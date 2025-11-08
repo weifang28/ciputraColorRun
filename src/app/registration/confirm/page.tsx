@@ -1,43 +1,122 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 
 export default function ConfirmPaymentPage() {
 	const search = useSearchParams();
 	const router = useRouter();
-	// expecting ?category=Individual&price=69000 (registrationId removed)
-	const category = search.get("category") ?? "Individual";
-	const price = search.get("price") ?? "0";
 
-	// capture registration user info from query params (or pass them from registration page)
-	const fullName = search.get("fullName") ?? "";
-	const email = search.get("email") ?? "";
-	const phone = search.get("phone") ?? "";
-	const registrationType = search.get("registrationType") ?? "individual";
+	const categoryId = search.get("categoryId");
+	const participants = Number(search.get("participants") ?? "0");
 
+	// read from query first, then fall back to sessionStorage
+	const [fullName, setFullName] = useState<string>(search.get("fullName") ?? "");
+	const [email, setEmail] = useState<string>(search.get("email") ?? "");
+	const [phone, setPhone] = useState<string>(search.get("phone") ?? "");
+	const [registrationType, setRegistrationType] = useState<string>(
+		search.get("registrationType") ?? "individual"
+	);
+
+	useEffect(() => {
+		// fallback to sessionStorage values if query params are not present
+		try {
+			if (!fullName) {
+				const s = sessionStorage.getItem("reg_fullName");
+				if (s) setFullName(s);
+			}
+			if (!email) {
+				const s = sessionStorage.getItem("reg_email");
+				if (s) setEmail(s);
+			}
+			if (!phone) {
+				const s = sessionStorage.getItem("reg_phone");
+				if (s) setPhone(s);
+			}
+			if (!registrationType) {
+				const s = sessionStorage.getItem("reg_registrationType");
+				if (s) setRegistrationType(s);
+			}
+		} catch (e) {
+			// ignore sessionStorage errors
+		}
+	}, [fullName, email, phone, registrationType]);
+
+	const [category, setCategory] = useState<
+		{ id: number; name: string; price: string } | null
+	>(null);
 	const [fileName, setFileName] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (!categoryId) return;
+		(async () => {
+			try {
+				const res = await fetch("/api/categories");
+				if (!res.ok) {
+					console.error("/api/categories returned", res.status);
+					setCategory(null);
+					return;
+				}
+				const ct = res.headers.get("content-type") || "";
+				if (!ct.includes("application/json")) {
+					console.error("/api/categories returned non-json:", await res.text());
+					setCategory(null);
+					return;
+				}
+				const list = await res.json();
+				const found = list.find((c: any) => String(c.id) === String(categoryId));
+				setCategory(found || null);
+			} catch (err) {
+				console.error("Failed to fetch categories:", err);
+				setCategory(null);
+			}
+		})();
+	}, [categoryId]);
+
+	const displayedPrice = category ? Number(category.price) * (participants || 1) : 0;
 
 	async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
 		setError(null);
 		setIsSubmitting(true);
 
+		// ensure form includes fallback values from sessionStorage if state is empty
 		const form = new FormData(e.currentTarget);
+		if (categoryId) form.set("categoryId", String(categoryId));
+
+		const fn = fullName || (typeof window !== "undefined" && sessionStorage.getItem("reg_fullName")) || "";
+		const em = email || (typeof window !== "undefined" && sessionStorage.getItem("reg_email")) || "";
+		const ph = phone || (typeof window !== "undefined" && sessionStorage.getItem("reg_phone")) || "";
+		const rtype =
+			registrationType ||
+			(typeof window !== "undefined" && sessionStorage.getItem("reg_registrationType")) ||
+			"individual";
+
+		form.set("fullName", String(fn));
+		form.set("email", String(em));
+		form.set("phone", String(ph));
+		form.set("registrationType", String(rtype));
+		form.set("amount", String(displayedPrice));
+
 		try {
 			const res = await fetch("/api/payments", {
 				method: "POST",
 				body: form,
 			});
 			if (!res.ok) {
-				const json = await res.json();
+				// defensive parse: server might return non-json
+				let json;
+				try {
+					json = await res.json();
+				} catch {
+					const txt = await res.text();
+					throw new Error(txt || res.statusText);
+				}
 				throw new Error(json?.error || res.statusText);
 			}
-			// success
 			router.push(`/registration/confirm?status=success`);
 		} catch (err: any) {
 			setError(err.message || "Upload failed");
@@ -66,18 +145,18 @@ export default function ConfirmPaymentPage() {
 						<h3 className="font-semibold mb-3">Detail Payment :</h3>
 						<div className="grid grid-cols-2 gap-2 text-sm">
 							<div>Kategori :</div>
-							<div className="text-right">{category}</div>
+							<div className="text-right">{category?.name}</div>
 
 							<div>Harga (one ticket) :</div>
 							<div className="text-right">
-								Rp. {Number(price).toLocaleString("id-ID")}
+								Rp. {Number(category?.price).toLocaleString("id-ID")}
 							</div>
 
 							<div className="col-span-2 border-t my-2" />
 
 							<div>Total yang harus dibayar :</div>
 							<div className="text-right font-semibold">
-								Rp. {Number(price).toLocaleString("id-ID")}
+								Rp. {displayedPrice.toLocaleString("id-ID")}
 							</div>
 						</div>
 					</div>
@@ -87,15 +166,12 @@ export default function ConfirmPaymentPage() {
 						encType="multipart/form-data"
 						className="space-y-6"
 					>
-						{/* include registration user data so API can create Registration when missing */}
+						<input type="hidden" name="categoryId" value={categoryId ?? ""} />
+						<input type="hidden" name="amount" value={String(displayedPrice)} />
 						<input type="hidden" name="fullName" value={fullName} />
 						<input type="hidden" name="email" value={email} />
 						<input type="hidden" name="phone" value={phone} />
 						<input type="hidden" name="registrationType" value={registrationType} />
-
-						{/* registrationId removed (API will auto-create / not require) */}
-						<input type="hidden" name="category" value={category} />
-						<input type="hidden" name="amount" value={price} />
 
 						<label className="block font-semibold">Upload Bukti*</label>
 

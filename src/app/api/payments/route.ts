@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-import { PrismaClient, Prisma } from "@prisma/client"; // { changed code }
+import { PrismaClient, Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -57,16 +57,13 @@ export async function POST(req: Request) {
 			// don't set createdAt — DB will set timestamps
 		};
 
-		// remove category — not a field on Payment model
-		// if you need to store category, add it to prisma/schema.prisma (recommended) and then set it here
-
 		if (amount !== undefined && !Number.isNaN(amount)) {
 			// if Payment.amount is Decimal in prisma/schema.prisma, use Prisma.Decimal
 			paymentData.amount = new Prisma.Decimal(String(amount)); // { changed code }
 		}
 
 		// If registrationId provided and valid, use it; otherwise create registration (and user if needed)
-		let registrationId: number | undefined = undefined;
+		let registrationId: number | undefined;
 		if (registrationIdStr && !Number.isNaN(Number(registrationIdStr))) {
 			registrationId = Number(registrationIdStr);
 		} else {
@@ -96,24 +93,20 @@ export async function POST(req: Request) {
 					});
 				}
 
-				// <-- FIX: include totalAmount when creating registration -->
 				const registration = await prismaTx.registration.create({
 					data: {
 						userId: user.id,
 						registrationType,
-						// provide totalAmount (use posted amount or 0 fallback)
-						totalAmount:
-							amount !== undefined && !Number.isNaN(amount) ? amount : 0,
+						totalAmount: new Prisma.Decimal(String(amount ?? 0)), // required Decimal
 					},
 				});
 
-				return { user, registration };
+				return { registration };
 			});
 
 			registrationId = result.registration.id;
 		}
 
-		// attach registrationId (non-nullable) and create payment
 		paymentData.registrationId = registrationId;
 
 		const created = await prisma.payment.create({
@@ -122,7 +115,6 @@ export async function POST(req: Request) {
 
 		return NextResponse.json({ success: true, payment: created });
 	} catch (err: any) {
-		console.error("payment upload error", err);
 		return NextResponse.json(
 			{ error: err?.message ?? "internal" },
 			{ status: 500 }

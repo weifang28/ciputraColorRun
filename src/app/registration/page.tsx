@@ -2,13 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function RegistrationPage() {
     const router = useRouter();
     const [type, setType] = useState<"individual" | "community">("community");
-    const [category, setCategory] = useState("5km");
+
+    // categories loaded from server
+    const [categories, setCategories] = useState<Array<{ id: number; name: string; price: string }>>([]);
+    const [categoryId, setCategoryId] = useState<number | null>(null);
     const [participants, setParticipants] = useState<number | "">("");
     const [jerseys, setJerseys] = useState<Record<string, number | "">>({
         XS: "",
@@ -19,33 +22,60 @@ export default function RegistrationPage() {
         XXL: "",
     });
 
-    // new: personal details state (bind your form inputs to these)
+    // personal details
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
     const [registrationType, setRegistrationType] = useState<"individual" | "community">("community");
 
-    // simple price lookup (adjust values to match your data)
-    const priceMap: Record<string, number> = {
-        "5km": 69000,
-        "10km": 99000,
-        "20km": 129000,
-    };
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch("/api/categories");
+                const contentType = res.headers.get("content-type") || "";
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error("/api/categories returned non-OK response:", res.status, text);
+                    return;
+                }
+                if (!contentType.includes("application/json")) {
+                    const text = await res.text();
+                    console.error("/api/categories returned non-JSON response:", text);
+                    return;
+                }
+                const data = await res.json();
+                setCategories(data);
+                if (data.length > 0) setCategoryId(data[0].id);
+            } catch (err) {
+                console.error("Failed to load categories:", err);
+            }
+        })();
+    }, []);
 
     function updateJersey(size: string, value: number | "") {
         setJerseys((s) => ({ ...s, [size]: value }));
     }
 
-    function goToConfirm(params: { category: string; price: number; participants?: number }) {
+    function goToConfirm(params: { participants?: number }) {
+        if (!categoryId) return;
+
+        // persist personal details so confirm page can read them if query params are dropped
+        try {
+            sessionStorage.setItem("reg_fullName", fullName);
+            sessionStorage.setItem("reg_email", email);
+            sessionStorage.setItem("reg_phone", phone);
+            sessionStorage.setItem("reg_registrationType", registrationType);
+        } catch (e) {
+            // ignore sessionStorage errors (e.g. SSR, privacy settings)
+        }
+
         const qs = new URLSearchParams({
-            category: params.category,
-            price: String(params.price),
-            // include personal details so API can auto-create registration
+            categoryId: String(categoryId),
+            ...(params.participants !== undefined ? { participants: String(params.participants) } : {}),
             fullName,
             email,
             phone,
             registrationType,
-            ...(params.participants !== undefined ? { participants: String(params.participants) } : {}),
         }).toString();
         router.push(`/registration/confirm?${qs}`);
     }
@@ -132,13 +162,15 @@ export default function RegistrationPage() {
                             <div className="grid gap-3">
                                 <label className="text-sm text-gray-700">Categories</label>
                                 <select
-                                    value={category}
-                                    onChange={(e) => setCategory(e.target.value)}
+                                    value={categoryId ?? ""}
+                                    onChange={(e) => setCategoryId(Number(e.target.value))}
                                     className="w-full p-2 border border-gray-300 rounded text-sm text-gray-800 bg-white"
                                 >
-                                    <option value="5km">5km</option>
-                                    <option value="10km">10km</option>
-                                    <option value="20km">20km</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>
+                                            {cat.name}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -158,10 +190,7 @@ export default function RegistrationPage() {
                             <div className="flex justify-end items-center mt-4">
                                 <button
                                     onClick={() =>
-                                        goToConfirm({
-                                            category,
-                                            price: priceMap[category] ?? 0,
-                                        })
+                                        goToConfirm({})
                                     }
                                     className="px-6 py-2 rounded-full bg-emerald-200/60 text-white font-semibold shadow"
                                 >
@@ -179,13 +208,15 @@ export default function RegistrationPage() {
                                     <div>
                                         <label className="text-sm text-gray-700">Race Category</label>
                                         <select
-                                            value={category}
-                                            onChange={(e) => setCategory(e.target.value)}
+                                            value={categoryId ?? ""}
+                                            onChange={(e) => setCategoryId(Number(e.target.value))}
                                             className="w-full p-2 border border-gray-300 rounded text-sm text-gray-800 bg-white"
                                         >
-                                            <option value="5km">5km</option>
-                                            <option value="10km">10km</option>
-                                            <option value="20km">20km</option>
+                                            {categories.map((cat) => (
+                                                <option key={cat.id} value={cat.id}>
+                                                    {cat.name}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
 
@@ -235,7 +266,7 @@ export default function RegistrationPage() {
                                         <button
                                             onClick={() => {
                                                 console.log("Added community to cart", {
-                                                    category,
+                                                    categoryId,
                                                     participants,
                                                     jerseys,
                                                 });
@@ -252,8 +283,6 @@ export default function RegistrationPage() {
                                 <button
                                     onClick={() =>
                                         goToConfirm({
-                                            category,
-                                            price: (Number(participants || 0) * (priceMap[category] ?? 0)) || 0,
                                             participants: Number(participants || 0),
                                         })
                                     }
