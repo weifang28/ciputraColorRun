@@ -23,9 +23,7 @@ export default function Home() {
   ];
 
   return (
-    <main className="bg-white">
-
-
+    <main className="bg-white overflow-x-hidden">
       <div className="home_top">
         <div className="home_top_content">
 
@@ -37,7 +35,7 @@ export default function Home() {
 
           <h1 className="home_title">CIPUTRA COLOR RUN</h1>
 
-          <Link href="/register" className="home_register_button">
+          <Link href="/registration" className="home_register_button">
             REGISTER NOW
           </Link>
 
@@ -50,7 +48,7 @@ export default function Home() {
 
       <div className="sponsor-container">
 
-        <h1 className="sponsor-title">MA  IN SPONSOR</h1>
+        <h1 className="sponsor-title">MAIN SPONSOR</h1>
 
         <div className="partner-loop-with-borders">
           <LogoLoop
@@ -67,8 +65,6 @@ export default function Home() {
         </div>
 
       </div>
-
-
 
     </main>
   );
