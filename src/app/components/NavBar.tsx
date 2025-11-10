@@ -4,9 +4,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, User, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function NavBar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const router = useRouter();
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-black/30 border-b border-white/10">
@@ -22,7 +24,6 @@ export default function NavBar() {
                         />
                     </Link>
 
-		
                     <div className="hidden md:flex items-center gap-12">
                         <Link
                             href="/"
@@ -50,7 +51,8 @@ export default function NavBar() {
                             </button>
                             <button
                                 onClick={() => {
-                                    console.log("Profile clicked");
+                                    // redirect to profile page
+                                    router.push("/profilePage");
                                 }}
                                 className="text-white hover:text-white/80 transition-colors"
                                 aria-label="User Profile"
@@ -84,7 +86,7 @@ export default function NavBar() {
                             HOME
                         </Link>
                         <Link
-                            href="/register"
+                            href="/registration"
                             className="text-white font-bold text-lg hover:text-white/80 transition-colors tracking-wide"
                             onClick={() => setIsMenuOpen(false)}
                         >
@@ -103,8 +105,9 @@ export default function NavBar() {
                             </button>
                             <button
                                 onClick={() => {
-                                    console.log("Profile clicked");
+                                    // redirect to profile page (mobile)
                                     setIsMenuOpen(false);
+                                    router.push("/profilePage");
                                 }}
                                 className="text-white hover:text-white/80 transition-colors"
                                 aria-label="User Profile"
