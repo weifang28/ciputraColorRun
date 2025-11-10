@@ -47,9 +47,10 @@ model Registration {
   user             User           @relation(fields: [userId], references: [id])
   registrationType String         // "individual" or "community"
   groupName        String?        // for community
-  totalAmount      Decimal        @db.Decimal(10, 2)
+  totalAmount      Decimal        @db.Decimal(10, 2)     // required Decimal (API sets this)
   paymentStatus    String         @default("pending") // "pending", "confirmed", "rejected"
   createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   participants     Participant[]
   payments         Payment[]
   qrCodes          QrCode[]
@@ -73,9 +74,11 @@ model Payment {
   registrationId   Int
   registration     Registration   @relation(fields: [registrationId], references: [id])
   transactionId    String         @unique
-  proofOfPayment   String         // file path/URL
-  status           String         @default("pending") // "pending", "confirmed", "rejected"
-  paidAt           DateTime       @default(now())
+  proofOfPayment   String
+  status           String         @default("pending")
+  paidAt           DateTime?      // make nullable
+  amount           Decimal?       @db.Decimal(10, 2)
+  createdAt        DateTime       @default(now())
 }
 
 model QrCode {

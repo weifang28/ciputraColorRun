@@ -1,8 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Poppins:wght@600&display=swap");
 @import "tailwindcss";
+/* Add Google Fonts for Moderniz (fallback to Montserrat) and Mustica Pro SemiBold (Poppins 600 used) */
+
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* typography variables */
+  --font-moderniz: "Montserrat", var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --font-mustica: "Poppins", var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
 @theme inline {
@@ -17,6 +24,17 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+}
+
+/* utility classes for components */
+.font-moderniz {
+  font-family: var(--font-moderniz);
+  font-weight: 700;
+}
+
+.font-mustica {
+  font-family: var(--font-mustica);
+  font-weight: 600;
 }
 
 body {
