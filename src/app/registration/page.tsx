@@ -36,6 +36,11 @@ export default function RegistrationPage() {
     const [agreedToTerms, setAgreedToTerms] = useState(false);
 
     useEffect(() => {
+        // Initialize AOS on component mount
+        if (typeof window !== 'undefined' && (window as any).AOS) {
+            (window as any).AOS.refresh();
+        }
+
         (async () => {
             try {
                 const res = await fetch("/api/categories");
@@ -63,14 +68,12 @@ export default function RegistrationPage() {
         setJerseys((s) => ({ ...s, [size]: value }));
     }
 
-    // Calculate total community participants across all cart items
     function getTotalCommunityParticipants(): number {
         return items
             .filter(item => item.type === "community")
             .reduce((sum, item) => sum + (item.participants || 0), 0);
     }
 
-    // Add to cart without modal (for community)
     function handleAddToCart() {
         if (!fullName || !email || !phone) {
             alert("Please fill in your personal details (Name, Email, Phone)");
@@ -86,7 +89,6 @@ export default function RegistrationPage() {
             return;
         }
 
-        // Validate jersey distribution matches participant count
         const totalJerseys = Object.values(jerseys).reduce((sum, val) => sum + (Number(val) || 0), 0);
         if (totalJerseys !== currentParticipants) {
             alert(`Jersey count (${totalJerseys}) must match participant count (${currentParticipants}) for this category`);
@@ -96,7 +98,6 @@ export default function RegistrationPage() {
         const category = categories.find((c) => c.id === categoryId);
         if (!category) return;
 
-        // Persist personal details
         try {
             sessionStorage.setItem("reg_fullName", fullName);
             sessionStorage.setItem("reg_email", email);
@@ -106,7 +107,6 @@ export default function RegistrationPage() {
             // ignore
         }
 
-        // Add to cart
         addItem({
             type: "community",
             categoryId: category.id,
@@ -121,12 +121,10 @@ export default function RegistrationPage() {
         const newTotal = getTotalCommunityParticipants() + currentParticipants;
         alert(`Category added to cart! Total community participants: ${newTotal}/100`);
         
-        // Reset community fields to allow adding another category
         setParticipants("");
         setJerseys({ XS: "", S: "", M: "", L: "", XL: "", XXL: "" });
     }
 
-    // Checkout with modal (for both individual and community)
     function handleCheckout() {
         if (!fullName || !email || !phone) {
             alert("Please fill in your personal details (Name, Email, Phone)");
@@ -134,11 +132,9 @@ export default function RegistrationPage() {
         }
 
         if (type === "individual") {
-            // For individual, open modal immediately
             setAgreedToTerms(false);
             setIsModalOpen(true);
         } else {
-            // For community, check if total meets minimum
             const currentParticipants = Number(participants || 0);
             const totalWithCurrent = getTotalCommunityParticipants() + currentParticipants;
 
@@ -147,7 +143,6 @@ export default function RegistrationPage() {
                 return;
             }
 
-            // If there's a current category being filled, validate it before checkout
             if (currentParticipants > 0) {
                 const totalJerseys = Object.values(jerseys).reduce((sum, val) => sum + (Number(val) || 0), 0);
                 if (totalJerseys !== currentParticipants) {
@@ -156,20 +151,17 @@ export default function RegistrationPage() {
                 }
             }
 
-            // Open modal for terms agreement
             setAgreedToTerms(false);
             setIsModalOpen(true);
         }
     }
 
-    // Execute checkout after terms accepted
     function executeCheckout() {
         if (!categoryId) return;
 
         const category = categories.find((c) => c.id === categoryId);
         if (!category) return;
 
-        // Persist personal details
         try {
             sessionStorage.setItem("reg_fullName", fullName);
             sessionStorage.setItem("reg_email", email);
@@ -180,7 +172,6 @@ export default function RegistrationPage() {
         }
 
         if (type === "individual") {
-            // Add individual item to cart
             addItem({
                 type: "individual",
                 categoryId: category.id,
@@ -189,7 +180,6 @@ export default function RegistrationPage() {
                 jerseySize: selectedJerseySize,
             });
         } else {
-            // For community, add current category if filled
             const currentParticipants = Number(participants || 0);
             if (currentParticipants > 0) {
                 addItem({
@@ -206,18 +196,24 @@ export default function RegistrationPage() {
         }
 
         setIsModalOpen(false);
-        // Redirect to cart
         router.push("/cart");
     }
 
     return (
         <main className="flex bg-gradient-to-br from-emerald-100/30 via-transparent to-rose-100/30 min-h-screen pt-28 pb-16">
             <div className="mx-auto w-full max-w-2xl px-4">
-                <h1 className="text-4xl md:text-6xl text-center font-bold mb-8 tracking-wide text-white drop-shadow-lg font-moderniz">
+                <h1 
+                    className="text-4xl md:text-6xl text-center font-bold mb-8 tracking-wide text-white drop-shadow-lg font-moderniz"
+                    data-aos="fade-down"
+                >
                     CIPUTRA COLOR RUN
                 </h1>
 
-                <section className="bg-white/95 backdrop-blur-md rounded-lg p-8 md:p-10 shadow-lg text-gray-800">
+                <section 
+                    className="bg-white/95 backdrop-blur-md rounded-lg p-8 md:p-10 shadow-lg text-gray-800"
+                    data-aos="zoom-in"
+                    data-aos-delay="200"
+                >
                     <h2 className="text-2xl font-bold text-center mb-1 text-gray-800 font-moderniz">
                         REGISTRATION FORM
                     </h2>
@@ -226,7 +222,7 @@ export default function RegistrationPage() {
                     </p>
 
                     {/* Personal details */}
-                    <div className="space-y-4">
+                    <div className="space-y-4" data-aos="fade-up" data-aos-delay="300">
                         <div className="grid gap-3">
                             <label className="text-sm text-gray-700">Full Name *</label>
                             <input
@@ -293,7 +289,7 @@ export default function RegistrationPage() {
 
                     {/* Individual layout */}
                     {type === "individual" && (
-                        <div className="space-y-4 mt-6">
+                        <div className="space-y-4 mt-6" data-aos="fade-up" data-aos-delay="400">
                             <div className="grid gap-3">
                                 <label className="text-sm text-gray-700">Categories</label>
                                 <select
@@ -341,7 +337,10 @@ export default function RegistrationPage() {
                         <div className="space-y-6 mt-6">
                             {/* Community Progress Indicator */}
                             {getTotalCommunityParticipants() > 0 && (
-                                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                <div 
+                                    className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg"
+                                    data-aos="slide-down"
+                                >
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-sm font-medium text-emerald-800">
                                             Community Progress
@@ -364,7 +363,11 @@ export default function RegistrationPage() {
                                 </div>
                             )}
 
-                            <div className="rounded-lg border border-gray-300 p-5 bg-white">
+                            <div 
+                                className="rounded-lg border border-gray-300 p-5 bg-white"
+                                data-aos="fade-up"
+                                data-aos-delay="400"
+                            >
                                 <div className="space-y-4">
                                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                                         <p className="text-xs text-blue-700">
