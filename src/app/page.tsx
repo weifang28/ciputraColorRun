@@ -65,7 +65,39 @@ export default function Home() {
         </div>
 
       </div>
+      <section className="relative w-full bg-gradient-to-r from-[#1F6251] to-[#9C686A] py-16 px-10">
+        <div className="grid grid-cols-3 gap-8 mb-12 max-w-6xl mx-auto">
+          <div className="bg-gray-200 rounded-md flex items-center justify-center text-center p-6">
+            <h3 className="font-bold text-xl text-black">
+              Documentation from last Cirun
+            </h3>
+          </div>
 
+          <div className="bg-gray-200 rounded-md flex items-center justify-center p-6">
+            <img
+              src="/Images/logo.png"
+              alt="Running Logo"
+              className="w-32 h-32 object-contain"
+            />
+          </div>
+
+          <div className="bg-gray-200 rounded-md flex items-center justify-center text-center p-6">
+            <h3 className="font-bold text-xl text-black">Documentation</h3>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-7 gap-6 max-w-6xl mx-auto">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-gray-200 rounded-md aspect-square"
+            ></div>
+          ))}
+        </div>
+      </section>
+            <section className="w-full bg-gray-200 py-24 flex justify-center items-center">
+        <p className="text-gray-700 text-2xl font-semibold">About Ciputra Run</p>
+      </section>
     </main>
   );
 }
