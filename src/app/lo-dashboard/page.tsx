@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 
 const TABS = [
   { key: 'all', label: 'All' },
-  { key: 'personal', label: 'Personal' },
+  { key: 'individual', label: 'Individual' },
   { key: 'community', label: 'Community' },
 ];
 

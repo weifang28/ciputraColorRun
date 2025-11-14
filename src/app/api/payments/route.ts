@@ -49,6 +49,32 @@ async function generateAccessCode(
   return accessCode;
 }
 
+/**
+ * Generate a bib number with category-based prefix and ensure uniqueness.
+ * Example: categoryName "3K" -> prefix "3" -> bib "3XXXX" (4 random digits)
+ */
+async function generateUniqueBib(
+  categoryName: string | undefined,
+  prismaTx: Omit<
+    PrismaClient,
+    "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
+  >
+): Promise<string> {
+  const prefixMatch = (categoryName || "").match(/^(\d{1,2})/);
+  const prefix = prefixMatch ? prefixMatch[1] : "0"; // fallback prefix
+
+  const makeCandidate = () => `${prefix}${Math.floor(1000 + Math.random() * 9000)}`;
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const candidate = makeCandidate();
+    const exists = await prismaTx.participant.findFirst({ where: { bibNumber: candidate } });
+    if (!exists) return candidate;
+  }
+
+  // Last resort: append timestamp
+  return `${prefix}${Date.now().toString().slice(-6)}`;
+}
+
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
@@ -122,7 +148,16 @@ export async function POST(req: Request) {
         );
       }
 
-      // create/find user and create registration inside a transaction
+      // parse cart items JSON (if provided)
+      const cartItemsStr = form.get("cartItems") as string | null;
+      let cartItems: any[] = [];
+      try {
+        if (cartItemsStr) cartItems = JSON.parse(cartItemsStr);
+      } catch (e) {
+        cartItems = [];
+      }
+
+      // create/find user and create registration + participants inside a transaction
       const result = await prisma.$transaction(async (prismaTx) => {
         let user = await prismaTx.user.findUnique({ where: { email } });
         if (!user) {
@@ -150,6 +185,63 @@ export async function POST(req: Request) {
             totalAmount: new Prisma.Decimal(String(amount ?? 0)), // required Decimal
           },
         });
+
+        // If cartItems provided, create Participant rows accordingly
+        if (Array.isArray(cartItems) && cartItems.length > 0) {
+          for (const item of cartItems) {
+            try {
+              const categoryId = Number(item.categoryId);
+
+              // get category name for bib prefix
+              const category = await prismaTx.raceCategory.findUnique({ where: { id: categoryId } });
+
+              if (item.type === "individual") {
+                // find jersey option by size if provided
+                let jerseyId: number | undefined = undefined;
+                if (item.jerseySize) {
+                  const j = await prismaTx.jerseyOption.findUnique({ where: { size: item.jerseySize } });
+                  if (j) jerseyId = j.id;
+                }
+
+                const bib = await generateUniqueBib(category?.name, prismaTx);
+
+                await prismaTx.participant.create({
+                  data: {
+                    registrationId: registration.id,
+                    categoryId: categoryId,
+                    jerseyId: jerseyId ?? (await prismaTx.jerseyOption.findFirst())?.id ?? 1,
+                    bibNumber: bib,
+                  },
+                });
+              } else if (item.type === "community") {
+                // item.jerseys is an object mapping size->count
+                const jerseysMap: Record<string, number> = item.jerseys || {};
+                for (const [size, cnt] of Object.entries(jerseysMap)) {
+                  const count = Number(cnt) || 0;
+                  if (count <= 0) continue;
+
+                  const jOpt = await prismaTx.jerseyOption.findUnique({ where: { size } });
+                  const jerseyId = jOpt ? jOpt.id : (await prismaTx.jerseyOption.findFirst())?.id ?? 1;
+
+                  for (let i = 0; i < count; i++) {
+                    const bib = await generateUniqueBib(category?.name, prismaTx);
+                    await prismaTx.participant.create({
+                      data: {
+                        registrationId: registration.id,
+                        categoryId: categoryId,
+                        jerseyId,
+                        bibNumber: bib,
+                      },
+                    });
+                  }
+                }
+              }
+            } catch (e) {
+              // continue on participant creation errors to avoid blocking whole transaction
+              console.error("Error creating participants for cart item:", e);
+            }
+          }
+        }
 
         return { registration };
       });
