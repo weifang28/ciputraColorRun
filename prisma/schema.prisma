@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,101 +8,101 @@ datasource db {
 }
 
 model User {
-  id           Int            @id @default(autoincrement())
-  name         String
-  email        String         @unique
-  phone        String
-  accessCode   String         @unique
-  role         String         @default("user") // "user" or "admin"
-  password     String?        // For admin login
-  createdAt    DateTime       @default(now())
+  id            Int            @id @default(autoincrement())
+  name          String
+  email         String         @unique
+  phone         String
+  accessCode    String         @unique
+  role          String         @default("user")
+  password      String?
+  createdAt     DateTime       @default(now())
   registrations Registration[]
 }
 
 model RaceCategory {
-  id           Int            @id @default(autoincrement())
-  name         String         @unique // "5km", "10km", "20km"
-  price        Decimal        @db.Decimal(10, 2)
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  price        Decimal       @db.Decimal(10, 2)
   participants Participant[]
   qrCodes      QrCode[]
 }
 
 model JerseyOption {
-  id           Int            @id @default(autoincrement())
-  size         String         @unique // "XS", "S", "M", "L", "XL", "XXL"
-  price        Decimal        @db.Decimal(10, 2)
+  id           Int           @id @default(autoincrement())
+  size         String        @unique
+  price        Decimal       @db.Decimal(10, 2)
   quantity     Int
   participants Participant[]
 }
 
 model Registration {
-  id               Int            @id @default(autoincrement())
+  id               Int           @id @default(autoincrement())
   userId           Int
-  user             User           @relation(fields: [userId], references: [id])
-  registrationType String         // "individual" or "community"
-  groupName        String?        // for community
-  totalAmount      Decimal        @db.Decimal(10, 2)     // required Decimal (API sets this)
-  paymentStatus    String         @default("pending") // "pending", "confirmed", "rejected"
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  registrationType String
+  groupName        String?
+  totalAmount      Decimal       @db.Decimal(10, 2)
+  paymentStatus    String        @default("pending")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   participants     Participant[]
   payments         Payment[]
   qrCodes          QrCode[]
+  user             User          @relation(fields: [userId], references: [id])
 }
 
 model Participant {
-  id               Int            @id @default(autoincrement())
-  registrationId   Int
-  registration     Registration   @relation(fields: [registrationId], references: [id])
-  categoryId       Int
-  category         RaceCategory   @relation(fields: [categoryId], references: [id])
-  jerseyId         Int
-  jersey           JerseyOption   @relation(fields: [jerseyId], references: [id])
-  bibNumber        String?
-  packClaimed      Boolean        @default(false)
-  claimDetails     ClaimDetail[]
+  id             Int           @id @default(autoincrement())
+  registrationId Int
+  categoryId     Int
+  jerseyId       Int
+  bibNumber      String?
+  packClaimed    Boolean       @default(false)
+  claimDetails   ClaimDetail[]
+  category       RaceCategory  @relation(fields: [categoryId], references: [id])
+  jersey         JerseyOption  @relation(fields: [jerseyId], references: [id])
+  registration   Registration  @relation(fields: [registrationId], references: [id])
 }
 
 model Payment {
-  id               Int            @id @default(autoincrement())
-  registrationId   Int
-  registration     Registration   @relation(fields: [registrationId], references: [id])
-  transactionId    String         @unique
-  proofOfPayment   String
-  status           String         @default("pending")
-  paidAt           DateTime?      // make nullable
-  amount           Decimal?       @db.Decimal(10, 2)
-  createdAt        DateTime       @default(now())
+  id             Int          @id @default(autoincrement())
+  registrationId Int
+  transactionId  String       @unique
+  proofOfPayment String
+  status         String       @default("pending")
+  paidAt         DateTime?
+  amount         Decimal?     @db.Decimal(10, 2)
+  createdAt      DateTime     @default(now())
+  registration   Registration @relation(fields: [registrationId], references: [id])
 }
 
 model QrCode {
-  id               Int            @id @default(autoincrement())
-  registrationId   Int
-  registration     Registration   @relation(fields: [registrationId], references: [id])
-  categoryId       Int
-  category         RaceCategory   @relation(fields: [categoryId], references: [id])
-  qrCodeData       String         @unique
-  totalPacks       Int            // number of participants in this category
-  maxScans         Int            // totalPacks + 3
-  scansRemaining   Int            // decrements on each scan
-  createdAt        DateTime       @default(now())
-  claims           RacePackClaim[]
+  id             Int             @id @default(autoincrement())
+  registrationId Int
+  categoryId     Int
+  qrCodeData     String          @unique
+  totalPacks     Int
+  maxScans       Int
+  scansRemaining Int
+  createdAt      DateTime        @default(now())
+  category       RaceCategory    @relation(fields: [categoryId], references: [id])
+  registration   Registration    @relation(fields: [registrationId], references: [id])
+  claims         RacePackClaim[]
 }
 
 model RacePackClaim {
-  id                  Int            @id @default(autoincrement())
-  qrCodeId            Int
-  qrCode              QrCode         @relation(fields: [qrCodeId], references: [id])
-  claimedBy           String
-  packsClaimedCount   Int
-  claimedAt           DateTime       @default(now())
-  claimDetails        ClaimDetail[]
+  id                Int           @id @default(autoincrement())
+  qrCodeId          Int
+  claimedBy         String
+  packsClaimedCount Int
+  claimedAt         DateTime      @default(now())
+  claimDetails      ClaimDetail[]
+  qrCode            QrCode        @relation(fields: [qrCodeId], references: [id])
 }
 
 model ClaimDetail {
-  id               Int            @id @default(autoincrement())
-  claimId          Int
-  participantId    Int
-  participant      Participant    @relation(fields: [participantId], references: [id])
-  claim            RacePackClaim  @relation(fields: [claimId], references: [id])
+  id            Int           @id @default(autoincrement())
+  claimId       Int
+  participantId Int
+  claim         RacePackClaim @relation(fields: [claimId], references: [id])
+  participant   Participant   @relation(fields: [participantId], references: [id])
 }
