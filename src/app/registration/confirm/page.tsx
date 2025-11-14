@@ -3,24 +3,21 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import { useCart } from "../../context/CartContext";
 
 export default function ConfirmPaymentPage() {
 	const search = useSearchParams();
 	const router = useRouter();
+	const { items, clearCart, totalPrice } = useCart();
 
-	const categoryId = search.get("categoryId");
-	const participants = Number(search.get("participants") ?? "0");
+	const fromCart = search.get("fromCart") === "true";
 
-	// read from query first, then fall back to sessionStorage
+	// Personal info from query/sessionStorage
 	const [fullName, setFullName] = useState<string>(search.get("fullName") ?? "");
 	const [email, setEmail] = useState<string>(search.get("email") ?? "");
 	const [phone, setPhone] = useState<string>(search.get("phone") ?? "");
-	const [registrationType, setRegistrationType] = useState<string>(
-		search.get("registrationType") ?? "individual"
-	);
 
 	useEffect(() => {
-		// fallback to sessionStorage values if query params are not present
 		try {
 			if (!fullName) {
 				const s = sessionStorage.getItem("reg_fullName");
@@ -34,72 +31,36 @@ export default function ConfirmPaymentPage() {
 				const s = sessionStorage.getItem("reg_phone");
 				if (s) setPhone(s);
 			}
-			if (!registrationType) {
-				const s = sessionStorage.getItem("reg_registrationType");
-				if (s) setRegistrationType(s);
-			}
 		} catch (e) {
-			// ignore sessionStorage errors
+			// ignore
 		}
-	}, [fullName, email, phone, registrationType]);
+	}, [fullName, email, phone]);
 
-	const [category, setCategory] = useState<
-		{ id: number; name: string; price: string } | null
-	>(null);
 	const [fileName, setFileName] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	// Redirect if cart is empty when coming from cart
 	useEffect(() => {
-		if (!categoryId) return;
-		(async () => {
-			try {
-				const res = await fetch("/api/categories");
-				if (!res.ok) {
-					console.error("/api/categories returned", res.status);
-					setCategory(null);
-					return;
-				}
-				const ct = res.headers.get("content-type") || "";
-				if (!ct.includes("application/json")) {
-					console.error("/api/categories returned non-json:", await res.text());
-					setCategory(null);
-					return;
-				}
-				const list = await res.json();
-				const found = list.find((c: any) => String(c.id) === String(categoryId));
-				setCategory(found || null);
-			} catch (err) {
-				console.error("Failed to fetch categories:", err);
-				setCategory(null);
-			}
-		})();
-	}, [categoryId]);
-
-	const displayedPrice = category ? Number(category.price) * (participants || 1) : 0;
+		if (fromCart && items.length === 0) {
+			router.push("/registration");
+		}
+	}, [fromCart, items, router]);
 
 	async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
 		setError(null);
 		setIsSubmitting(true);
 
-		// ensure form includes fallback values from sessionStorage if state is empty
 		const form = new FormData(e.currentTarget);
-		if (categoryId) form.set("categoryId", String(categoryId));
+		form.set("fullName", fullName);
+		form.set("email", email);
+		form.set("phone", phone);
+		form.set("amount", String(totalPrice));
+		form.set("registrationType", items[0]?.type || "individual");
 
-		const fn = fullName || (typeof window !== "undefined" && sessionStorage.getItem("reg_fullName")) || "";
-		const em = email || (typeof window !== "undefined" && sessionStorage.getItem("reg_email")) || "";
-		const ph = phone || (typeof window !== "undefined" && sessionStorage.getItem("reg_phone")) || "";
-		const rtype =
-			registrationType ||
-			(typeof window !== "undefined" && sessionStorage.getItem("reg_registrationType")) ||
-			"individual";
-
-		form.set("fullName", String(fn));
-		form.set("email", String(em));
-		form.set("phone", String(ph));
-		form.set("registrationType", String(rtype));
-		form.set("amount", String(displayedPrice));
+		// Include cart items as JSON
+		form.set("cartItems", JSON.stringify(items));
 
 		try {
 			const res = await fetch("/api/payments", {
@@ -107,7 +68,6 @@ export default function ConfirmPaymentPage() {
 				body: form,
 			});
 			if (!res.ok) {
-				// defensive parse: server might return non-json
 				let json;
 				try {
 					json = await res.json();
@@ -117,6 +77,9 @@ export default function ConfirmPaymentPage() {
 				}
 				throw new Error(json?.error || res.statusText);
 			}
+
+			// Clear cart after successful payment
+			clearCart();
 			router.push(`/registration/confirm?status=success`);
 		} catch (err: any) {
 			setError(err.message || "Upload failed");
@@ -134,30 +97,44 @@ export default function ConfirmPaymentPage() {
 
 				<section className="bg-white/95 backdrop-blur-md rounded-lg p-8 md:p-10 shadow-lg text-gray-800">
 					<h2 className="text-2xl font-bold text-center mb-1">
-						REGISTRATION FORM
+						PAYMENT CONFIRMATION
 					</h2>
 					<p className="text-center text-sm text-gray-600 mb-6">
-						Enter the details to get going.
+						Upload your payment proof to complete registration.
 					</p>
 
-					{/* Payment details */}
+					{/* Order Summary */}
 					<div className="mb-6">
-						<h3 className="font-semibold mb-3">Detail Payment :</h3>
-						<div className="grid grid-cols-2 gap-2 text-sm">
-							<div>Kategori :</div>
-							<div className="text-right">{category?.name}</div>
+						<h3 className="font-semibold mb-3">Order Summary:</h3>
+						<div className="space-y-2">
+							{items.map((item) => (
+								<div
+									key={item.id}
+									className="flex justify-between text-sm border-b pb-2"
+								>
+									<div>
+										<span className="font-medium">{item.categoryName}</span>
+										<span className="text-gray-500 ml-2">
+											{item.type === "community"
+												? `${item.participants} participants`
+												: `Size ${item.jerseySize}`}
+										</span>
+									</div>
+									<div>
+										Rp{" "}
+										{(
+											item.type === "community"
+												? (item.participants || 0) * item.price
+												: item.price
+										).toLocaleString("id-ID")}
+									</div>
+								</div>
+							))}
+						</div>
 
-							<div>Harga (one ticket) :</div>
-							<div className="text-right">
-								Rp. {Number(category?.price).toLocaleString("id-ID")}
-							</div>
-
-							<div className="col-span-2 border-t my-2" />
-
-							<div>Total yang harus dibayar :</div>
-							<div className="text-right font-semibold">
-								Rp. {displayedPrice.toLocaleString("id-ID")}
-							</div>
+						<div className="flex justify-between font-bold text-lg mt-4 pt-4 border-t">
+							<span>Total:</span>
+							<span>Rp {totalPrice.toLocaleString("id-ID")}</span>
 						</div>
 					</div>
 
@@ -166,19 +143,16 @@ export default function ConfirmPaymentPage() {
 						encType="multipart/form-data"
 						className="space-y-6"
 					>
-						<input type="hidden" name="categoryId" value={categoryId ?? ""} />
-						<input type="hidden" name="amount" value={String(displayedPrice)} />
+						<input type="hidden" name="amount" value={String(totalPrice)} />
 						<input type="hidden" name="fullName" value={fullName} />
 						<input type="hidden" name="email" value={email} />
 						<input type="hidden" name="phone" value={phone} />
-						<input type="hidden" name="registrationType" value={registrationType} />
 
-						<label className="block font-semibold">Upload Bukti*</label>
+						<label className="block font-semibold">Upload Payment Proof*</label>
 
-						{/* drag & drop / file input */}
 						<label
 							htmlFor="proof"
-							className="block border border-gray-300 rounded-lg p-8 text-center cursor-pointer"
+							className="block border border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
 						>
 							<div className="flex flex-col items-center justify-center gap-2">
 								<div className="w-12 h-12 text-gray-400">
@@ -193,9 +167,11 @@ export default function ConfirmPaymentPage() {
 								<div className="text-xs text-gray-500">
 									Supported formats: PNG, JPG, JPEG — Files size under 5 MB
 								</div>
-								<div className="mt-4 text-sm text-gray-700">
-									{fileName ?? ""}
-								</div>
+								{fileName && (
+									<div className="mt-4 text-sm text-green-600 font-medium">
+										Selected: {fileName}
+									</div>
+								)}
 							</div>
 							<input
 								id="proof"
@@ -211,14 +187,18 @@ export default function ConfirmPaymentPage() {
 							/>
 						</label>
 
-						{error && <div className="text-red-600 text-sm">{error}</div>}
+						{error && (
+							<div className="text-red-600 text-sm bg-red-50 p-3 rounded">
+								{error}
+							</div>
+						)}
 
 						<button
 							type="submit"
 							disabled={isSubmitting}
-							className="w-full py-3 rounded-full bg-gradient-to-r from-emerald-200 to-emerald-100 text-white font-bold"
+							className="w-full py-3 rounded-full bg-gradient-to-r from-emerald-200 to-emerald-100 text-white font-bold shadow hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 						>
-							{isSubmitting ? "Uploading..." : "Next"}
+							{isSubmitting ? "Uploading..." : "Submit Payment"}
 						</button>
 					</form>
 				</section>

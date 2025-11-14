@@ -17,7 +17,6 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    
 }
 
 .home_top_content {
@@ -111,4 +110,5 @@
 .partner-loop-with-borders {
     margin-top: 2rem;
     margin-bottom: 2rem;
+    width: 100%;
 }
