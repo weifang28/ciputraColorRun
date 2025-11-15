@@ -819,16 +819,7 @@ export default function RegistrationPage() {
                                                 </span>
                                             </div>
                                             
-                                            {discountInfo && (
-                                                <div className="mt-2 p-2 bg-purple-100 rounded flex justify-between items-center">
-                                                    <span className="text-xs font-medium text-purple-800">
-                                                        💰 You save:
-                                                    </span>
-                                                    <span className="text-sm font-bold text-purple-700">
-                                                        Rp {(discountInfo.discountAmount * (selectedCategory?.bundleSize || 4)).toLocaleString("id-ID")}
-                                                    </span>
-                                                </div>
-                                            )}
+                                    
                                         </div>
                                     </div>
 
@@ -975,17 +966,7 @@ export default function RegistrationPage() {
                                                     </div>
                                                 </div>
                                                 
-                                                {/* Savings display */}
-                                                {discountInfo && (
-                                                    <div className="mt-2 p-2 bg-emerald-100 rounded flex justify-between items-center">
-                                                        <span className="text-xs font-medium text-emerald-800">
-                                                            💰 You save:
-                                                        </span>
-                                                        <span className="text-sm font-bold text-emerald-700">
-                                                            Rp {(discountInfo.discountAmount * Number(participants)).toLocaleString("id-ID")}
-                                                        </span>
-                                                    </div>
-                                                )}
+                        
                                             </div>
 
                                             <p className="text-xs text-gray-600 mt-3">
