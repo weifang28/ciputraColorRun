@@ -514,7 +514,7 @@
   top: 0;
   bottom: 0;
   /* place divider near the middle so it overlays the left image */
-  left: 55%;
+  left: 60%;
   width: 65%;
   max-width: 900px;
   transform: translateX(50%);
@@ -819,11 +819,12 @@
   padding-top: 2.5rem;
   padding-bottom: 2.5rem;
   color: var(--foreground);
-  --pricing-border: rgba(31,98,81,0.08);   /* subtle green border */
-  --pricing-odd: rgba(31,98,81,0.02);      /* even-row tint */
-  --pricing-hover: rgba(31,98,81,0.045);   /* hover highlight */
-  --accent-strong: #91DCAC;                /* site accent green */
-  --accent-muted: #F581A4;                 /* site accent pink */
+  --pricing-border: rgba(31,98,81,0.08);
+  --pricing-odd: rgba(31,98,81,0.02);
+  --pricing-hover: rgba(31,98,81,0.045);
+  --accent-strong: #91DCAC;
+  --accent-muted: #F581A4;
+  overflow-x: hidden;
 }
 
 /* small decorative assets inside pricing section */
@@ -854,22 +855,80 @@
 }
 
 /* table container sits above decor */
-.pricing-table-wrap { position: relative; z-index: 2; }
+.pricing-table-wrap { 
+  position: relative;
+  z-index: 2;
+  overflow-x: auto;
+  overflow-y: hidden; /* <- explicitly hide vertical overflow to prevent inner scrollbar */
+  -webkit-overflow-scrolling: touch;
+  scroll-padding: 1rem;
+  max-width: 100%;
+}
+
+/* prevent columns from compressing too far — allow scroll instead */
+.pricing-table {
+  min-width: 780px;
+  width: 100%;
+}
+
+/* keep header visible while user scrolls horizontally/vertically */
+.pricing-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  /* preserve the existing header look while stuck */
+  background: linear-gradient(90deg, rgba(145,220,172,0.06), rgba(245,129,164,0.03));
+  backdrop-filter: blur(6px);
+}
+
+/* tiny polish: ensure the first column remains readable when scrolling horizontally */
+.pricing-table tbody td.col-item {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: rgba(255,255,255,0.95);
+  box-shadow: 2px 0 8px rgba(16,24,40,0.04);
+}
 
 /* clean table layout */
 .pricing-table {
   width: 100%;
   border-collapse: collapse;
-  background: rgba(255,255,255,0.985);
+  /* translucent glass surface */
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  backdrop-filter: blur(6px) saturate(1.02);
+  -webkit-backdrop-filter: blur(6px) saturate(1.02);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 14px 40px rgba(16,24,40,0.06);
   font-size: 0.95rem;
   border: 1px solid var(--pricing-border);
+  z-index: 2;
+}
+
+/* ensure claim cards sit above the overlay as well */
+.claim-card,
+.venue-card {
+  position: relative;
+  z-index: 2;
+  /* keep cards translucent (glass) so image is visible */
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  backdrop-filter: blur(8px) saturate(1.02);
+  -webkit-backdrop-filter: blur(8px) saturate(1.02);
+  border-radius: 14px;
+  padding: 1.25rem;
+  box-shadow: 0 10px 28px rgba(16,24,40,0.06);
+  border: 1px solid rgba(31,98,81,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  color: #23312b;
 }
 
 /* header row */
 .pricing-table thead th {
+  position: relative;
+  z-index: 3;
   text-align: left;
   padding: 14px 18px;
   background: linear-gradient(90deg, rgba(145,220,172,0.06), rgba(245,129,164,0.03));
@@ -880,12 +939,13 @@
   font-family: var(--font-moderniz);
 }
 
-/* body cells */
+/* body cells - stronger separators while preserving translucency */
 .pricing-table tbody td {
   padding: 14px 18px;
-  border-bottom: 1px solid var(--pricing-border);
+  border-bottom: 1px solid rgba(31,98,81,0.10);
   vertical-align: middle;
   color: #374151;
+  background: transparent;
 }
 
 /* category badge on first column for visual hierarchy */
@@ -934,246 +994,547 @@
   transition: background 160ms ease;
 }
 
-/* responsive: stack into cards on narrow screens */
+/* responsive: transform table into informative cards on narrow screens */
 @media (max-width: 720px) {
-  .pricing-decor-large, .pricing-decor-small { display: none; }
+  .pricing-decor-large,
+  .pricing-decor-small {
+    display: none;
+  }
+
+  /* keep horizontal scroller active and prevent inner vertical scrollbar */
+  .pricing-table-wrap {
+    overflow-x: auto;
+    overflow-y: hidden; /* keep vertical overflow hidden */
+    -webkit-overflow-scrolling: touch;
+    scroll-padding: 1rem;
+    padding-bottom: 0.5rem;
+    max-width: 100%;
+  }
+
+  /* keep the table layout so it stays horizontally scrollable */
   .pricing-table {
-    display: block;
+    display: table;
+    width: max-content; /* allow horizontal overflow instead of collapsing columns */
+    min-width: 780px;   /* same desktop min so horizontal scroll appears on narrow viewports */
+    border-collapse: collapse;
+    background: transparent;
     box-shadow: none;
     border: none;
-    background: transparent;
   }
-  .pricing-table thead { display: none; }
-  .pricing-table tbody { display: grid; gap: 12px; }
+
+  /* keep the header visible and readable */
+  .pricing-table thead {
+    display: table-header-group;
+  }
+  .pricing-table thead th {
+    white-space: nowrap;
+    padding: 10px 14px;
+  }
+
+  /* normal table body rows/cells (no stacking) */
+  .pricing-table tbody {
+    display: table-row-group;
+    width: 100%;
+  }
   .pricing-table tbody tr {
-    display: grid;
-    grid-template-columns: 1fr;
-    padding: 12px;
-    background: rgba(255,255,255,0.98);
-    border-radius: 10px;
-    box-shadow: 0 8px 20px rgba(16,24,40,0.04);
-    border-bottom: none;
+    display: table-row;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
   }
-  .pricing-table tbody td { display: flex; justify-content: space-between; padding: 10px 12px; border-bottom: none; }
-  .col-item { color: #682950; font-weight: 700; padding-left: 12px; }
-  .col-main { font-weight: 800; color: #0f5132; }
+  .pricing-table tbody td {
+    display: table-cell;
+    white-space: nowrap;
+    vertical-align: middle;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(31,98,81,0.06);
+  }
+
+  /* keep sticky first column behavior */
+  .pricing-table tbody td.col-item,
+  .pricing-table thead th.col-item {
+    position: sticky;
+    left: 0;
+    z-index: 6;
+    background: rgba(255,255,255,0.95);
+    box-shadow: 2px 0 8px rgba(16,24,40,0.04);
+  }
+
+  /* ensure nothing forces additional horizontal overflow */
+  .pricing-table, .pricing-table * {
+    box-sizing: border-box;
+    max-width: none;
+    overflow-wrap: normal;
+  }
 }
 
-/* subtle focus styles for accessibility */
-.pricing-table tbody tr:focus-within td {
-  outline: 2px solid rgba(145,220,172,0.18);
-  outline-offset: -2px;
+/* Pricing title gradient */
+.pricing-title-gradient {
+  background: linear-gradient(
+    90deg,
+    #4D9D56 0%,
+    #FFE1C4 25%,
+    #682950 50%,
+    #F581A4 75%,
+    #4E765C 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
 }
 
-/* Typography helpers (use site font vars) */
-.font-moderniz { font-family: var(--font-moderniz) !important; }
-.font-mustica { font-family: var(--font-mustica) !important; }
-
-.pricing-title { color: var(--accent-strong); font-family: var(--font-moderniz); margin-bottom: 1rem; }
-
-/* ===== Timeline Section (updated colors to match site palette) ===== */
+/* ===== Timeline styles ===== */
 .timeline-section {
-  background: linear-gradient(135deg, rgba(145,220,172,0.03), rgba(245,129,164,0.02));
   position: relative;
-  --cirun-accent-green: #91DCAC;
-  --cirun-accent-pink: #F581A4;
-  --cirun-text-strong: #1F6251;
-  --cirun-muted: #52605f;
-  --timeline-border: rgba(31,98,81,0.10);
-  --timeline-card-shadow: 0 10px 28px rgba(16,24,40,0.06);
+  padding: 3rem 0;
+  color: var(--foreground);
+  background: linear-gradient(90deg, #a0d4ac, #e2969c);
+  background-size: cover;
+  background-position: center;
 }
 
-/* Title */
-.timeline-title-wrap h2 {
-  color: var(--cirun-text-strong);
-}
-
-/* scroll wrapper (unchanged behaviour) */
 .timeline-scroll-wrap {
   position: relative;
-  overflow-x: auto;
-  overflow-y: hidden;
+  z-index: 2;
+  overflow-x: auto;  /* horizontal only */
+  overflow-y: hidden; /* <- prevent vertical scroll inside this wrapper */
+  padding: 1.5rem 0;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: linear-gradient(90deg,var(--cirun-accent-green),var(--cirun-accent-pink)) transparent;
+  scroll-padding: 1rem;
 }
 
-.timeline-scroll-wrap::-webkit-scrollbar {
-  height: 8px;
-}
-.timeline-scroll-wrap::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.02);
-  border-radius: 10px;
-}
-.timeline-scroll-wrap::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, var(--cirun-accent-green), var(--cirun-accent-pink));
-  border-radius: 10px;
-}
-
-/* cards container */
 .timeline-cards {
   display: flex;
   gap: 1.5rem;
-  padding-bottom: 1rem;
-  min-width: min-content;
+  min-width: max-content;
+  padding: 0 1rem;
 }
 
-/* card */
 .timeline-card {
-  flex: 0 0 280px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: var(--timeline-card-shadow);
-  border: 1px solid var(--timeline-border);
-  transition: transform 280ms ease, box-shadow 280ms ease;
   position: relative;
-  overflow: hidden;
-}
-
-/* accent stripe uses site gradient */
-.timeline-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: linear-gradient(90deg, var(--cirun-accent-green), var(--cirun-accent-pink));
-  opacity: 0.9;
-}
-
-/* hover */
-.timeline-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 18px 40px rgba(16,24,40,0.10);
-}
-
-/* badge styled with subtle tint and accent color */
-.timeline-badge {
-  display: inline-block;
-  padding: 6px 12px;
-  background: linear-gradient(90deg, rgba(145,220,172,0.12), rgba(245,129,164,0.08));
-  color: var(--cirun-accent-pink);
-  font-size: 0.72rem;
-  font-weight: 800;
-  border-radius: 999px;
-  margin-bottom: 0.75rem;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-/* date (main label) */
-.timeline-date {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--cirun-text-strong);
-  margin-bottom: 0.5rem;
-  font-family: var(--font-moderniz);
-}
-
-/* description */
-.timeline-text {
-  font-size: 0.94rem;
-  color: var(--cirun-muted);
-  line-height: 1.5;
-  font-family: var(--font-mustica);
-}
-
-/* responsive tweaks (keeps scrollable layout intact) */
-@media (max-width: 768px) {
-  .timeline-section { padding-top: 2rem; padding-bottom: 2rem; }
-  .timeline-title-wrap h2 { font-size: 1.75rem; }
-  .timeline-card { flex: 0 0 240px; padding: 1.25rem; }
-  .timeline-date { font-size: 0.98rem; }
-}
-/* ===== end timeline updates ===== */
-
-/* Claim Racepack & Venue styles */
-.claim-venue-section {
-  background: linear-gradient(180deg, rgba(255,255,255,0.0), rgba(245,249,246,0.02));
-  padding-top: 2.5rem;
-  padding-bottom: 2.5rem;
-}
-
-.claim-card,
-.venue-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: 0 12px 30px rgba(16,24,40,0.06);
-  border: 1px solid rgba(31,98,81,0.06);
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  gap: 1rem;
+  padding: 2rem 1.5rem;
+  min-width: 320px;
+  max-width: 380px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  backdrop-filter: blur(8px) saturate(1.02);
+  -webkit-backdrop-filter: blur(8px) saturate(1.02);
+  border: 1px solid rgba(31,98,81,0.08);
+  box-shadow: 0 10px 28px rgba(16,24,40,0.06);
+  flex-shrink: 0;
 }
 
-.claim-card-header,
-.venue-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: space-between;
+.timeline-scroll-wrap::-webkit-scrollbar {
+  height: 10px;
 }
 
-.badge-small {
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 6px 10px;
+.timeline-scroll-wrap::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #91DCAC, #F581A4);
+  border-radius: 5px;
+}
+
+.timeline-scroll-wrap::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.15);
+  border-radius: 5px;
+}
+
+.timeline-card .timeline-badge {
+  font-family: var(--font-moderniz);
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: #0f5132;
+  background: linear-gradient(90deg, rgba(145,220,172,0.18), rgba(245,129,164,0.08));
+  padding: 0.5rem 1rem;
   border-radius: 999px;
-  color: #fff;
-  background: linear-gradient(90deg,#91DCAC,#F581A4);
-  box-shadow: 0 6px 18px rgba(145,220,172,0.12);
+  display: inline-block;
+  width: fit-content;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.claim-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 6px;
-  margin-top: 0.5rem;
-  color: #42504f;
+.timeline-card .timeline-date {
+  font-family: var(--font-moderniz);
+  color: #0f5132;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.3px;
+}
+
+.timeline-card .timeline-text {
+  font-family: var(--font-mustica);
+  color: #27443a;
+  font-weight: 600;
   font-size: 0.95rem;
+  line-height: 1.55;
 }
 
-.venue-map {
-  height: 160px;
+@media (max-width: 768px) {
+  .timeline-card {
+    min-width: 280px;
+    padding: 1.5rem 1rem;
+  }
+
+  .timeline-card .timeline-date {
+    font-size: 0.95rem;
+  }
+
+  .timeline-card .timeline-text {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .timeline-card {
+    min-width: 260px;
+    padding: 1.25rem 1rem;
+  }
+
+  .timeline-card .timeline-badge {
+    font-size: 0.7rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .timeline-card .timeline-date {
+    font-size: 0.9rem;
+  }
+
+  .timeline-card .timeline-text {
+    font-size: 0.85rem;
+  }
+}
+
+/* ===== Benefits Section (after pricing table) ===== */
+.benefits-section {
+  position: relative;
+  z-index: 2;
+  margin-top: 3rem;
+}
+
+.benefit-section-title {
+  background: linear-gradient(
+    90deg,
+    #4D9D56 0%,
+    #FFE1C4 25%,
+    #682950 50%,
+    #F581A4 75%,
+    #4E765C 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 1.5px;
+}
+
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.benefit-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+  backdrop-filter: blur(8px) saturate(1.02);
+  -webkit-backdrop-filter: blur(8px) saturate(1.02);
+  border: 1px solid rgba(31,98,81,0.12);
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  transition: transform 280ms cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 280ms ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.benefit-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 48px rgba(16,24,40,0.12);
+  border-color: rgba(145,220,172,0.24);
+}
+
+.benefit-icon-wrap {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(145,220,172,0.12), rgba(245,129,164,0.08));
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: linear-gradient(180deg, rgba(145,220,172,0.06), rgba(245,129,164,0.03));
+  margin-bottom: 0.5rem;
+  position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
-.venue-decor {
-  width: 60%;
-  opacity: 0.24;
-  transform: rotate(-6deg);
-  user-select: none;
+.benefit-icon-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent 60%);
   pointer-events: none;
 }
 
-/* subtle CTA */
-.btn-register-ghost {
-  display: inline-block;
-  padding: 8px 14px;
-  border-radius: 999px;
-  color: #1F6251;
-  border: 1px solid rgba(31,98,81,0.08);
-  background: rgba(145,220,172,0.06);
-  font-weight: 700;
-  transition: transform 180ms ease, box-shadow 180ms ease;
-}
-.btn-register-ghost:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 26px rgba(16,24,40,0.06);
+.benefit-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
-/* responsive */
-@media (max-width: 768px) {
-  .claim-card, .venue-card { padding: 1rem; }
-  .venue-map { height: 140px; }
+.benefit-svg {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 12px rgba(145,220,172,0.2));
+}
+
+.benefit-title {
+  font-family: var(--font-moderniz);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1F6251;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+.benefit-description {
+  font-family: var(--font-mustica);
+  font-size: 0.875rem;
+  color: #52605f;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Responsive: tablet adjustments */
+@media (max-width: 1024px) {
+  .benefits-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .benefit-card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .benefit-icon-wrap {
+    width: 70px;
+    height: 70px;
+  }
+
+  .benefit-svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .benefit-title {
+    font-size: 1rem;
+  }
+
+  .benefit-description {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Responsive: mobile adjustments */
+@media (max-width: 640px) {
+  .benefits-section {
+    margin-top: 2rem;
+  }
+
+  .benefits-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .benefit-card {
+    padding: 1.25rem 1rem;
+    border-radius: 12px;
+  }
+
+  .benefit-icon-wrap {
+    width: 64px;
+    height: 64px;
+  }
+
+  .benefit-svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .benefit-title {
+    font-size: 0.9375rem;
+  }
+
+  .benefit-description {
+    font-size: 0.75rem;
+  }
+}
+
+/* --- Mobile: improved, compact & non-overflowing pricing cards --- */
+@media (max-width: 720px) {
+  .pricing-decor-large,
+  .pricing-decor-small {
+    display: none;
+  }
+
+  /* keep horizontal scroller active and prevent inner vertical scrollbar */
+  .pricing-table-wrap {
+    overflow-x: auto;
+    overflow-y: hidden; /* keep vertical overflow hidden */
+    -webkit-overflow-scrolling: touch;
+    scroll-padding: 1rem;
+    padding-bottom: 0.5rem;
+    max-width: 100%;
+  }
+
+  /* keep the table layout so it stays horizontally scrollable */
+  .pricing-table {
+    display: table;
+    width: max-content; /* allow horizontal overflow instead of collapsing columns */
+    min-width: 780px;   /* same desktop min so horizontal scroll appears on narrow viewports */
+    border-collapse: collapse;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+  }
+
+  /* keep the header visible and readable */
+  .pricing-table thead {
+    display: table-header-group;
+  }
+  .pricing-table thead th {
+    white-space: nowrap;
+    padding: 10px 14px;
+  }
+
+  /* normal table body rows/cells (no stacking) */
+  .pricing-table tbody {
+    display: table-row-group;
+    width: 100%;
+  }
+  .pricing-table tbody tr {
+    display: table-row;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
+  }
+  .pricing-table tbody td {
+    display: table-cell;
+    white-space: nowrap;
+    vertical-align: middle;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(31,98,81,0.06);
+  }
+
+  /* keep sticky first column behavior */
+  .pricing-table tbody td.col-item,
+  .pricing-table thead th.col-item {
+    position: sticky;
+    left: 0;
+    z-index: 6;
+    background: rgba(255,255,255,0.95);
+    box-shadow: 2px 0 8px rgba(16,24,40,0.04);
+  }
+
+  /* ensure nothing forces additional horizontal overflow */
+  .pricing-table, .pricing-table * {
+    box-sizing: border-box;
+    max-width: none;
+    overflow-wrap: normal;
+  }
+}
+
+/* Prevent inner vertical scrollbars coming from pricing / benefits area
+   - keep timeline and pricing horizontal scroll intact
+   - ensure benefit icons cannot grow beyond intended size */
+.pricing-table-wrap,
+.benefits-section,
+.benefits-grid,
+.benefit-card {
+  /* prevent these containers from producing their own vertical scrollbars */
+  overflow-y: hidden !important;
+  max-height: none !important;
+  /* hide vertical scrollbar chrome in WebKit/Firefox for these wrappers */
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Strong override: prevent inner vertical scrollbars while preserving horizontal scroll */
+html body .pricing-table-wrap,
+html body .timeline-scroll-wrap,
+html body .benefits-section,
+html body .benefits-grid,
+html body .benefit-card {
+  /* ensure vertical scroll never appears inside these containers */
+  overflow-y: hidden !important;
+  /* allow horizontal scrolling where intended */
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  /* don't let any accidental height constraints produce scrollbars */
+  max-height: none !important;
+  /* hide any scrollbar chrome defensively (no visual change because overflow-y is hidden) */
+  -ms-overflow-style: none !important; /* IE/Edge */
+  scrollbar-width: none !important; /* Firefox */
+}
+
+/* ensure table wrapper keeps horizontal scrolling and header sticky */
+html body .pricing-table-wrap {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+/* ensure timeline wrapper keeps horizontal scrolling and no vertical */
+html body .timeline-scroll-wrap {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+/* ensure nothing inside forces a vertical overflow */
+html body .pricing-table,
+html body .pricing-table * {
+  max-height: none !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+
+/* --- Fix: prevent <main> from having its own vertical scrollbar --- */
+/* Ensure the document (html/body) is the scroll container and main is content-only. */
+main,
+main[data-slot="main"],
+.app-main {
+  overflow-y: visible !important;   /* don't create internal vertical scroll */
+  overflow-x: visible !important;
+  height: auto !important;
+  min-height: 100vh !important;     /* keep full viewport height but not constrained */
+  -webkit-overflow-scrolling: auto !important;
+}
+
+/* Make sure html/body allow normal page scrolling */
+html, body {
+  height: auto !important;
+  overflow-y: auto !important;
+}
+
+/* Defensive: some wrappers previously forced scrollbars — ensure they don't create vertical scroll */
+.pricing-table-wrap,
+.timeline-scroll-wrap,
+.benefits-section,
+.partner-loop-with-borders,
+.sponsor-container,
+.home_top,
+.doc-decor,
+.doc-thumb-overlays {
+  overflow-y: hidden !important; /* only inner horizontal scrollers should remain (explicit) */
 }

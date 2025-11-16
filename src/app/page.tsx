@@ -191,7 +191,7 @@ export default function Home() {
 
             {/* Right: Text content overlays the background image */}
             <div
-              className="relative bg-gradient-to-r from-[#a0d4ac]/90 to-[#e2969c]/90 p-6 sm:p-8 md:p-12 md:pl-20 flex flex-col justify-center min-h-[400px]"
+              className="relative bg-gradient-to-r from-[#a0d4ac]/50 to-[#e2969c]/90 p-6 sm:p-8 md:p-12 md:pl-20 flex flex-col justify-center min-h-[400px]"
               data-aos="fade-left"
               data-aos-duration="1200"
             >
@@ -228,7 +228,9 @@ export default function Home() {
           <img src="/assets/asset10.svg" className="pricing-decor-small" alt="" />
         </div>
 
-        <h2 className="pricing-title text-2xl md:text-3xl font-moderniz font-bold text-center mb-6">HARGA TIKET</h2>
+        <h2 className="pricing-title text-2xl md:text-3xl font-moderniz font-bold text-center mb-6">
+          <span className="pricing-title-gradient">HARGA TIKET</span>
+        </h2>
 
         <div className="pricing-table-wrap">
           <table className="pricing-table" role="table" aria-label="Harga Tiket Ciputra Color Run">
@@ -244,28 +246,28 @@ export default function Home() {
             </thead>
             <tbody>
               <tr>
-                <td className="col-item">10K</td>
-                <td className="col-main font-mustica">Rp 250.000</td>
-                <td className="col-tier">Rp 235.000</td>
-                <td className="col-tier">Rp 225.000</td>
-                <td className="col-tier">Rp 215.000</td>
-                <td className="col-note">Early bird: Rp 220.000</td>
+                <td className="col-item" data-label="Kategori">10K</td>
+                <td className="col-main font-mustica" data-label="Harga Dasar">Rp 250.000</td>
+                <td className="col-tier" data-label="Komunitas 10-29">Rp 235.000</td>
+                <td className="col-tier" data-label="Komunitas 30-59">Rp 225.000</td>
+                <td className="col-tier" data-label="Komunitas ≥60">Rp 215.000</td>
+                <td className="col-note" data-label="Promo">Early bird: Rp 220.000</td>
               </tr>
               <tr>
-                <td className="col-item">5K</td>
-                <td className="col-main font-mustica">Rp 200.000</td>
-                <td className="col-tier">Rp 190.000</td>
-                <td className="col-tier">Rp 180.000</td>
-                <td className="col-tier">Rp 170.000</td>
-                <td className="col-note">Early bird: Rp 180.000</td>
+                <td className="col-item" data-label="Kategori">5K</td>
+                <td className="col-main font-mustica" data-label="Harga Dasar">Rp 200.000</td>
+                <td className="col-tier" data-label="Komunitas 10-29">Rp 190.000</td>
+                <td className="col-tier" data-label="Komunitas 30-59">Rp 180.000</td>
+                <td className="col-tier" data-label="Komunitas ≥60">Rp 170.000</td>
+                <td className="col-note" data-label="Promo">Early bird: Rp 180.000</td>
               </tr>
               <tr>
-                <td className="col-item">3K</td>
-                <td className="col-main font-mustica">Rp 150.000</td>
-                <td className="col-tier">Rp 140.000</td>
-                <td className="col-tier">Rp 135.000</td>
-                <td className="col-tier">—</td>
-                <td className="col-note">
+                <td className="col-item" data-label="Kategori">3K</td>
+                <td className="col-main font-mustica" data-label="Harga Dasar">Rp 150.000</td>
+                <td className="col-tier" data-label="Komunitas 10-29">Rp 140.000</td>
+                <td className="col-tier" data-label="Komunitas 30-59">Rp 135.000</td>
+                <td className="col-tier" data-label="Komunitas ≥60">—</td>
+                <td className="col-note" data-label="Promo">
                   Early bird: Rp 130.000<br/>
                   Bundling family (4 orang): Rp 145.000 / orang
                 </td>
@@ -273,46 +275,115 @@ export default function Home() {
             </tbody>
           </table>
         </div>
+
+        {/* Benefits Section */}
+        <div className="benefits-section mt-12" data-aos="fade-up">
+          <h3 className="text-3xl md:text-4xl font-moderniz font-extrabold text-center mb-10 benefit-section-title">
+            BENEFIT PENDAFTARAN
+          </h3>
+          
+          <div className="benefits-grid">
+            {/* Jersey & Medal Card */}
+            <div className="benefit-card" data-aos="zoom-in" data-aos-delay="100">
+              <div className="benefit-icon-wrap">
+                <img src="/Homepage/jersey-medal.png" alt="Jersey & Medali" className="benefit-image" />
+              </div>
+              <h4 className="benefit-title">Jersey & Medali</h4>
+              <p className="benefit-description">
+                Dapatkan jersey eksklusif dan medali finisher untuk setiap peserta
+              </p>
+            </div>
+
+            {/* Fresh Money Card */}
+            <div className="benefit-card" data-aos="zoom-in" data-aos-delay="200">
+              <div className="benefit-icon-wrap bg-gradient-to-br from-[#FFD700]/20 to-[#FFA500]/10">
+                <svg className="benefit-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#gold-gradient)" stroke="#FFD700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <defs>
+                    <linearGradient id="gold-gradient" x1="12" y1="2" x2="12" y2="21.02" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#FFD700"/>
+                      <stop offset="1" stopColor="#FFA500"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <h4 className="benefit-title">Fresh Money</h4>
+              <p className="benefit-description">
+                Hadiah uang tunai untuk juara 1, 2, dan 3 di setiap kategori
+              </p>
+            </div>
+
+            {/* Powder Color War Card */}
+            <div className="benefit-card" data-aos="zoom-in" data-aos-delay="300">
+              <div className="benefit-icon-wrap bg-gradient-to-br from-[#91DCAC]/20 to-[#F581A4]/10">
+                <svg className="benefit-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="3" fill="#91DCAC"/>
+                  <circle cx="8" cy="8" r="2" fill="#F581A4"/>
+                  <circle cx="16" cy="8" r="2" fill="#4EF9CD"/>
+                  <circle cx="8" cy="16" r="2" fill="#FFD700"/>
+                  <circle cx="16" cy="16" r="2" fill="#73E9DD"/>
+                  <path d="M12 2C12 2 15 5 15 8C15 10 13.5 12 12 12C10.5 12 9 10 9 8C9 5 12 2 12 2Z" fill="#91DCAC" opacity="0.6"/>
+                  <path d="M2 12C2 12 5 9 8 9C10 9 12 10.5 12 12C12 13.5 10 15 8 15C5 15 2 12 2 12Z" fill="#F581A4" opacity="0.6"/>
+                </svg>
+              </div>
+              <h4 className="benefit-title">Powder Color War</h4>
+              <p className="benefit-description">
+                Nikmati serunya perang warna dengan bubuk warna-warni yang aman
+              </p>
+            </div>
+
+            {/* Additional Benefits Card */}
+            <div className="benefit-card" data-aos="zoom-in" data-aos-delay="400">
+              <div className="benefit-icon-wrap bg-gradient-to-br from-[#4EF9CD]/20 to-[#73E9DD]/10">
+                <svg className="benefit-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 11L12 14L22 4" stroke="#4EF9CD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="#73E9DD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <h4 className="benefit-title">Benefit Lainnya</h4>
+              <p className="benefit-description">
+                Konsumsi, doorprize, entertainment, dan banyak lagi!
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Timeline Section */}
       <section className="timeline-section py-12 md:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="grid md:grid-cols-[1fr_2fr] gap-8 items-center">
-            {/* Left: Title */}
-            <div className="timeline-title-wrap" data-aos="fade-right">
-              <h2 className="text-3xl md:text-4xl font-bold text-[#1F6251] mb-2 font-moderniz">
-                TIMELINE
-              </h2>
-              <p className="text-gray-600 font-mustica">Jadwal Penting Event</p>
-            </div>
+          <h2 className="text-3xl md:text-4xl font-bold text-center text-[#1F6251] mb-8 font-moderniz" data-aos="fade-up">
+            TIMELINE
+          </h2>
+          <p className="text-center text-gray-600 font-mustica mb-8" data-aos="fade-up" data-aos-delay="100">
+            Jadwal Penting Event
+          </p>
 
-            {/* Right: Scrollable timeline cards */}
-            <div className="timeline-scroll-wrap" data-aos="fade-left">
-              <div className="timeline-cards">
-                <div className="timeline-card">
-                  <div className="timeline-badge">REGISTRASI</div>
-                  <div className="timeline-date">1 Desember 2025 — 28 Maret 2026</div>
-                  <p className="timeline-text">
-                    Registrasi dibuka sejak 1 Desember 2025 hingga 28 Maret 2026, atau sampai kuota terpenuhi.
-                  </p>
-                </div>
+          {/* Horizontal scrollable timeline cards */}
+          <div className="timeline-scroll-wrap" data-aos="fade-up" data-aos-delay="200">
+            <div className="timeline-cards">
+              <div className="timeline-card">
+                <div className="timeline-badge">REGISTRASI</div>
+                <div className="timeline-date">1 Desember 2025 — 28 Maret 2026</div>
+                <p className="timeline-text">
+                  Registrasi dibuka sejak 1 Desember 2025 hingga 28 Maret 2026, atau sampai kuota terpenuhi.
+                </p>
+              </div>
 
-                <div className="timeline-card">
-                  <div className="timeline-badge">PENGAMBILAN RACE PACK</div>
-                  <div className="timeline-date">9 — 11 April 2026</div>
-                  <p className="timeline-text">
-                    Ambil race pack pada tanggal 9 sampai 11 April 2026.
-                  </p>
-                </div>
+              <div className="timeline-card">
+                <div className="timeline-badge">PENGAMBILAN RACE PACK</div>
+                <div className="timeline-date">9 — 11 April 2026</div>
+                <p className="timeline-text">
+                  Ambil race pack pada tanggal 9 sampai 11 April 2026.
+                </p>
+              </div>
 
-                <div className="timeline-card">
-                  <div className="timeline-badge">RUNNING DAY</div>
-                  <div className="timeline-date">12 April 2026</div>
-                  <p className="timeline-text">
-                    Hari lomba: 12 April 2026 — mari bergabung dan bersenang-senang!
-                  </p>
-                </div>
+              <div className="timeline-card">
+                <div className="timeline-badge">RUNNING DAY</div>
+                <div className="timeline-date">12 April 2026</div>
+                <p className="timeline-text">
+                  Hari lomba: 12 April 2026 — mari bergabung dan bersenang-senang!
+                </p>
               </div>
             </div>
           </div>
@@ -349,8 +420,16 @@ export default function Home() {
                 Start dan finish akan berada di <strong>Universitas Ciputra Surabaya</strong>.
               </p>
               <div className="venue-map mt-4" aria-hidden>
-                {/* Decorative asset — non-interactive */}
-                <img src="/assets/asset4.svg" alt="" className="venue-decor" />
+                {/* Embedded Google Maps (Universitas Ciputra Surabaya) */}
+                <iframe
+                  title="Universitas Ciputra Surabaya - Racepack Claim Location"
+                  src="https://www.google.com/maps?q=Universitas+Ciputra+Surabaya&z=16&output=embed"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="venue-iframe"
+                />
+                {/* subtle decorative overlay (keeps previous visual language) */}
+                <img src="/assets/asset4.svg" alt="" className="venue-decor" aria-hidden />
               </div>
               <p className="mt-4 text-sm text-[#52605f]">
                 Detail titik kumpul dan rute akhir akan diumumkan melalui email dan halaman acara.
