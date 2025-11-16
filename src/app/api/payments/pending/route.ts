@@ -12,7 +12,7 @@ export async function GET(request: Request) {
       },
       include: {
         user: true,
-        payments: true,
+        payments: true, // include payment records (proofOfPayment, amount, etc.)
       },
       orderBy: {
         createdAt: 'desc',
@@ -28,6 +28,14 @@ export async function GET(request: Request) {
       groupName: reg.groupName || 'N/A',
       totalAmount: reg.totalAmount,
       createdAt: reg.createdAt,
+      // include payments array so frontend can show proof(s)
+      payments: reg.payments.map(p => ({
+        id: p.id,
+        amount: p.amount,
+        proofOfPayment: p.proofOfPayment, // e.g. "/uploads/xxx.png"
+        status: p.status,
+        createdAt: p.createdAt,
+      })),
     }));
 
     return NextResponse.json(payments);

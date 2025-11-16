@@ -22,7 +22,8 @@ export default function LODashboard() {
         setLoading(true);
         const res = await fetch('/api/payments/pending');
         if (!res.ok) {
-          throw new Error('Failed to fetch payments');
+          const err = await res.json().catch(() => ({ error: res.statusText }));
+          throw new Error(err.error || 'Failed to fetch payments');
         }
         const data = await res.json();
         setPayments(data);
@@ -39,28 +40,49 @@ export default function LODashboard() {
 
   const handleAccept = async (registrationId: number) => {
     try {
+      // include credentials so any cookie-based admin session is sent
       const res = await fetch('/api/payments/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ registrationId }),
       });
 
+      const body = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        throw new Error('Failed to confirm payment');
+        // show server-provided message when available
+        const msg = body?.error || body?.message || res.statusText || 'Unknown error';
+        throw new Error(msg);
       }
 
       alert(`Payment confirmed. QR code sent to user email.`);
-      // Refresh the list
-      setPayments(payments.filter(p => p.registrationId !== registrationId));
+      setPayments(prev => prev.filter(p => p.registrationId !== registrationId));
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      alert('Error: ' + (err.message || 'Failed to confirm payment'));
     }
   };
 
-  const handleDecline = (registrationId: number) => {
-    // TODO: Backend - Decline payment, notify user
-    alert(`Payment for registration ${registrationId} declined.`);
-    setPayments(payments.filter(p => p.registrationId !== registrationId));
+  const handleDecline = async (registrationId: number) => {
+    try {
+      const res = await fetch('/api/payments/decline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ registrationId }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = body?.error || body?.message || res.statusText || 'Failed to decline payment';
+        throw new Error(msg);
+      }
+
+      alert('Payment declined — status updated in database.');
+      setPayments(prev => prev.filter(p => p.registrationId !== registrationId));
+    } catch (err: any) {
+      alert('Error: ' + (err.message || 'Failed to decline payment'));
+    }
   };
 
   // Filter payments by tab and search
@@ -121,6 +143,7 @@ export default function LODashboard() {
                   <tr className="bg-[#18181b] text-[#73e9dd]">
                     <th className="p-3 font-semibold">User Name</th>
                     <th className="p-3 font-semibold">{activeTab === 'community' ? 'Group Name' : 'Total Price (IDR)'}</th>
+                    <th className="p-3 font-semibold">Proof</th>
                     <th className="p-3 font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -133,6 +156,16 @@ export default function LODashboard() {
                           {payment.registrationType === 'community' ? payment.groupName : payment.totalAmount?.toLocaleString()}
                         </td>
                         <td className="p-3">
+                          {/* show first proof thumbnail if available */}
+                          {payment.payments && payment.payments.length > 0 && payment.payments[0].proofOfPayment ? (
+                            <a href={payment.payments[0].proofOfPayment} target="_blank" rel="noreferrer">
+                              <img src={payment.payments[0].proofOfPayment} alt="proof" className="w-20 h-14 object-cover rounded-md border" />
+                            </a>
+                          ) : (
+                            <span className="text-xs text-[#ffdfc0] opacity-60">No proof</span>
+                          )}
+                        </td>
+                        <td className="p-3">
                           <button className="bg-[#91dcac] hover:bg-[#73e9dd] text-[#18181b] px-4 py-2 mr-2 rounded transition-colors duration-150 font-bold" onClick={() => handleAccept(payment.registrationId)}>Accept</button>
                           <button className="bg-[#f581a4] hover:bg-[#ffdfc0] text-[#18181b] px-4 py-2 rounded transition-colors duration-150 font-bold" onClick={() => handleDecline(payment.registrationId)}>Decline</button>
                         </td>
@@ -140,7 +173,7 @@ export default function LODashboard() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={3} className="p-4 text-center text-[#ffdfc0]">No pending payments found.</td>
+                      <td colSpan={4} className="p-4 text-center text-[#ffdfc0]">No pending payments found.</td>
                     </tr>
                   )}
                 </tbody>
