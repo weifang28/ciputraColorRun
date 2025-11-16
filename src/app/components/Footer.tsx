@@ -65,13 +65,16 @@ export default function Footer() {
                         <h3 className="text-lg sm:text-2xl font-bold mb-1 tracking-wider">
                             CONTACT PERSON
                         </h3>
-                        <p className="text-sm sm:text-lg font-semibold mb-0.5">John Doe</p>
-                        <p className="text-xs sm:text-base opacity-90">+62 129 8329 8123 949</p>
+                        <p className="text-sm sm:text-lg font-semibold mb-0.5">Abel</p>
+                        <p className="text-xs sm:text-base opacity-90">WA: 0895410319676</p>
+                        <br />
+                        <p className="text-sm sm:text-lg font-semibold mb-0.5">Elysian</p>
+                        <p className="text-xs sm:text-base opacity-90">WA: 0811306658</p>
                     </div>
                     
                     <div className="flex items-center justify-center" data-aos="fade-left" aria-hidden>
-                        <div className="w-16 h-16 sm:w-28 sm:h-28 relative rounded-lg overflow-hidden bg-white/10 p-1 shadow-md">
-                            <Image src="/images/logo.png" alt="Ciputra Color Run Logo" fill className="object-contain opacity-95" />
+                        <div className="relative w-32 h-32 sm:w-48 sm:h-48 lg:w-56 lg:h-56 overflow-hidden bg-transparent p-0 shadow-none">
+                            <Image src="/images/logoWajib.png" alt="Ciputra Color Run Logo" fill className="object-contain opacity-100" />
                         </div>
                     </div>
                 </div>

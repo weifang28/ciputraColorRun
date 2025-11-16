@@ -17,25 +17,24 @@ const ASSETS = [
 ];
 
 const POSITIONS = [
-  // large decorative near top-left featured
-  { top: "8%", left: "6%", size: 140, cls: "large rotate", delay: "0s" },
-  // small accent near top-right featured
-  { top: "12%", left: "64%", size: 56, cls: "small rotate-slow", delay: "0.12s" },
-  // lower-left near thumbnails
-  { top: "62%", left: "8%", size: 48, cls: "petal rotate", delay: "0.22s" },
-  // lower-right near thumbnails
-  { top: "62%", left: "82%", size: 64, cls: "petal", delay: "0.3s" },
+  // moved closer to the featured docs and thumbnails for a more natural look
+  // added `rot` for a small base rotation (wrapper applies this so animations still run)
+  { top: "10%", left: "10%", size: 120, cls: "large rotate", delay: "0s", rot: -8 },
+  { top: "14%", left: "54%", size: 48, cls: "small rotate-slow", delay: "0.12s", rot: 12 },
+  { top: "56%", left: "12%", size: 44, cls: "petal rotate", delay: "0.18s", rot: -14 },
+  { top: "58%", left: "72%", size: 56, cls: "petal", delay: "0.22s", rot: 6 },
 
-  // extra small confetti around center grid
-  { top: "34%", left: "28%", size: 28, cls: "confetti tiny-rotate", delay: "0.08s" },
-  { top: "46%", left: "48%", size: 24, cls: "confetti tiny-rotate-2", delay: "0.18s" },
-  { top: "46%", left: "68%", size: 30, cls: "confetti tiny-rotate-3", delay: "0.26s" },
+  // confetti / small accents clustered nearer the grid center/right
+  { top: "36%", left: "34%", size: 28, cls: "confetti tiny-rotate", delay: "0.08s", rot: -20 },
+  { top: "46%", left: "44%", size: 22, cls: "confetti tiny-rotate-2", delay: "0.18s", rot: 18 },
+  { top: "46%", left: "58%", size: 26, cls: "confetti tiny-rotate-3", delay: "0.26s", rot: -10 },
 ];
 
 // small decorative single-item overlay per thumb (lightweight)
+// nudged overlays closer to thumbnails so they read as part of the gallery
 const THUMB_OVERLAYS = [
-  { offsetTop: "6%", offsetRight: "6%", size: 28, asset: "/assets/asset10.svg", cls: "thumb-petal" },
-  { offsetTop: "8%", offsetLeft: "6%", size: 22, asset: "/assets/asset5.svg", cls: "thumb-spark" },
+  { offsetTop: "6%", offsetRight: "4%", size: 28, asset: "/assets/asset10.svg", cls: "thumb-petal" },
+  { offsetTop: "8%", offsetLeft: "4%", size: 22, asset: "/assets/asset5.svg", cls: "thumb-spark" },
 ];
 
 export default function DocDecor() {
@@ -43,21 +42,35 @@ export default function DocDecor() {
     <>
       <div className="doc-decor" aria-hidden>
         {POSITIONS.map((p, i) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          // wrapper applies a small static rotation while the img retains animation transforms
+          <div
             key={`decor-${i}`}
-            src={ASSETS[i % ASSETS.length]}
-            alt=""
-            className={`doc-decor-item ${p.cls}`}
+            className="doc-decor-wrap"
             style={{
+              position: "absolute",
               top: p.top,
               left: p.left,
               width: p.size,
               height: p.size,
-              animationDelay: p.delay,
+              transform: `rotate(${p.rot ?? 0}deg)`,
+              pointerEvents: "none",
             }}
-            draggable={false}
-          />
+            aria-hidden
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={ASSETS[i % ASSETS.length]}
+              alt=""
+              className={`doc-decor-item ${p.cls}`}
+              style={{
+                width: "100%",
+                height: "100%",
+                animationDelay: p.delay,
+                display: "block",
+              }}
+              draggable={false}
+            />
+          </div>
         ))}
       </div>
 
@@ -66,6 +79,7 @@ export default function DocDecor() {
           The grid items are not modified — overlays are positioned absolutely inside section. */}
       <div className="doc-thumb-overlays" aria-hidden>
         {THUMB_OVERLAYS.map((t, i) => (
+          // keep small overlays but allow a tiny rotation for a natural look
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={`thumb-ov-${i}`}
@@ -78,6 +92,7 @@ export default function DocDecor() {
               left: (t as any).offsetLeft,
               width: t.size,
               height: t.size,
+              transform: `rotate(${(t as any).rot ?? 8}deg)`,
             }}
             draggable={false}
           />

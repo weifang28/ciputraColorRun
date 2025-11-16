@@ -428,8 +428,6 @@ export default function Home() {
                   referrerPolicy="no-referrer-when-downgrade"
                   className="venue-iframe"
                 />
-                {/* subtle decorative overlay (keeps previous visual language) */}
-                <img src="/assets/asset4.svg" alt="" className="venue-decor" aria-hidden />
               </div>
               <p className="mt-4 text-sm text-[#52605f]">
                 Detail titik kumpul dan rute akhir akan diumumkan melalui email dan halaman acara.
