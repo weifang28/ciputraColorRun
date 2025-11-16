@@ -219,6 +219,151 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Pricing Section: semantic table with minimal styling + small decor assets */}
+      <section className="pricing-section max-w-6xl mx-auto px-4 sm:px-6 py-10 relative">
+        {/* decorative assets near the table (non-interactive) */}
+        <div className="pricing-decor" aria-hidden>
+          <img src="/assets/asset4.svg" className="pricing-decor-large" alt="" />
+          <img src="/assets/asset10.svg" className="pricing-decor-small" alt="" />
+        </div>
+
+        <h2 className="pricing-title text-2xl md:text-3xl font-moderniz font-bold text-center mb-6">HARGA TIKET</h2>
+
+        <div className="pricing-table-wrap">
+          <table className="pricing-table" role="table" aria-label="Harga Tiket Ciputra Color Run">
+            <thead>
+              <tr>
+                <th scope="col" className="col-item">Kategori</th>
+                <th scope="col" className="col-main">Harga Dasar</th>
+                <th scope="col" className="col-tier">Komunitas 10-29</th>
+                <th scope="col" className="col-tier">Komunitas 30-59</th>
+                <th scope="col" className="col-tier">Komunitas ≥60</th>
+                <th scope="col" className="col-note">Early bird / Bundle</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="col-item">10K</td>
+                <td className="col-main font-mustica">Rp 250.000</td>
+                <td className="col-tier">Rp 235.000</td>
+                <td className="col-tier">Rp 225.000</td>
+                <td className="col-tier">Rp 215.000</td>
+                <td className="col-note">Early bird: Rp 220.000</td>
+              </tr>
+              <tr>
+                <td className="col-item">5K</td>
+                <td className="col-main font-mustica">Rp 200.000</td>
+                <td className="col-tier">Rp 190.000</td>
+                <td className="col-tier">Rp 180.000</td>
+                <td className="col-tier">Rp 170.000</td>
+                <td className="col-note">Early bird: Rp 180.000</td>
+              </tr>
+              <tr>
+                <td className="col-item">3K</td>
+                <td className="col-main font-mustica">Rp 150.000</td>
+                <td className="col-tier">Rp 140.000</td>
+                <td className="col-tier">Rp 135.000</td>
+                <td className="col-tier">—</td>
+                <td className="col-note">
+                  Early bird: Rp 130.000<br/>
+                  Bundling family (4 orang): Rp 145.000 / orang
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Timeline Section */}
+      <section className="timeline-section py-12 md:py-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="grid md:grid-cols-[1fr_2fr] gap-8 items-center">
+            {/* Left: Title */}
+            <div className="timeline-title-wrap" data-aos="fade-right">
+              <h2 className="text-3xl md:text-4xl font-bold text-[#1F6251] mb-2 font-moderniz">
+                TIMELINE
+              </h2>
+              <p className="text-gray-600 font-mustica">Jadwal Penting Event</p>
+            </div>
+
+            {/* Right: Scrollable timeline cards */}
+            <div className="timeline-scroll-wrap" data-aos="fade-left">
+              <div className="timeline-cards">
+                <div className="timeline-card">
+                  <div className="timeline-badge">REGISTRASI</div>
+                  <div className="timeline-date">1 Desember 2025 — 28 Maret 2026</div>
+                  <p className="timeline-text">
+                    Registrasi dibuka sejak 1 Desember 2025 hingga 28 Maret 2026, atau sampai kuota terpenuhi.
+                  </p>
+                </div>
+
+                <div className="timeline-card">
+                  <div className="timeline-badge">PENGAMBILAN RACE PACK</div>
+                  <div className="timeline-date">9 — 11 April 2026</div>
+                  <p className="timeline-text">
+                    Ambil race pack pada tanggal 9 sampai 11 April 2026.
+                  </p>
+                </div>
+
+                <div className="timeline-card">
+                  <div className="timeline-badge">RUNNING DAY</div>
+                  <div className="timeline-date">12 April 2026</div>
+                  <p className="timeline-text">
+                    Hari lomba: 12 April 2026 — mari bergabung dan bersenang-senang!
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Claim Racepack & Venue Section */}
+      <section className="claim-venue-section py-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="grid md:grid-cols-2 gap-8 items-stretch">
+            <div className="claim-card" data-aos="fade-up">
+              <div className="claim-card-header">
+                <h3 className="font-moderniz text-xl text-[#1F6251]">Claim Your Racepack</h3>
+                <span className="badge-small">Important</span>
+              </div>
+              <p className="font-mustica text-[#52605f] mt-3">
+                Registrants can claim their racepack at <strong>Corepreneur UC</strong>.
+              </p>
+              <ul className="claim-list mt-4">
+                <li><strong>Lokasi:</strong> Corepreneur UC, Universitas Ciputra</li>
+                <li><strong>Waktu Pengambilan:</strong> 9 — 11 April 2026</li>
+                <li><strong>Yang Harus Dibawa:</strong> ID & bukti pendaftaran (QR code / nama)</li>
+              </ul>
+              <p className="mt-4 text-sm text-[#52605f]">
+                Jika Anda mendaftar melalui komunitas, pastikan perwakilan membawa daftar peserta.
+              </p>
+            </div>
+
+            <div className="venue-card" data-aos="fade-up" data-aos-delay="80">
+              <div className="venue-card-header">
+                <h3 className="font-moderniz text-xl text-[#1F6251]">Start / Finish</h3>
+              </div>
+              <p className="font-mustica text-[#52605f] mt-2">
+                Start dan finish akan berada di <strong>Universitas Ciputra Surabaya</strong>.
+              </p>
+              <div className="venue-map mt-4" aria-hidden>
+                {/* Decorative asset — non-interactive */}
+                <img src="/assets/asset4.svg" alt="" className="venue-decor" />
+              </div>
+              <p className="mt-4 text-sm text-[#52605f]">
+                Detail titik kumpul dan rute akhir akan diumumkan melalui email dan halaman acara.
+              </p>
+              <div className="mt-4">
+                <Link href="/registration" className="inline-block btn-register-ghost">
+                  Need help? Contact us
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
