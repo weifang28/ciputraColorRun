@@ -8,7 +8,7 @@
         rgba(203, 220, 209, 0.4) 50%,   
         rgba(239, 146, 155, 0.5) 100% 
         ),
-        url('/Homepage/home_background.svg');
+        url('/Homepage/home_bg.jpg');
     background-size: cover; 
     background-position: center;
     background-repeat: no-repeat;
@@ -424,4 +424,223 @@
   .countdown-box {
     padding: 1rem 0.5rem;
   }
+}
+
+/* About section carousel + divider overlay */
+.about-carousel {
+  position: absolute;
+  inset: 0;
+  z-index: 0; /* images below divider and content */
+  overflow: hidden;
+}
+
+/* ensure slides sit beneath the divider */
+.about-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 900ms ease-in-out;
+  will-change: opacity, transform;
+  z-index: 0; /* image layer */
+}
+
+.about-slide.active {
+  opacity: 1;
+}
+
+/* Make carousel fill only its parent left column and ensure children size correctly */
+.about-left { position: relative; overflow: hidden; width: 100%; height: 100%; min-height: 400px; }
+
+.about-carousel {
+  position: relative; /* IMPORTANT: relative so absolute slides size to this container */
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0; /* images below divider and content */
+}
+
+/* Slides (images) inside the left column */
+.about-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  transition: opacity 700ms ease-in-out;
+  will-change: opacity;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.about-slide.active {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 2; /* keeps active above other slides */
+}
+
+/* Use <img> so make it cover parent */
+.about-slide-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Divider: above the left image but below the right column content */
+.about-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* place divider near the middle so it overlays the left image */
+  left: 55%;
+  width: 65%;
+  max-width: 900px;
+  transform: translateX(50%);
+  z-index: 5; /* > slides and < right-column content */
+  pointer-events: none;
+  opacity: 1; /* ensure visible by default */
+}
+
+/* Local animation that mirrors AOS timing — re-triggered from JS on index change */
+.about-divider.divider-animate {
+  animation: divider-fade-left 700ms ease-in-out both;
+}
+
+@keyframes divider-fade-left {
+  from {
+    opacity: 0;
+    transform: translateX(20px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* keep existing about-divider-img rules */
+.about-divider-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: right center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Ensure right content sits above divider */
+.about-section .about-content,
+.about-section .about-text-overlay,
+.about-section .z-10 {
+  position: relative;
+  z-index: 10;
+}
+
+/* Responsive: hide divider on small screens if it collides */
+@media (max-width: 768px) {
+  .about-left { display: none; }
+  .about-divider { display: none; }
+}
+
+/* Decor assets container (positioned inside .home_top_content) */
+.decor-assets {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3; /* sits above background but below any interactive UI if needed */
+}
+
+/* Default asset styling */
+.decor-item {
+  position: absolute;
+  display: block;
+  object-fit: contain;
+  opacity: 0.95;
+  transform-origin: center;
+  will-change: transform, opacity;
+  user-select: none;
+  -webkit-user-drag: none;
+  transition: opacity 300ms ease;
+}
+
+/* Animations */
+@keyframes floatY {
+  0% { transform: translateY(0) translateX(0) rotate(0deg); }
+  50% { transform: translateY(-12px) translateX(2px) rotate(-2deg); }
+  100% { transform: translateY(0) translateX(0) rotate(0deg); }
+}
+
+@keyframes floatYSlow {
+  0% { transform: translateY(0) translateX(0) rotate(0deg); }
+  50% { transform: translateY(-6px) translateX(-2px) rotate(1deg); }
+  100% { transform: translateY(0) translateX(0) rotate(0deg); }
+}
+
+@keyframes drift {
+  0% { transform: translateY(0) translateX(0) rotate(0deg); }
+  50% { transform: translateY(-18px) translateX(6px) rotate(6deg); opacity: 0.95; }
+  100% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 1; }
+}
+
+@keyframes spin {
+  0% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(18deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+/* attach animations to classes */
+.decor-item.float {
+  animation: floatY 4.5s ease-in-out infinite;
+}
+
+.decor-item.float-slow {
+  animation: floatYSlow 6.5s ease-in-out infinite;
+}
+
+.decor-item.drift {
+  animation: drift 5.2s ease-in-out infinite;
+}
+
+.decor-item.spin {
+  animation: spin 5s cubic-bezier(.2,.8,.2,1) infinite;
+}
+
+/* subtle pop-in on initial load */
+.decor-item {
+  opacity: 0;
+  animation-fill-mode: both;
+}
+.decor-item.float,
+.decor-item.float-slow,
+.decor-item.drift,
+.decor-item.spin {
+  animation-name: none; /* will be overridden by individual rules above after delay */
+  animation-fill-mode: both;
+  /* initial pop-in, then the main animation (pop-in via combined animation shorthand not used to keep simple) */
+  animation: none;
+}
+
+/* Use a small JS-friendly trick: the inline style sets animationDelay; rely on CSS to run */
+.decor-item {
+  /* first play a quick opacity transition via animation shorthand using var delay:
+     browsers use the inline animationDelay we pass from React */
+  animation: popIn 420ms ease forwards;
+}
+
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.85) translateY(6px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* After popIn finishes, run the main loop. We rely on animationDelay to offset timing.
+   To ensure the main animation loops, reapply with a slight JS toggle - but the above animations
+   also run because we set classes that contain looping animations. */
+
+/* Responsive: hide decorative floating assets on small screens */
+@media (max-width: 768px) {
+  .decor-assets { display: none; }
 }

@@ -6,6 +6,7 @@ import Link from "next/link";
 import "./styles/homepage.css";
 import LogoLoop from './components/LogoLoop'
 import CountdownTimer from './components/CountdownTimer';
+import AboutCarousel from './components/AboutCarousel';
 
 export default function Home() {
   // Refresh AOS animations when page loads
@@ -30,6 +31,17 @@ export default function Home() {
       src: TEMP_LOGO_PATH,
       alt: "Partner 3",
     }
+  ];
+
+  // list documentation images placed in /public/Homepage/documentation
+  const docImages = [
+    "/Homepage/documentation/doc1.jpg",
+    "/Homepage/documentation/doc2.jpg",
+    "/Homepage/documentation/doc3.jpg",
+    "/Homepage/documentation/doc4.jpg",
+    "/Homepage/documentation/doc5.jpg",
+    "/Homepage/documentation/doc6.jpg",
+    "/Homepage/documentation/doc7.jpg",
   ];
 
   return (
@@ -115,50 +127,47 @@ export default function Home() {
       <section className="relative w-full bg-gradient-to-r from-[#1F6251] to-[#9C686A] py-8 md:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-            <div
-              className="bg-gray-200 rounded-md flex items-center justify-center text-center p-4 sm:p-6 min-h-[120px] md:min-h-[160px]"
-              data-aos="fade-right"
-              data-aos-duration="1000"
-              data-aos-delay="100"
-            >
-              <h3 className="font-bold text-xl text-black">
-                Documentation from last Cirun
-              </h3>
-            </div>
-
-            <div
-              className="bg-gray-200 rounded-md flex items-center justify-center p-4 sm:p-6 min-h-[120px] md:min-h-[160px]"
-              data-aos="zoom-in"
-              data-aos-duration="1000"
-              data-aos-delay="300"
-            >
-              <img
-                src="/Images/logo.png"
-                alt="Running Logo"
-                className="w-20 h-20 sm:w-32 sm:h-32 object-contain"
-              />
-            </div>
-
-            <div
-              className="bg-gray-200 rounded-md flex items-center justify-center text-center p-4 sm:p-6 min-h-[120px] md:min-h-[160px]"
-              data-aos="fade-left"
-              data-aos-duration="1000"
-              data-aos-delay="100"
-            >
-              <h3 className="font-bold text-xl text-black">Documentation</h3>
-            </div>
+            { /* Featured top-3 documentation images */ }
+            {[0,1,2].map((n) => (
+              <div
+                key={`featured-doc-${n}`}
+                className="bg-gray-200 rounded-md overflow-hidden p-0 min-h-[160px] md:min-h-[200px]"
+                data-aos="zoom-in"
+                data-aos-duration="1000"
+                data-aos-delay={100 + n * 100}
+              >
+                <img
+                  src={docImages[n]}
+                  alt={`Documentation featured ${n + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = "/Homepage/documentation/placeholder.png";
+                  }}
+                />
+              </div>
+            ))}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {Array.from({ length: 7 }).map((_, i) => (
+            {docImages.map((src, i) => (
               <div
                 key={i}
-                className="bg-gray-200 rounded-md aspect-square w-full"
+                className="bg-gray-200 rounded-md aspect-square w-full overflow-hidden"
                 data-aos="flip-left"
                 data-aos-duration="800"
                 data-aos-delay={i * 100}
                 aria-hidden
-              />
+              >
+                <img
+                  src={src}
+                  alt={`Documentation ${i + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // fallback if image missing
+                    (e.currentTarget as HTMLImageElement).src = "/Homepage/documentation/placeholder.png";
+                  }}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -166,31 +175,12 @@ export default function Home() {
       
       {/* About Section - Two Column Layout (image fills entire section) */}
       <section className="w-full relative overflow-hidden">
-        {/* Full-section background image (fills entire section) */}
-        <div
-          className="absolute inset-0 z-0"
-          data-aos="zoom-in"
-          data-aos-duration="1000"
-          data-aos-delay="200"
-        >
-          <Image
-            src="/images/CiRun_About.svg"
-            alt="About Ciputra Color Run"
-            fill
-            sizes="100vw"
-            className="object-cover"
-            priority
-            // also add to the image element for redundancy (Next/Image passes data-* through)
-            data-aos="zoom-in"
-            data-aos-duration="1000"
-            data-aos-delay="250"
-          />
-        </div>
-
         <div className="max-w-full mx-auto relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0 items-stretch min-h-[400px] md:min-h-[600px]">
-            {/* Left: intentionally empty (image covers full section); keep spacing on md */}
-            <div className="hidden md:block" aria-hidden />
+            {/* Left: carousel placed inside left grid column (hidden on small screens) */}
+            <div className="hidden md:block about-left" aria-hidden>
+              <AboutCarousel />
+            </div>
 
             {/* Right: Text content overlays the background image */}
             <div

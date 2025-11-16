@@ -43,6 +43,11 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Prevent accidental horizontal overflow on small/embedded devices (iPad, Nest Hub) */
+html, body {
+  overflow-x: hidden;
+}
+
 .about-section {
   overflow: hidden;
   border-radius: 20px;
