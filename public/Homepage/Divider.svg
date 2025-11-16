@@ -7,10 +7,10 @@
         stroke-width: 0px;
       }
     </style>
-    <linearGradient id="linear-gradient" x1="-48" y1="540.11" x2="974.47" y2="540.11" gradientUnits="userSpaceOnUse">
-      <stop offset=".07" stop-color="#a57879" stop-opacity="0"/>
-      <stop offset=".22" stop-color="#927775" stop-opacity=".5"/>
-      <stop offset=".86" stop-color="#387364"/>
+    <linearGradient id="linear-gradient" x1="-34.67" y1="540.11" x2="915.16" y2="540.11" gradientUnits="userSpaceOnUse">
+      <stop offset=".09" stop-color="#e2969c" stop-opacity="0"/>
+      <stop offset=".54" stop-color="#e2969c" stop-opacity=".5"/>
+      <stop offset=".86" stop-color="#a0d4ac"/>
     </linearGradient>
   </defs>
   <g id="Layer_1-2" data-name="Layer 1">

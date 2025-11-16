@@ -7,6 +7,7 @@ import "./styles/homepage.css";
 import LogoLoop from './components/LogoLoop'
 import CountdownTimer from './components/CountdownTimer';
 import AboutCarousel from './components/AboutCarousel';
+import DocDecor from './components/DocDecor';
 
 export default function Home() {
   // Refresh AOS animations when page loads
@@ -69,15 +70,21 @@ export default function Home() {
         
           <CountdownTimer />
 
-          <Link 
-            href="/registration" 
-            className="home_register_button"
+          {/* Register button wrapper: shows flower assets on hover */}
+          <div
+            className="register-wrap"
             data-aos="fade-up"
             data-aos-duration="1000"
             data-aos-delay="500"
           >
-            REGISTER NOW
-          </Link>
+            <Link href="/registration" className="home_register_button register-btn">
+              REGISTER NOW
+            </Link>
+
+            {/* decorative flowers that pop out on hover */}
+            <img src="/assets/asset10.svg" alt="" className="register-flower reg-flower-1" aria-hidden />
+            <img src="/assets/asset10.svg" alt="" className="register-flower reg-flower-2" aria-hidden />
+          </div>
 
           <p 
             className="home_description"
@@ -90,8 +97,6 @@ export default function Home() {
 
         </div>
       </div>
-
-      
 
       <div className="sponsor-container">
 
@@ -124,7 +129,9 @@ export default function Home() {
 
       </div>
       {/* Documentation Section - Grid Layout with Animations */}
-      <section className="relative w-full bg-gradient-to-r from-[#1F6251] to-[#9C686A] py-8 md:py-16">
+      <section className="relative w-full bg-gradient-to-r from-[#a0d4ac] to-[#e2969c] py-8 md:py-16">
+        {/* decorative floating assets anchored to this documentation section */}
+        <DocDecor />
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
             { /* Featured top-3 documentation images */ }
@@ -184,7 +191,7 @@ export default function Home() {
 
             {/* Right: Text content overlays the background image */}
             <div
-              className="relative bg-gradient-to-r from-[#1F6251]/90 to-[#9C686A]/90 p-6 sm:p-8 md:p-12 md:pl-20 flex flex-col justify-center min-h-[400px]"
+              className="relative bg-gradient-to-r from-[#a0d4ac]/90 to-[#e2969c]/90 p-6 sm:p-8 md:p-12 md:pl-20 flex flex-col justify-center min-h-[400px]"
               data-aos="fade-left"
               data-aos-duration="1200"
             >
