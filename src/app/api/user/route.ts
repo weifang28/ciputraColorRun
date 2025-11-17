@@ -1,103 +1,105 @@
+// src/app/api/user/route.ts
+
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { cookies } from "next/headers";
 
 const prisma = new PrismaClient();
 
-// Handler for GET request to fetch user profile
+async function getAccessCodeFromCookie() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth-token');
+  return token?.value;
+}
+
+// Handler GET
 export async function GET(req: Request) {
   try {
-    // In a real app, this accessCode would come from a secure session/cookie.
-    // For this demonstration, we read it from the query parameters.
-    const { searchParams } = new URL(req.url);
-    const accessCode = searchParams.get("accessCode");
-
+    const accessCode = await getAccessCodeFromCookie();
+    // ... (kode Anda yang lain) ...
     if (!accessCode) {
-      return NextResponse.json(
-        { error: "Missing required query parameter: accessCode" },
-        { status: 400 }
-      );
+        return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-
     const user = await prisma.user.findUnique({
-      where: { accessCode },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        accessCode: true,
-      },
+        // ...
+        where: { accessCode },
+        // ...
     });
-
+    // ... (kode Anda yang lain) ...
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-
     return NextResponse.json({ user });
-  } catch (err: any) {
+
+  } catch (err: unknown) { // <-- UBAH KE UNKNOWN
     console.error("GET /api/user error:", err);
+    
+    // Periksa tipe sebelum digunakan
+    let errorMessage = "Internal server error";
+    if (err instanceof Error) {
+        errorMessage = err.message;
+    }
+    
     return NextResponse.json(
-      { error: err?.message ?? "Internal server error" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
 }
 
-// Handler for PUT request to update user profile
+// Handler PUT
 export async function PUT(req: Request) {
   try {
-    const { accessCode, email, phone } = await req.json();
-
-    if (!accessCode || !email || !phone) {
-      return NextResponse.json(
-        { error: "Missing required fields: accessCode, email, or phone" },
-        { status: 400 }
-      );
+    const { email, phone } = await req.json();
+    const accessCode = await getAccessCodeFromCookie();
+    // ... (kode Anda yang lain) ...
+    if (!accessCode) {
+        return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-
-    // 1. Check if the new email is already taken by another user
+    if (!email || !phone) {
+        return NextResponse.json(
+          { error: "Missing required fields: email, or phone" },
+          { status: 400 }
+        );
+    }
+    // ... (logika validasi email Anda) ...
     const existingUserWithEmail = await prisma.user.findFirst({
-      where: {
-        email: email,
-        NOT: { accessCode: accessCode }, // exclude the current user
-      },
+        where: { email: email, NOT: { accessCode: accessCode } },
     });
-
     if (existingUserWithEmail) {
-      return NextResponse.json(
-        { error: "Email already in use by another account." },
-        { status: 409 }
-      );
+        return NextResponse.json(
+            { error: "Email already in use by another account." },
+            { status: 409 }
+        );
     }
-
-    // 2. Find the user by accessCode and update their details
+    
     const updatedUser = await prisma.user.update({
-      where: { accessCode },
-      data: {
-        email,
-        phone,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        accessCode: true,
-      },
+        where: { accessCode },
+        data: { email, phone },
+        select: { /* ... data Anda ... */ }
     });
 
     return NextResponse.json({ success: true, user: updatedUser });
-  } catch (err: any) {
-    if (err.code === "P2025") {
-      // P2025: Record to update not found (i.e., invalid accessCode)
+
+  } catch (err: unknown) { // <-- UBAH KE UNKNOWN
+    
+    // Periksa apakah ini error Prisma (P2025)
+    if (typeof err === 'object' && err !== null && 'code' in err && err.code === 'P2025') {
       return NextResponse.json(
         { error: "User not found with the provided accessCode." },
         { status: 404 }
       );
     }
+
+    // Tangani error umum
     console.error("PUT /api/user error:", err);
+    let errorMessage = "Internal server error";
+    if (err instanceof Error) {
+        errorMessage = err.message;
+    }
+    
     return NextResponse.json(
-      { error: err?.message ?? "Internal server error" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
