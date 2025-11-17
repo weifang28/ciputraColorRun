@@ -372,9 +372,11 @@ export async function POST(req: Request) {
     }
 
     // run transaction (increase interactive transaction timeout to avoid 5s default)
-    // configurable via PRISMA_TX_TIMEOUT (ms). Default: 120000 (2 minutes).
-    const txTimeout = Number(process.env.PRISMA_TX_TIMEOUT || 120000);
-    const result = await prisma.$transaction((tx: any) => createRegistrationAndPayment(tx), { timeout: txTimeout });
+    // configurable via PRISMA_TX_TIMEOUT (ms). Accelerate enforces a 15000 ms max.
+    // Clamp to 15000 to avoid P6005 errors from the platform.
+    const configured = Number(process.env.PRISMA_TX_TIMEOUT || 15000);
+    const txTimeout = Math.min(Math.max(0, configured || 15000), 15000);
+     const result = await prisma.$transaction((tx: any) => createRegistrationAndPayment(tx), { timeout: txTimeout });
 
     return NextResponse.json({
       success: true,
