@@ -10,6 +10,7 @@ import { useCart } from "../context/CartContext";
 export default function NavBar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const router = useRouter();
+    const { totalItems } = useCart();
 
     // new: track auth status (null=unknown, false=not logged in, true=logged in)
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);

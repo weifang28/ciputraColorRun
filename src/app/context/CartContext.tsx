@@ -35,6 +35,7 @@ interface CartContextType {
   removeItem: (id: string) => void;
   clearCart: () => void;
   totalPrice: number;
+  totalItems: number; // <- added
   setUserDetails: (details: UserDetails) => void;
 }
 
@@ -43,6 +44,16 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [userDetails, setUserDetailsState] = useState<UserDetails | null>(null);
+
+  // compute total number of participants/items for the navbar badge
+  const totalItems = React.useMemo(() => {
+    return items.reduce((sum, item) => {
+      if (item.type === "individual") return sum + 1;
+      if (item.type === "community") return sum + (Number(item.participants ?? 0) || 0);
+      if (item.type === "family") return sum + (Number(item.participants ?? 0) || 4); // family bundle = 4 by default
+      return sum;
+    }, 0);
+  }, [items]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem("cart");
@@ -86,7 +97,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ items, userDetails, addItem, removeItem, clearCart, totalPrice, setUserDetails }}
+      value={{
+        items,
+        userDetails,
+        addItem,
+        removeItem,
+        clearCart,
+        totalPrice,
+        totalItems, // <- expose here
+        setUserDetails,
+      }}
     >
       {children}
     </CartContext.Provider>
