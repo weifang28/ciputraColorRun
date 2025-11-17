@@ -128,57 +128,6 @@ export default function Home() {
         </div>
 
       </div>
-      {/* Documentation Section - Grid Layout with Animations */}
-      <section className="relative w-full bg-gradient-to-r from-[#a0d4ac] to-[#e2969c] py-8 md:py-16">
-        {/* decorative floating assets anchored to this documentation section */}
-        <DocDecor />
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-            { /* Featured top-3 documentation images */ }
-            {[0,1,2].map((n) => (
-              <div
-                key={`featured-doc-${n}`}
-                className="bg-gray-200 rounded-md overflow-hidden p-0 min-h-[160px] md:min-h-[200px]"
-                data-aos="zoom-in"
-                data-aos-duration="1000"
-                data-aos-delay={100 + n * 100}
-              >
-                <img
-                  src={docImages[n]}
-                  alt={`Documentation featured ${n + 1}`}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = "/Homepage/documentation/placeholder.png";
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {docImages.map((src, i) => (
-              <div
-                key={i}
-                className="bg-gray-200 rounded-md aspect-square w-full overflow-hidden"
-                data-aos="flip-left"
-                data-aos-duration="800"
-                data-aos-delay={i * 100}
-                aria-hidden
-              >
-                <img
-                  src={src}
-                  alt={`Documentation ${i + 1}`}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // fallback if image missing
-                    (e.currentTarget as HTMLImageElement).src = "/Homepage/documentation/placeholder.png";
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
       
       {/* About Section - Two Column Layout (image fills entire section) */}
       <section className="w-full relative overflow-hidden">
