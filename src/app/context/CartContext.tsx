@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 
 // Update the CartItem type to include "family"
 export interface CartItem {
@@ -46,7 +46,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [userDetails, setUserDetailsState] = useState<UserDetails | null>(null);
 
   // compute total number of participants/items for the navbar badge
-  const totalItems = React.useMemo(() => {
+  const totalItems = useMemo(() => {
     return items.reduce((sum, item) => {
       if (item.type === "individual") return sum + 1;
       if (item.type === "community") return sum + (Number(item.participants ?? 0) || 0);
