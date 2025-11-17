@@ -82,7 +82,10 @@ export async function POST(req: Request) {
     const amountStr = (form.get("amount") as string) || undefined;
     const proofFile = form.get("proof") as File | null;
     const idCardPhotoFile = form.get("idCardPhoto") as File | null;
-    const cartItemsJson = (form.get("items") as string) || (form.get("cartItems") as string) || undefined;
+    const cartItemsJson =
+      (form.get("items") as string) ||
+      (form.get("cartItems") as string) ||
+      undefined;
 
     // User details
     const fullName = (form.get("fullName") as string) || undefined;
@@ -94,24 +97,33 @@ export async function POST(req: Request) {
     const nationality = (form.get("nationality") as string) || undefined;
     const emergencyPhone = (form.get("emergencyPhone") as string) || undefined;
     const medicalHistory = (form.get("medicalHistory") as string) || undefined;
-    const registrationType = (form.get("registrationType") as string) || "individual";
+    const registrationType =
+      (form.get("registrationType") as string) || "individual";
 
     if (!proofFile) {
-      return NextResponse.json({ error: "proof file is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "proof file is required" },
+        { status: 400 }
+      );
     }
 
-    const amount = amountStr !== undefined ? Number(amountStr) : undefined;
+    const amount =
+      amountStr !== undefined && amountStr !== "" ? Number(amountStr) : undefined;
 
-    const txId = typeof crypto?.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const txId =
+      typeof crypto?.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     const uploadsDir = path.resolve(process.cwd(), "public", "uploads");
     await fs.mkdir(uploadsDir, { recursive: true });
 
     // Save payment proof
     const proofBuffer = Buffer.from(await proofFile.arrayBuffer());
-    const proofExt = (proofFile.name?.split(".").pop() || "bin").replace(/[^a-zA-Z0-9]/g, "");
+    const proofExt = (proofFile.name?.split(".").pop() || "bin").replace(
+      /[^a-zA-Z0-9]/g,
+      ""
+    );
     const proofFilename = `${txId}_proof.${proofExt}`;
     const proofPath = path.join(uploadsDir, proofFilename);
     await fs.writeFile(proofPath, proofBuffer);
@@ -120,206 +132,174 @@ export async function POST(req: Request) {
     let idCardPhotoPath: string | undefined;
     if (idCardPhotoFile) {
       const idBuffer = Buffer.from(await idCardPhotoFile.arrayBuffer());
-      const idExt = (idCardPhotoFile.name?.split(".").pop() || "bin").replace(/[^a-zA-Z0-9]/g, "");
+      const idExt = (idCardPhotoFile.name?.split(".").pop() || "bin").replace(
+        /[^a-zA-Z0-9]/g,
+        ""
+      );
       const idFilename = `${txId}_id.${idExt}`;
       const idPath = path.join(uploadsDir, idFilename);
       await fs.writeFile(idPath, idBuffer);
       idCardPhotoPath = `/uploads/${idFilename}`;
-    }
-
-    // helper to generate simple access code if needed
-    const generateAccessCode = (name?: string) => {
-      return `${(name || "u").replace(/\s+/g, "").slice(0, 6)}-${Date.now().toString(36).slice(-6)}`;
     };
 
-      // parse cart items JSON (if provided)
-      const cartItemsStr = form.get("cartItems") as string | null;
-      let cartItems: any[] = [];
+    // parse cart items JSON (if provided)
+    let cartItems: any[] = [];
+    if (cartItemsJson) {
       try {
-        if (cartItemsStr) cartItems = JSON.parse(cartItemsStr);
+        cartItems = JSON.parse(cartItemsJson);
       } catch (e) {
-        cartItems = [];
+        return NextResponse.json({ error: "invalid items JSON" }, { status: 400 });
       }
+    }
 
-      // create/find user and create registration + participants inside a transaction
-      const result = await prisma.$transaction(async (prismaTx) => {
-        let user = await prismaTx.user.findUnique({ where: { email } });
-        if (!user) {
-          const accessCode = generateAccessCode(fullName);
-          user = await tx.user.create({
-            data: {
-              name: fullName,
-              email,
-              phone,
-              accessCode,
-              role: "user",
-              birthDate: birthDate ? new Date(birthDate) : undefined,
-              gender: gender || undefined,
-              currentAddress: currentAddress || undefined,
-              nationality: nationality || undefined,
-              idCardPhoto: idCardPhotoPath || undefined,
-              emergencyPhone: emergencyPhone || undefined,
-              medicalHistory: medicalHistory || undefined,
-            },
-          });
-        } else {
-          // Update user with new details if provided
-          await tx.user.update({
-            where: { id: user.id },
-            data: {
-              birthDate: birthDate ? new Date(birthDate) : undefined,
-              gender: gender || undefined,
-              currentAddress: currentAddress || undefined,
-              nationality: nationality || undefined,
-              idCardPhoto: idCardPhotoPath || user.idCardPhoto,
-              emergencyPhone: emergencyPhone || undefined,
-              medicalHistory: medicalHistory || undefined,
-            },
-          });
-        }
+    // transaction body extracted to a named async function to avoid parsing issues
+    async function createRegistrationAndPayment(prismaTx: any) {
+      // find user by email if available
+      let user =
+        email && email !== ""
+          ? await prismaTx.user.findUnique({ where: { email } })
+          : null;
 
-        const registration = await tx.registration.create({
+      // helper to create a quick access code if needed
+      const quickAccessCode = (name?: string) =>
+        `${(name || "u").replace(/\s+/g, "").slice(0, 6)}-${Date.now()
+          .toString(36)
+          .slice(-6)}`;
+
+      if (!user) {
+        const accessCode = quickAccessCode(fullName);
+        user = await prismaTx.user.create({
           data: {
-            userId: user.id,
-            registrationType,
-            totalAmount: new Prisma.Decimal(String(amount ?? 0)),
+            name: fullName,
+            email: email || undefined,
+            phone: phone || undefined,
+            accessCode,
+            role: "user",
+            birthDate: birthDate ? new Date(birthDate) : undefined,
+            gender: gender || undefined,
+            currentAddress: currentAddress || undefined,
+            nationality: nationality || undefined,
+            idCardPhoto: idCardPhotoPath || undefined,
+            emergencyPhone: emergencyPhone || undefined,
+            medicalHistory: medicalHistory || undefined,
           },
         });
-
-        // If cartItems provided, create Participant rows accordingly
-        if (Array.isArray(cartItems) && cartItems.length > 0) {
-          for (const item of cartItems) {
-            try {
-              const categoryId = Number(item.categoryId);
-
-              // get category name for bib prefix
-              const category = await prismaTx.raceCategory.findUnique({ where: { id: categoryId } });
-
-              if (item.type === "individual") {
-                // find jersey option by size if provided
-                let jerseyId: number | undefined = undefined;
-                if (item.jerseySize) {
-                  const j = await prismaTx.jerseyOption.findUnique({ where: { size: item.jerseySize } });
-                  if (j) jerseyId = j.id;
-                }
-
-                const bib = await generateUniqueBib(category?.name, prismaTx);
-
-                await prismaTx.participant.create({
-                  data: {
-                    registrationId: registration.id,
-                    categoryId: categoryId,
-                    jerseyId: jerseyId ?? (await prismaTx.jerseyOption.findFirst())?.id ?? 1,
-                    bibNumber: bib,
-                  },
-                });
-              } else if (item.type === "community") {
-                // item.jerseys is an object mapping size->count
-                const jerseysMap: Record<string, number> = item.jerseys || {};
-                for (const [size, cnt] of Object.entries(jerseysMap)) {
-                  const count = Number(cnt) || 0;
-                  if (count <= 0) continue;
-
-                  const jOpt = await prismaTx.jerseyOption.findUnique({ where: { size } });
-                  const jerseyId = jOpt ? jOpt.id : (await prismaTx.jerseyOption.findFirst())?.id ?? 1;
-
-                  for (let i = 0; i < count; i++) {
-                    const bib = await generateUniqueBib(category?.name, prismaTx);
-                    await prismaTx.participant.create({
-                      data: {
-                        registrationId: registration.id,
-                        categoryId: categoryId,
-                        jerseyId,
-                        bibNumber: bib,
-                      },
-                    });
-                  }
-                }
-              }
-            } catch (e) {
-              // continue on participant creation errors to avoid blocking whole transaction
-              console.error("Error creating participants for cart item:", e);
-            }
-          }
-        }
-
-        return { registration };
-      });
-
-      if (!registrationId) {
-        throw new Error("failed to create or resolve registration");
+      } else {
+        await prismaTx.user.update({
+          where: { id: user.id },
+          data: {
+            birthDate: birthDate ? new Date(birthDate) : undefined,
+            gender: gender || undefined,
+            currentAddress: currentAddress || undefined,
+            nationality: nationality || undefined,
+            idCardPhoto: idCardPhotoPath || user.idCardPhoto,
+            emergencyPhone: emergencyPhone || undefined,
+            medicalHistory: medicalHistory || undefined,
+          },
+        });
       }
 
-      // Create participants and QR codes (if cart items provided)
-      const createdQrCodes: any[] = [];
-      if (cartItemsJson) {
-        let cartItems: any[] = [];
-        try {
-          cartItems = JSON.parse(cartItemsJson);
-        } catch (e) {
-          throw new Error("invalid items JSON");
-        }
+      // create registration
+      const registration = await prismaTx.registration.create({
+        data: {
+          userId: user.id,
+          registrationType,
+          totalAmount: new Prisma.Decimal(String(amount ?? 0)),
+        },
+      });
 
-        const participantRows: Array<{ registrationId: number; categoryId: number; jerseyId: number }> = [];
+      // create participants based on cartItems
+      const participantRows: Array<{
+        registrationId: number;
+        categoryId: number;
+        jerseyId: number;
+        bibNumber?: string;
+      }> = [];
 
-        for (const item of cartItems) {
-          const categoryId = Number(item.categoryId);
-          if (item.type === "individual") {
-            const size = item.jerseySize;
-            const jersey = await tx.jerseyOption.findUnique({ where: { size } });
-            if (!jersey) {
-              throw new Error(`Jersey option not found for size ${size}`);
-            }
-            participantRows.push({ registrationId, categoryId, jerseyId: jersey.id });
-          } else if (item.type === "community") {
-            const jerseys: Record<string, number> = item.jerseys || {};
-            for (const [size, count] of Object.entries(jerseys)) {
-              const cnt = Number(count || 0);
-              if (cnt <= 0) continue;
-              const jersey = await tx.jerseyOption.findUnique({ where: { size } });
-              if (!jersey) {
-                throw new Error(`Jersey option not found for size ${size}`);
-              }
-              for (let i = 0; i < cnt; i++) {
-                participantRows.push({ registrationId, categoryId, jerseyId: jersey.id });
-              }
+      for (const item of cartItems || []) {
+        const categoryId = Number(item.categoryId);
+        if (Number.isNaN(categoryId)) continue;
+
+        const category = await prismaTx.raceCategory.findUnique({
+          where: { id: categoryId },
+        });
+
+        if (item.type === "individual") {
+          let jerseyId: number | undefined = undefined;
+          if (item.jerseySize) {
+            const j = await prismaTx.jerseyOption.findUnique({
+              where: { size: item.jerseySize },
+            });
+            if (j) jerseyId = j.id;
+          }
+          const bib = await generateUniqueBib(category?.name, prismaTx);
+          participantRows.push({
+            registrationId: registration.id,
+            categoryId,
+            jerseyId: jerseyId ?? (await prismaTx.jerseyOption.findFirst())?.id ?? 1,
+            bibNumber: bib,
+          });
+        } else if (item.type === "community") {
+          const jerseysMap: Record<string, number> = item.jerseys || {};
+          for (const [size, cnt] of Object.entries(jerseysMap)) {
+            const count = Number(cnt) || 0;
+            if (count <= 0) continue;
+            const jOpt = await prismaTx.jerseyOption.findUnique({ where: { size } });
+            const jerseyId = jOpt ? jOpt.id : (await prismaTx.jerseyOption.findFirst())?.id ?? 1;
+            for (let i = 0; i < count; i++) {
+              const bib = await generateUniqueBib(category?.name, prismaTx);
+              participantRows.push({
+                registrationId: registration.id,
+                categoryId,
+                jerseyId,
+                bibNumber: bib,
+              });
             }
           }
         }
+      }
 
-        if (participantRows.length > 0) {
-          await tx.participant.createMany({ data: participantRows });
-        }
+      if (participantRows.length > 0) {
+        await prismaTx.participant.createMany({
+          data: participantRows.map((r) => ({
+            registrationId: r.registrationId,
+            categoryId: r.categoryId,
+            jerseyId: r.jerseyId,
+            bibNumber: r.bibNumber,
+          })),
+        });
+      }
 
-        // Group participants by category to create QrCode per category
-        const grouped = participantRows.reduce<Record<number, number>>((acc, r) => {
-          acc[r.categoryId] = (acc[r.categoryId] || 0) + 1;
-          return acc;
-        }, {});
+      // Group participants by category to create QR codes
+      const grouped = participantRows.reduce<Record<number, number>>((acc, r) => {
+        acc[r.categoryId] = (acc[r.categoryId] || 0) + 1;
+        return acc;
+      }, {});
 
-        for (const [catIdStr, totalPacks] of Object.entries(grouped)) {
-          const catId = Number(catIdStr);
-          const code = typeof crypto?.randomUUID === "function"
+      const createdQrCodes: any[] = [];
+      for (const [catIdStr, totalPacks] of Object.entries(grouped)) {
+        const catId = Number(catIdStr);
+        const code =
+          typeof crypto?.randomUUID === "function"
             ? crypto.randomUUID()
             : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-          const maxScans = totalPacks + 3;
-          const qr = await tx.qrCode.create({
-            data: {
-              registrationId,
-              categoryId: catId,
-              qrCodeData: code,
-              totalPacks,
-              maxScans,
-              scansRemaining: maxScans,
-            },
-          });
-          createdQrCodes.push(qr);
-        }
+        const maxScans = totalPacks + 3;
+        const qr = await prismaTx.qrCode.create({
+          data: {
+            registrationId: registration.id,
+            categoryId: catId,
+            qrCodeData: code,
+            totalPacks,
+            maxScans,
+            scansRemaining: maxScans,
+          },
+        });
+        createdQrCodes.push(qr);
       }
 
       // Create payment record
       const paymentData: any = {
-        registrationId,
+        registrationId: registration.id,
         transactionId: txId,
         proofOfPayment: `/uploads/${proofFilename}`,
         status: "pending",
@@ -329,16 +309,23 @@ export async function POST(req: Request) {
         paymentData.amount = new Prisma.Decimal(String(amount));
       }
 
-      const payment = await tx.payment.create({ data: paymentData });
+      const payment = await prismaTx.payment.create({ data: paymentData });
 
-      return { payment, createdQrCodes };
+      return { registration, payment, createdQrCodes };
+    }
+
+    // run transaction
+    const result = await prisma.$transaction((tx: any) => createRegistrationAndPayment(tx));
+
+    return NextResponse.json({
+      success: true,
+      payment: result.payment,
+      qrCodes: result.createdQrCodes,
     });
-
-    return NextResponse.json({ success: true, payment: result.payment, qrCodes: result.createdQrCodes });
   } catch (err) {
-    // avoid typed catch binding which breaks the parser
     console.error("Payment API error:", err);
-    const message = err && (err as any).message ? (err as any).message : "internal";
+    const message =
+      err && (err as any).message ? (err as any).message : "internal";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
