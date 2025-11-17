@@ -371,8 +371,10 @@ export async function POST(req: Request) {
       return { registration, payment, createdQrCodes };
     }
 
-    // run transaction
-    const result = await prisma.$transaction((tx: any) => createRegistrationAndPayment(tx));
+    // run transaction (increase interactive transaction timeout to avoid 5s default)
+    // configurable via PRISMA_TX_TIMEOUT (ms). Default: 120000 (2 minutes).
+    const txTimeout = Number(process.env.PRISMA_TX_TIMEOUT || 120000);
+    const result = await prisma.$transaction((tx: any) => createRegistrationAndPayment(tx), { timeout: txTimeout });
 
     return NextResponse.json({
       success: true,
