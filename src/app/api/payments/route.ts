@@ -3,7 +3,9 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import os from "os";
 import { PrismaClient, Prisma } from "@prisma/client";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const prisma = new PrismaClient();
 
@@ -118,17 +120,53 @@ export async function POST(req: Request) {
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    const uploadsDir = path.resolve(process.cwd(), "public", "uploads");
-    await fs.mkdir(uploadsDir, { recursive: true });
-
     const proofBuffer = Buffer.from(await proofFile.arrayBuffer());
     const proofExt = (proofFile.name?.split(".").pop() || "bin").replace(
       /[^a-zA-Z0-9]/g,
       ""
     );
     const proofFilename = `${txId}_proof.${proofExt}`;
-    await fs.writeFile(path.join(uploadsDir, proofFilename), proofBuffer);
 
+    const S3_BUCKET = process.env.S3_BUCKET_NAME || "";
+    const useS3 = !!S3_BUCKET;
+
+    let proofPath: string;
+    if (useS3) {
+      // upload to S3 (or compatible) and set public URL or path
+      const s3 = new S3Client({
+        region: process.env.AWS_REGION || "us-east-1",
+        credentials:
+          process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+            ? {
+                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+              }
+            : undefined,
+      });
+
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: `uploads/${proofFilename}`,
+          Body: proofBuffer,
+          ContentType: proofFile.type || `image/${proofExt}`,
+          ACL: "public-read", // optional — configure bucket policy instead for security
+        })
+      );
+
+      // public URL (adjust if using a custom domain or non-AWS provider)
+      const region = process.env.AWS_REGION || "us-east-1";
+      proofPath = `https://${S3_BUCKET}.s3.${region}.amazonaws.com/uploads/${proofFilename}`;
+    } else {
+      // fallback: write into ephemeral OS temp directory (works on serverless, not persistent)
+      const uploadsDir = path.join(os.tmpdir(), "uploads");
+      await fs.mkdir(uploadsDir, { recursive: true });
+      const proofFullPath = path.join(uploadsDir, proofFilename);
+      await fs.writeFile(proofFullPath, proofBuffer);
+      proofPath = `/tmp/uploads/${proofFilename}`; // store path/marker; note: not publicly accessible
+    }
+
+    // Save ID card photo if provided
     let idCardPhotoPath: string | undefined;
     if (idCardPhotoFile) {
       const idBuffer = Buffer.from(await idCardPhotoFile.arrayBuffer());
@@ -137,8 +175,22 @@ export async function POST(req: Request) {
         ""
       );
       const idFilename = `${txId}_id.${idExt}`;
-      await fs.writeFile(path.join(uploadsDir, idFilename), idBuffer);
-      idCardPhotoPath = `/uploads/${idFilename}`;
+      if (useS3) {
+        await s3.send(
+          new PutObjectCommand({
+            Bucket: S3_BUCKET,
+            Key: `uploads/${idFilename}`,
+            Body: idBuffer,
+            ContentType: idCardPhotoFile.type || `image/${idExt}`,
+            ACL: "public-read",
+          })
+        );
+        idCardPhotoPath = `https://${S3_BUCKET}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/uploads/${idFilename}`;
+      } else {
+        const idPath = path.join(os.tmpdir(), "uploads", idFilename);
+        await fs.writeFile(idPath, idBuffer);
+        idCardPhotoPath = `/tmp/uploads/${idFilename}`;
+      }
     };
 
     // parse cart items JSON (if provided)

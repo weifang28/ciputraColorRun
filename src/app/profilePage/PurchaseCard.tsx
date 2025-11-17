@@ -48,14 +48,23 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
         if (mounted) setQrImage(null);
         return;
       }
+
       try {
-        const dataUrl = await toDataURL(qrCodeData, {
+        // If qrCodeData already looks like a full URL, use it.
+        // Otherwise build absolute claim URL -> /claim/[token]
+        const payload =
+          typeof qrCodeData === "string" && qrCodeData.startsWith("http")
+            ? qrCodeData
+            : `${(typeof window !== "undefined" && window.location?.origin) || (process.env.NEXT_PUBLIC_APP_URL || "")}/claim/${qrCodeData}`;
+
+        const dataUrl = await toDataURL(payload, {
           margin: 1,
           color: {
             dark: '#682950',
-            light: '#0000',
+            light: '#ffffff',
           },
         });
+
         if (mounted) setQrImage(dataUrl);
       } catch (e) {
         console.error('Failed to generate QR data URL', e);
