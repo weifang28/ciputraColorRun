@@ -1,9 +1,10 @@
 // src/app/profilePage/PurchaseCard.tsx
-"use client"; // Pastikan ini ada
+"use client";
 
+import * as React from "react";
 import { Card } from './components/ui/card';
 import { QrCode, Users, ShoppingBag, DollarSign } from 'lucide-react';
-import { QRCode } from 'qrcode.react'; // <-- 1. IMPORT KOMPONEN QR CODE
+import { toDataURL } from 'qrcode'; // generate QR image data URL instead of qrcode.react
 
 interface JerseySize {
   size: string;
@@ -29,7 +30,7 @@ type PurchaseData = CommunityPurchase | IndividualPurchase;
 
 interface PurchaseCardProps {
   purchase: PurchaseData;
-  qrCodeData: string | null; // <-- 2. TAMBAHKAN PROPS INI
+  qrCodeData: string | null; // QR payload (string) or null
 }
 
 // Format number to Indonesian Rupiah
@@ -37,14 +38,39 @@ function formatRupiah(amount: number): string {
   return 'Rp ' + amount.toLocaleString('id-ID');
 }
 
-// <-- 3. TAMBAHKAN 'qrCodeData' di sini
 export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
+  const [qrImage, setQrImage] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+    async function gen() {
+      if (!qrCodeData) {
+        if (mounted) setQrImage(null);
+        return;
+      }
+      try {
+        const dataUrl = await toDataURL(qrCodeData, {
+          margin: 1,
+          color: {
+            dark: '#682950',
+            light: '#0000',
+          },
+        });
+        if (mounted) setQrImage(dataUrl);
+      } catch (e) {
+        console.error('Failed to generate QR data URL', e);
+        if (mounted) setQrImage(null);
+      }
+    }
+    gen();
+    return () => { mounted = false; };
+  }, [qrCodeData]);
+
   return (
     <Card className="overflow-hidden bg-white/70 backdrop-blur-xl border-white/90 shadow-2xl relative">
       {/* Gradient top accent - colorful gradient */}
       <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#94DCAD] via-[#4EF9CD] to-[#73E9DD]"></div>
       
-      {/* ... (Kode untuk Kategori Header, Detail Pembelian, Jersey, Harga, dll tetap sama) ... */}
       {/* Category Header - Positioned at top edge */}
       <div className="px-8 pt-6 pb-4">
         <div className="inline-block px-6 py-2 rounded-full bg-gradient-to-r from-[#FFDFC0]/60 to-[#FFF1C5]/60 border border-[#FFF1C5]/80">
@@ -143,15 +169,8 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
             <div className="w-full aspect-square max-w-xs mx-auto bg-gradient-to-br from-[#FFF1C5]/50 to-[#FFDFC0]/50 rounded-3xl flex items-center justify-center border-4 border-white shadow-2xl relative overflow-hidden transition-all hover:shadow-xl p-6"> {/* Tambahkan padding 'p-6' */}
               
               {/* --- 4. GANTI BAGIAN INI --- */}
-              {qrCodeData ? (
-                // Jika ada data QR, tampilkan QR code asli
-                <QRCode
-                  value={qrCodeData}
-                  size={256} // Ukuran dasar (akan diskalakan oleh container)
-                  style={{ width: '100%', height: 'auto' }} // Buat responsif
-                  bgColor="transparent" // Latar belakang transparan
-                  fgColor="#682950" // Warna QR code (sesuaikan dengan tema Anda)
-                />
+              {qrImage ? (
+                <img src={qrImage} alt="QR Code" style={{ width: '100%', height: 'auto' }} />
               ) : (
                 // Fallback jika tidak ada data QR
                 <div className="relative z-10 flex flex-col items-center gap-3">

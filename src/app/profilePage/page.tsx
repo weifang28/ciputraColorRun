@@ -15,59 +15,108 @@ interface UserData {
 // --- THIS IS THE FIX ---
 // The user you created in Prisma Studio was "Test User".
 // Our new logic generates "test_user" from "Test User".
-// Using "dev-user-code" will no longer work.
 const MOCK_ACCESS_CODE = 'test_user'; // Changed from 'dev-user-code'
 
-// Example Mock Purchase Data (since we're not fetching full backend purchase details yet)
-const MOCK_PURCHASE_DATA = {
-  type: 'community' as const,
-  category: '3K',
-  participantCount: 50,
-  jerseySizes: [
-    { size: 'S', count: 12 },
-    { size: 'M', count: 15 },
-    { size: 'L', count: 18 },
-    { size: 'XL', count: 5 },
-  ],
-  totalPrice: 2500000 // Indonesian Rupiah
-};
+// Local shape passed to PurchaseCard
+type PurchaseData =
+  | {
+      type: 'community';
+      category: string;
+      participantCount: number;
+      jerseySizes: { size: string; count: number }[];
+      totalPrice: number;
+      qrCodeData: string | null;
+    }
+  | {
+      type: 'individual';
+      category: string;
+      jerseySize: string;
+      price: number;
+      qrCodeData: string | null;
+    };
 
 export default function App() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [purchases, setPurchases] = useState<PurchaseData[]>([]);
 
   // --- GET User Data on Mount ---
   useEffect(() => {
-    async function fetchUser() {
+    async function fetchUserAndPurchases() {
       if (!MOCK_ACCESS_CODE) {
         setError("Access code is not set.");
         setIsLoading(false);
         return;
       }
       try {
-        const res = await fetch(`/api/user?accessCode=${MOCK_ACCESS_CODE}`);
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.error || `Failed to fetch user: ${res.statusText}`);
+        // 1) fetch user (existing behavior)
+        const resUser = await fetch(`/api/user?accessCode=${encodeURIComponent(MOCK_ACCESS_CODE)}`);
+        if (!resUser.ok) {
+          const errorData = await resUser.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to fetch user: ${resUser.statusText}`);
         }
-        const { user } = await res.json();
+        const { user } = await resUser.json();
         setUserData(user);
+
+        // 2) fetch registrations/purchases (server now accepts ?accessCode= for dev)
+        const res = await fetch(`/api/profile/purchases?accessCode=${encodeURIComponent(MOCK_ACCESS_CODE)}`);
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || `Failed to fetch purchases: ${res.statusText}`);
+        }
+        const { registrations } = await res.json();
+
+        // map registrations -> PurchaseData expected by PurchaseCard
+        const mapped: PurchaseData[] = (registrations || []).map((reg: any) => {
+          const participants = reg.participants || [];
+          const qrCode = (reg.qrCodes && reg.qrCodes[0]) ? reg.qrCodes[0].qrCodeData : null;
+
+          if (reg.registrationType === 'community' || participants.length > 1) {
+            // aggregate jersey sizes
+            const sizesMap: Record<string, number> = {};
+            for (const p of participants) {
+              const size = p.jersey?.size || 'M';
+              sizesMap[size] = (sizesMap[size] || 0) + 1;
+            }
+            const jerseySizes = Object.entries(sizesMap).map(([size, count]) => ({ size, count }));
+            return {
+              type: 'community',
+              category: participants[0]?.category?.name || 'Community',
+              participantCount: participants.length,
+              jerseySizes,
+              totalPrice: Number(reg.totalAmount ?? 0),
+              qrCodeData: qrCode,
+            } as PurchaseData;
+          } else {
+            // individual
+            const p = participants[0] || {};
+            return {
+              type: 'individual',
+              category: p.category?.name || reg.registrationType || 'Individual',
+              jerseySize: p.jersey?.size || 'M',
+              price: Number(reg.totalAmount ?? 0),
+              qrCodeData: qrCode,
+            } as PurchaseData;
+          }
+        });
+
+        setPurchases(mapped);
       } catch (err: any) {
-        console.error("Fetch User Error:", err);
-        setError(err.message || 'Failed to load user profile.');
+        console.error("Fetch User/Purchases Error:", err);
+        setError(err.message || 'Failed to load profile or purchases.');
       } finally {
         setIsLoading(false);
       }
     }
-    fetchUser();
+    fetchUserAndPurchases();
   }, []);
 
   // --- UPDATE User Data Logic (Corrected) ---
   const handleUpdateUser = async (email: string, phone: string): Promise<boolean> => {
     if (!userData) {
       console.error("Attempted to update user before data was loaded.");
-      return false; // Explicitly return boolean false
+      return false;
     }
     
     try {
@@ -85,20 +134,19 @@ export default function App() {
         }
 
         const { user } = await res.json();
-        // Update local state with the new data from the API
         setUserData(user);
         alert('Profile updated successfully!'); 
-        return true; // Explicitly return boolean true on success
+        return true;
     } catch (err: any) {
         console.error("Update User Error:", err);
         alert(`Update failed: ${err.message}`);
-        return false; // Explicitly return boolean false on failure
+        return false;
     }
   };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Background image (place your image at /public/images/profile-bg.jpg) */}
+      {/* Background image */}
       <div
         className="fixed inset-0 bg-center bg-no-repeat"
         style={{
@@ -107,21 +155,14 @@ export default function App() {
         }}
       />
 
-      {/* Floating decorative elements */}
       <FloatingElements />
 
-      {/* Navbar placeholder */}
-
-      {/* Main Content */}
       <div className="relative z-10 min-h-screen pt-20">
         {/* Header */}
         <header className="relative overflow-hidden">
-          {/* Header gradient background */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#FFF1C5]/20 via-white/10 to-[#FFDFC0]/20 backdrop-blur-sm"></div>
-          
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex items-center justify-between mb-8">
-              {/* Ciputra Color Run 2026 Logo */}
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#91DCAC] to-[#91DCAC] flex items-center justify-center shadow-2xl ring-4 ring-white/50">
@@ -134,8 +175,6 @@ export default function App() {
                 </div>
               </div>
             </div>
-            
-            {/* Page Title */}
             <div>
               <h1 className="text-[#682950] mb-3">My Profile</h1>
               <div className="h-1.5 w-32 bg-gradient-to-r from-[#91DCAC] via-[#91DCAC] to-[#91DCAC] rounded-full shadow-lg"></div>
@@ -143,7 +182,6 @@ export default function App() {
           </div>
         </header>
 
-        {/* Content */}
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
             {isLoading ? (
                 <div className="text-center text-[#682950] text-lg">Loading profile...</div>
@@ -151,7 +189,6 @@ export default function App() {
                 <div className="text-center text-red-600 text-lg">Error: {error}</div>
             ) : userData ? (
                 <>
-                  {/* User Info Card */}
                   <div className="mb-12">
                     <UserInfoCard
                       userName={userData.name}
@@ -160,21 +197,28 @@ export default function App() {
                       onUpdate={handleUpdateUser}
                     />
                   </div>
-        
-                  {/* Purchase Section */}
+
                   <div>
                     <div className="mb-8">
-                      <h2 className="text-[#682950] mb-3">My Profile</h2>
+                      <h2 className="text-[#682950] mb-3">My Purchases</h2>
                       <div className="h-1.5 w-28 bg-[#92DDAE] rounded-full shadow-lg"></div>
                     </div>
-        
-                    <PurchaseCard purchase={MOCK_PURCHASE_DATA} />
+
+                    <div className="space-y-6">
+                      {purchases.length === 0 ? (
+                        <div className="text-center text-gray-600">No purchases found.</div>
+                      ) : (
+                        purchases.map((p, idx) => (
+                          <PurchaseCard key={idx} purchase={p as any} qrCodeData={(p as any).qrCodeData ?? null} />
+                        ))
+                      )}
+                    </div>
                   </div>
                 </>
             ) : null}
         </main>
 
-        {/* Footer */}
+        {/* Footer (unchanged) */}
         <footer className="relative mt-20">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="text-center">

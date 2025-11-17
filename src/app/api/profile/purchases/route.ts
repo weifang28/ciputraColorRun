@@ -15,13 +15,21 @@ async function getAccessCodeFromCookie() {
 
 export async function GET(req: Request) {
   try {
-    const accessCode = await getAccessCodeFromCookie();
+    // try cookie first (server-side)
+    let accessCode = await getAccessCodeFromCookie();
+
+    // fallback: allow query param ?accessCode=... for dev / client-side fetch
+    const url = new URL(req.url);
+    const accessCodeQuery = url.searchParams.get('accessCode');
+    if (!accessCode && accessCodeQuery) {
+      accessCode = accessCodeQuery;
+    }
 
     if (!accessCode) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    // 1. Temukan user berdasarkan cookie
+    // 1. Temukan user berdasarkan cookie / query param
     const user = await prisma.user.findUnique({
       where: { accessCode },
     });
@@ -30,37 +38,27 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // 2. Gunakan Prisma untuk mengambil data registrasi
-    // Penjelasan Prisma:
-    // - findMany: Ambil semua data dari tabel 'registration'
-    // - where: Yang 'userId'-nya sama dengan 'user.id' yang sedang login
-    // - include: "Sertakan" juga data terkait berikut ini (seperti JOIN di SQL):
-    //   - qrCodes: Ambil semua QR code yang terhubung ke registrasi ini
-    //   - participants: Ambil semua peserta di registrasi ini
-    //   - ...dan untuk setiap peserta, 'include' juga data 'category' dan 'jersey' mereka
+    // Ambil registrasi + peserta + qrCodes untuk user ini
     const registrations = await prisma.registration.findMany({
       where: { userId: user.id },
       include: {
-        qrCodes: true, // Ambil QR codes
-        participants: { // Ambil Peserta
+        qrCodes: true,
+        participants: {
           include: {
-            category: true, // Sertakan info Kategori Lomba (3K, 5K, 10K)
-            jersey: true,   // Sertakan info Jersey (S, M, L)
+            category: true,
+            jersey: true,
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc', // Tampilkan pembelian terbaru di atas
-      },
+      orderBy: { createdAt: 'desc' },
     });
 
     return NextResponse.json({ registrations });
-    
   } catch (err: unknown) {
     console.error('GET /api/profile/purchases error:', err);
     let errorMessage = "Failed to fetch purchase data";
     if (err instanceof Error) {
-        errorMessage = err.message;
+      errorMessage = err.message;
     }
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
