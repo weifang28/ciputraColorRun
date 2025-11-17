@@ -13,7 +13,9 @@ import { useParams, useRouter } from "next/navigation";
 export default function ClaimPage() {
   const params = useParams();
   const router = useRouter();
+  // normalize useParams() value (string | string[] | undefined) to a single token string
   const qr = params?.qr;
+  const token = Array.isArray(qr) ? qr[0] : qr;
 
   const [loading, setLoading] = useState(true);
   const [qrData, setQrData] = useState<any>(null);
@@ -25,10 +27,10 @@ export default function ClaimPage() {
   const [selfMode, setSelfMode] = useState(false);
 
   useEffect(() => {
-    if (!qr) return;
+    if (!token) return;
     let mounted = true;
     setLoading(true);
-    fetch(`/api/racePack/qr?qr=${encodeURIComponent(qr)}`)
+    fetch(`/api/racePack/qr?qr=${encodeURIComponent(String(token))}`)
       .then((r) => r.json())
       .then((b) => {
         if (!mounted) return;
@@ -42,14 +44,14 @@ export default function ClaimPage() {
       .catch((e) => setError(String(e)))
       .finally(() => mounted && setLoading(false));
     return () => { mounted = false; };
-  }, [qr]);
+  }, [token]);
 
   function toggleSelect(id: number) {
     setSelectedIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   }
 
   async function submitClaim() {
-    if (!qr) return;
+    if (!token) return;
     if (selectedIds.length === 0 && !selfMode) {
       alert("Select at least one participant or use Self Claim.");
       return;
@@ -65,7 +67,7 @@ export default function ClaimPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          qrCodeData: qr,
+          qrCodeData: token,
           participantIds: selectedIds.length ? selectedIds : undefined,
           claimedBy: claimedBy || (selfMode ? "self" : "staff"),
           claimType: selfMode ? "self" : "staff",
