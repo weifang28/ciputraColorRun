@@ -356,7 +356,8 @@ export async function POST(req: Request) {
       const paymentData: any = {
         registrationId: registration.id,
         transactionId: txId,
-        proofOfPayment: `/uploads/${proofFilename}`,
+        // store the actual uploaded path/URL (S3 URL or tmp path)
+        proofOfPayment: proofPath,
         status: "pending",
         amount: new Prisma.Decimal(String(amount ?? 0)),
       };

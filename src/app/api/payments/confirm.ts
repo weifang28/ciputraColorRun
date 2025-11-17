@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { authenticateAdmin, unauthorizedResponse } from '../middleware/auth';
+import { authenticateAdmin, unauthorizedResponse } from '../../middleware/auth';
 
 const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
-  // Authenticate admin (keeps your existing dev bypass logic)
+  // Authenticate admin (existing logic kept)
   const auth = await authenticateAdmin(request);
   if (!auth.authenticated) {
     const host = request.headers.get('host') || '';
@@ -13,7 +13,6 @@ export async function POST(request: Request) {
     const isDevHost = (process.env.NODE_ENV === 'development') || host.includes('localhost');
     const allowBypass = isDevHost || devBypassHeader === '1';
     if (!allowBypass) return unauthorizedResponse(auth.error);
-    console.warn('payments/confirm: admin auth failed — using development bypass (do not use in production).');
   }
 
   try {
@@ -23,37 +22,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing registrationId' }, { status: 400 });
     }
 
-    // Update registration payment status to confirmed
-    const registration = await prisma.registration.update({
-      where: { id: registrationId },
-      data: { paymentStatus: 'confirmed' },
-      include: { user: true },
+    // Update registration + its pending payments in a single transaction
+    const registration = await prisma.$transaction(async (tx) => {
+      // mark payments for this registration as confirmed
+      await tx.payment.updateMany({
+        where: { registrationId, status: 'pending' },
+        data: { status: 'confirmed' },
+      });
+
+      // update registration paymentStatus
+      const reg = await tx.registration.update({
+        where: { id: registrationId },
+        data: { paymentStatus: 'confirmed' },
+        include: { user: true },
+      });
+
+      return reg;
     });
 
-    // Attempt to send QR/email but do NOT fail the whole request if it errors.
-    // Fire-and-forget with logging so the LO sees successful confirm immediately.
+    // optional: fire-and-forget email/QR send (log errors but don't fail)
     (async () => {
       try {
-        const sendQrResponse = await fetch(`${process.env.APP_URL || 'http://localhost:3000'}/api/payments/sendQr`, {
+        await fetch(`${process.env.APP_URL || 'http://localhost:3000'}/api/payments/sendQr`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ registrationId, email: registration.user.email }),
+          body: JSON.stringify({ registrationId, email: registration.user?.email }),
         });
-        if (!sendQrResponse.ok) {
-          const text = await sendQrResponse.text().catch(() => '');
-          console.warn('payments/confirm: sendQr failed', sendQrResponse.status, text);
-        }
-      } catch (err) {
-        console.error('payments/confirm: sendQr error', err);
+      } catch (e) {
+        console.error('sendQr fire-and-forget failed', e);
       }
     })();
 
     return NextResponse.json({ success: true, registration });
-  } catch (error: any) {
-    console.error('Error confirming payment:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+  } catch (err: any) {
+    console.error('payments/confirm error:', err);
+    return NextResponse.json({ error: err?.message || String(err) }, { status: 500 });
   }
 }
