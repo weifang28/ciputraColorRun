@@ -1,13 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import fs from "fs/promises";
 import path from "path";
 
 const prisma = new PrismaClient();
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: any) {
   try {
-    const id = Number(params.id);
+    // handle both sync and Promise params shapes
+    const params = context?.params instanceof Promise ? await context.params : context?.params || {};
+    const id = Number(params?.id);
     if (Number.isNaN(id)) {
       return NextResponse.json({ error: "invalid id" }, { status: 400 });
     }
@@ -18,23 +20,25 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const proof = payment.proofOfPayment;
     if (!proof) return NextResponse.json({ error: "no proof stored" }, { status: 404 });
 
-    // If stored as a public URL (S3), redirect browser to it
+    // If proof is an absolute URL (S3), redirect to it
     if (proof.startsWith("http://") || proof.startsWith("https://")) {
       return NextResponse.redirect(proof);
     }
 
-    // Otherwise attempt to read local file (ephemeral; may not exist on another invocation)
-    // Accept either absolute /tmp/... or a path relative to repo/public (e.g. /uploads/...)
+    // Otherwise attempt to serve local file (ephemeral on serverless)
     let filePath = proof;
     if (!path.isAbsolute(filePath)) {
-      filePath = path.join(process.cwd(), "public", proof.replace(/^\//, ""));
+      // allow either absolute "/tmp/..." or repo-relative "/public/..." paths
+      filePath = path.join(process.cwd(), proof.replace(/^\//, ""));
     }
 
     try {
       const data = await fs.readFile(filePath);
       const ext = path.extname(filePath).slice(1).toLowerCase();
       const contentType =
-        ext === "png" ? "image/png" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : "application/octet-stream";
+        ext === "png" ? "image/png" :
+        ext === "jpg" || ext === "jpeg" ? "image/jpeg" :
+        "application/octet-stream";
       return new NextResponse(data, { headers: { "Content-Type": contentType } });
     } catch (readErr) {
       console.error("payments/proof: file read error", readErr);
