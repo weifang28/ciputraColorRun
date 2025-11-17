@@ -286,7 +286,7 @@ export default function RegistrationPage() {
         }
 
         // Validate jersey distribution matches participant count
-        const totalJerseys = Object.values(jerseys).reduce((sum, val) => sum + (Number(val) || 0), 0);
+        const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
         if (totalJerseys !== currentParticipants) {
             alert(`Jersey count (${totalJerseys}) must match participant count (${currentParticipants}) for this category`);
             return;
