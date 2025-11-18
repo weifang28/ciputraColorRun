@@ -178,7 +178,15 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFF1C5]/30 via-white/95 to-[#FFDFC0]/30">
+    <div 
+      className="min-h-screen"
+      style={{
+        backgroundImage: "url('/images/generalBg.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
       <FloatingElements />
       
       <div className="relative z-10 min-h-screen pt-20">

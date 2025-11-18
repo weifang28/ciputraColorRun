@@ -96,9 +96,9 @@ export default function LODashboard() {
   });
 
   return (
-    <div className="lo-dashboard p-8 pt-28 min-h-screen flex flex-col items-center bg-[#18181b]">
-      <div className="w-full max-w-3xl">
-        <h1 className="text-3xl pt-5 mt-5 font-bold mb-6 text-[#73e9dd] text-center">LO Dashboard - Pending Payments</h1>
+    <div className="lo-dashboard p-4 sm:p-6 lg:p-8 pt-24 sm:pt-28 min-h-screen flex flex-col items-center bg-[#18181b]">
+      <div className="w-full max-w-7xl">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl pt-5 mt-5 font-bold mb-6 text-[#73e9dd] text-center">LO Dashboard - Pending Payments</h1>
         
         {error && (
           <div className="mb-6 p-4 bg-red-900/30 border border-red-500 text-red-300 rounded">
@@ -115,11 +115,11 @@ export default function LODashboard() {
         {!loading && (
           <>
             {/* Tabs */}
-            <div className="flex justify-center mb-4 gap-2">
+            <div className="flex justify-center mb-4 gap-1 sm:gap-2 flex-wrap">
               {TABS.map(tab => (
                 <button
                   key={tab.key}
-                  className={`px-4 py-2 rounded-t-lg font-semibold border-b-2 transition-colors duration-150 ${activeTab === tab.key ? 'bg-[#73e9dd] text-[#18181b] border-[#73e9dd]' : 'bg-[#232326] text-[#ffdfc0] border-transparent hover:bg-[#232326] hover:text-[#73e9dd]'}`}
+                  className={`px-3 sm:px-4 py-2 rounded-t-lg text-sm sm:text-base font-semibold border-b-2 transition-colors duration-150 ${activeTab === tab.key ? 'bg-[#73e9dd] text-[#18181b] border-[#73e9dd]' : 'bg-[#232326] text-[#ffdfc0] border-transparent hover:bg-[#232326] hover:text-[#73e9dd]'}`}
                   onClick={() => setActiveTab(tab.key)}
                 >
                   {tab.label}
@@ -127,17 +127,18 @@ export default function LODashboard() {
               ))}
             </div>
             {/* Search */}
-            <div className="mb-6 flex justify-center">
+            <div className="mb-6 flex justify-center px-2">
               <input
                 type="text"
                 placeholder="Search by name or community..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full max-w-md px-4 py-2 border border-[#73e9dd] bg-[#232326] text-[#ffdfc0] rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-[#73e9dd] placeholder-[#91dcac]"
+                className="w-full max-w-md px-4 py-2 text-sm sm:text-base border border-[#73e9dd] bg-[#232326] text-[#ffdfc0] rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-[#73e9dd] placeholder-[#91dcac]"
               />
             </div>
-            {/* Table */}
-            <div className="overflow-x-auto rounded-lg shadow">
+
+            {/* Desktop/Tablet Table View - Hidden on mobile */}
+            <div className="hidden md:block overflow-x-auto rounded-lg shadow">
               <table className="w-full text-left bg-[#232326]">
                 <thead>
                   <tr className="bg-[#18181b] text-[#73e9dd]">
@@ -180,8 +181,8 @@ export default function LODashboard() {
                         
                         {/* Actions */}
                         <td className="p-3">
-                          <button className="bg-[#91dcac] hover:bg-[#73e9dd] text-[#18181b] px-4 py-2 mr-2 rounded transition-colors duration-150 font-bold" onClick={() => handleAccept(payment.registrationId)}>Accept</button>
-                          <button className="bg-[#f581a4] hover:bg-[#ffdfc0] text-[#18181b] px-4 py-2 rounded transition-colors duration-150 font-bold" onClick={() => handleDecline(payment.registrationId)}>Decline</button>
+                          <button className="bg-[#91dcac] hover:bg-[#73e9dd] text-[#18181b] px-4 py-2 mr-2 rounded transition-colors duration-150 font-bold text-sm" onClick={() => handleAccept(payment.registrationId)}>Accept</button>
+                          <button className="bg-[#f581a4] hover:bg-[#ffdfc0] text-[#18181b] px-4 py-2 rounded transition-colors duration-150 font-bold text-sm" onClick={() => handleDecline(payment.registrationId)}>Decline</button>
                         </td>
                       </tr>
                     ))
@@ -192,6 +193,72 @@ export default function LODashboard() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View - Visible only on mobile */}
+            <div className="md:hidden space-y-4">
+              {filteredPayments.length > 0 ? (
+                filteredPayments.map(payment => (
+                  <div key={payment.registrationId} className="bg-[#232326] rounded-lg p-4 border border-[#73e9dd] shadow">
+                    {/* User Name */}
+                    <div className="mb-3">
+                      <span className="text-xs text-[#73e9dd] font-semibold uppercase">User Name</span>
+                      <p className="text-[#ffdfc0] font-medium text-lg">{payment.userName}</p>
+                    </div>
+
+                    {/* Total Price */}
+                    <div className="mb-3">
+                      <span className="text-xs text-[#73e9dd] font-semibold uppercase">
+                        {activeTab === 'community' ? 'Group Name' : 'Total Price'}
+                      </span>
+                      <p className="text-[#91dcac]">
+                        {(() => {
+                          const amt = payment.payments?.[0]?.amount ?? payment.totalAmount ?? null;
+                          return amt ? `Rp ${Number(amt).toLocaleString('id-ID')}` : 'N/A';
+                        })()}
+                      </p>
+                    </div>
+
+                    {/* Proof */}
+                    <div className="mb-4">
+                      <span className="text-xs text-[#73e9dd] font-semibold uppercase block mb-2">Proof of Payment</span>
+                      {payment.payments && payment.payments[0] ? (
+                        (() => {
+                          const p = payment.payments[0];
+                          const proxy = p.id ? `/api/payments/proof/${p.id}` : p.proofOfPayment;
+                          return (
+                            <a href={proxy} target="_blank" rel="noreferrer">
+                              <img src={proxy} alt="proof" className="w-full h-48 object-cover rounded-md border border-[#73e9dd]" />
+                            </a>
+                          );
+                        })()
+                      ) : (
+                        <span className="text-xs text-[#ffdfc0] opacity-60">No proof</span>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <button 
+                        className="flex-1 bg-[#91dcac] hover:bg-[#73e9dd] text-[#18181b] px-4 py-3 rounded transition-colors duration-150 font-bold"
+                        onClick={() => handleAccept(payment.registrationId)}
+                      >
+                        Accept
+                      </button>
+                      <button 
+                        className="flex-1 bg-[#f581a4] hover:bg-[#ffdfc0] text-[#18181b] px-4 py-3 rounded transition-colors duration-150 font-bold"
+                        onClick={() => handleDecline(payment.registrationId)}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-[#ffdfc0] bg-[#232326] rounded-lg">
+                  No pending payments found.
+                </div>
+              )}
             </div>
           </>
         )}
