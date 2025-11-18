@@ -6,7 +6,9 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
-  engine: "classic",
+  // Prefer "library" runtime to avoid Prisma Accelerate binary download failures.
+  // Override with PRISMA_CLIENT_ENGINE_TYPE if you need "binary" or other engine.
+  engine: process.env.PRISMA_CLIENT_ENGINE_TYPE || "library",
   datasource: {
     url: env("DATABASE_URL"),
   },
