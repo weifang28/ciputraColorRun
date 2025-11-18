@@ -12,31 +12,31 @@ async function main() {
     const categories = [
       {
         name: "3km",
-        basePrice: new Prisma.Decimal("150000"),
-        earlyBirdPrice: new Prisma.Decimal("130000"),
-        tier1Price: new Prisma.Decimal("140000"), // 10-29 people
+        basePrice: 150000,
+        earlyBirdPrice: 130000,
+        tier1Price: 140000, // 10-29 people
         tier1Min: 10,
         tier1Max: 29,
-        tier2Price: new Prisma.Decimal("135000"), // >30 people
+        tier2Price: 135000, // >30 people
         tier2Min: 30,
         tier2Max: null, // unlimited
         tier3Price: null, // 3K doesn't have tier 3
         tier3Min: null,
-        bundlePrice: new Prisma.Decimal("145000"), // Family bundle
+        bundlePrice: 145000, // Family bundle
         bundleSize: 4,
         earlyBirdCapacity: 20, // NEW
       },
       {
         name: "5km",
-        basePrice: new Prisma.Decimal("200000"),
-        earlyBirdPrice: new Prisma.Decimal("180000"),
-        tier1Price: new Prisma.Decimal("190000"), // 10-29 people
+        basePrice: 200000,
+        earlyBirdPrice: 180000,
+        tier1Price: 190000, // 10-29 people
         tier1Min: 10,
         tier1Max: 29,
-        tier2Price: new Prisma.Decimal("180000"), // 30-59 people
+        tier2Price: 180000, // 30-59 people
         tier2Min: 30,
         tier2Max: 59,
-        tier3Price: new Prisma.Decimal("170000"), // >60 people
+        tier3Price: 170000, // >60 people
         tier3Min: 60,
         bundlePrice: null,
         bundleSize: null,
@@ -73,12 +73,12 @@ async function main() {
     // --- Seed Jersey Options (unchanged) ---
     console.log("👕 Seeding Jersey Options...");
     const jerseys = [
-      { size: "XS", price: new Prisma.Decimal("0"), quantity: 1000 },
-      { size: "S", price: new Prisma.Decimal("0"), quantity: 1000 },
-      { size: "M", price: new Prisma.Decimal("0"), quantity: 1000 },
-      { size: "L", price: new Prisma.Decimal("0"), quantity: 1000 },
-      { size: "XL", price: new Prisma.Decimal("0"), quantity: 1000 },
-      { size: "XXL", price: new Prisma.Decimal("0"), quantity: 1000 },
+      { size: "XS", price: 0, quantity: 1000 },
+      { size: "S", price: 0, quantity: 1000 },
+      { size: "M", price: 0, quantity: 1000 },
+      { size: "L", price: 0, quantity: 1000 },
+      { size: "XL", price: 0, quantity: 1000 },
+      { size: "XXL", price: 0, quantity: 1000 },
     ];
 
     for (const j of jerseys) {

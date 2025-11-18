@@ -144,19 +144,43 @@ export default function App() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold text-lg">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen pt-28 p-6 bg-gradient-to-br from-red-50 to-pink-50">
+        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Profile</h2>
+            <p className="text-gray-700 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Background image */}
-      <div
-        className="fixed inset-0 bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('/images/profile-bg.jpg')",
-          backgroundSize: 'contain',
-        }}
-      />
-
+    <div className="min-h-screen bg-gradient-to-br from-[#FFF1C5]/30 via-white/95 to-[#FFDFC0]/30">
       <FloatingElements />
-
+      
       <div className="relative z-10 min-h-screen pt-20">
         {/* Header */}
         <header className="relative overflow-hidden">
@@ -183,38 +207,34 @@ export default function App() {
         </header>
 
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
-            {isLoading ? (
-                <div className="text-center text-[#682950] text-lg">Loading profile...</div>
-            ) : error ? (
-                <div className="text-center text-red-600 text-lg">Error: {error}</div>
-            ) : userData ? (
-                <>
-                  <div className="mb-12">
-                    <UserInfoCard
-                      userName={userData.name}
-                      email={userData.email}
-                      phone={userData.phone}
-                      onUpdate={handleUpdateUser}
-                    />
+            {userData ? (
+              <>
+                <div className="mb-12">
+                  <UserInfoCard
+                    userName={userData.name}
+                    email={userData.email}
+                    phone={userData.phone}
+                    onUpdate={handleUpdateUser}
+                  />
+                </div>
+
+                <div>
+                  <div className="mb-8">
+                    <h2 className="text-[#682950] mb-3">My Purchases</h2>
+                    <div className="h-1.5 w-28 bg-[#92DDAE] rounded-full shadow-lg"></div>
                   </div>
 
-                  <div>
-                    <div className="mb-8">
-                      <h2 className="text-[#682950] mb-3">My Purchases</h2>
-                      <div className="h-1.5 w-28 bg-[#92DDAE] rounded-full shadow-lg"></div>
-                    </div>
-
-                    <div className="space-y-6">
-                      {purchases.length === 0 ? (
-                        <div className="text-center text-gray-600">No purchases found.</div>
-                      ) : (
-                        purchases.map((p, idx) => (
-                          <PurchaseCard key={idx} purchase={p as any} qrCodeData={(p as any).qrCodeData ?? null} />
-                        ))
-                      )}
-                    </div>
+                  <div className="space-y-6">
+                    {purchases.length === 0 ? (
+                      <div className="text-center text-gray-600">No purchases found.</div>
+                    ) : (
+                      purchases.map((p, idx) => (
+                        <PurchaseCard key={idx} purchase={p as any} qrCodeData={(p as any).qrCodeData ?? null} />
+                      ))
+                    )}
                   </div>
-                </>
+                </div>
+              </>
             ) : null}
         </main>
 

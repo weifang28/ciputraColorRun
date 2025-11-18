@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import "./styles/homepage.css";
@@ -10,12 +10,28 @@ import AboutCarousel from './components/AboutCarousel';
 import DocDecor from './components/DocDecor';
 
 export default function Home() {
+  const [loading, setLoading] = useState(true);
+
   // Refresh AOS animations when page loads
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as any).AOS) {
       (window as any).AOS.refresh();
     }
+    // Simulate initial content load
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold text-lg">Loading Ciputra Color Run...</p>
+        </div>
+      </div>
+    );
+  }
 
   const TEMP_LOGO_PATH = '/images/logo.png';
   

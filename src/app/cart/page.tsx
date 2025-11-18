@@ -2,18 +2,19 @@
 
 import { useCart } from "../context/CartContext";
 import { useRouter } from "next/navigation";
-import { Trash2, ShoppingBag } from "lucide-react";
-import { useState } from "react";
+import { ShoppingBag, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function CartPage() {
   const { items, removeItem, clearCart, totalPrice } = useCart();
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
   // Load personal details from sessionStorage
-  useState(() => {
+  useEffect(() => {
     try {
       setFullName(sessionStorage.getItem("reg_fullName") || "");
       setEmail(sessionStorage.getItem("reg_email") || "");
@@ -21,7 +22,13 @@ export default function CartPage() {
     } catch (e) {
       // ignore
     }
-  });
+  }, []);
+
+  useEffect(() => {
+    // Simulate initial load
+    const timer = setTimeout(() => setLoading(false), 400);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleCheckout = () => {
     if (items.length === 0) {
@@ -44,6 +51,19 @@ export default function CartPage() {
     }).toString();
     router.push(`/registration/confirm?${qs}`);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold text-lg">
+            Loading your cart...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="flex bg-gradient-to-br from-emerald-100/30 via-transparent to-rose-100/30 min-h-screen pt-28 pb-16">
@@ -101,7 +121,10 @@ export default function CartPage() {
                               .join(", ")}
                           </p>
                           <p className="font-semibold text-gray-800 mt-1">
-                            Rp {((item.participants || 0) * item.price).toLocaleString("id-ID")}
+                            Rp{" "}
+                            {(
+                              (item.participants || 0) * item.price
+                            ).toLocaleString("id-ID")}
                           </p>
                         </div>
                       )}
