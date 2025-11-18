@@ -6,6 +6,7 @@ const TABS = [
   { key: 'all', label: 'All' },
   { key: 'individual', label: 'Individual' },
   { key: 'community', label: 'Community' },
+  { key: 'family', label: 'Family Bundle' },
 ];
 
 export default function LODashboard() {
@@ -142,8 +143,10 @@ export default function LODashboard() {
               <table className="w-full text-left bg-[#232326]">
                 <thead>
                   <tr className="bg-[#18181b] text-[#73e9dd]">
-                    <th className="p-3 font-semibold">User Name</th>
-                    <th className="p-3 font-semibold">{activeTab === 'community' ? 'Group Name' : 'Total Price (IDR)'}</th>
+                    <th className="p-3 font-semibold">User Info</th>
+                    <th className="p-3 font-semibold">Registration Details</th>
+                    <th className="p-3 font-semibold">Participants</th>
+                    <th className="p-3 font-semibold">Total Price</th>
                     <th className="p-3 font-semibold">Proof</th>
                     <th className="p-3 font-semibold">Actions</th>
                   </tr>
@@ -151,18 +154,57 @@ export default function LODashboard() {
                 <tbody>
                   {filteredPayments.length > 0 ? (
                     filteredPayments.map(payment => (
-                      <tr key={payment.registrationId} className="border-b border-[#73e9dd] hover:bg-[#232326]">
-                        <td className="p-3 text-[#ffdfc0] font-medium">{payment.userName}</td>
+                      <tr key={payment.registrationId} className="border-b border-[#73e9dd] hover:bg-[#2a2a2e]">
+                        {/* User Info */}
+                        <td className="p-3">
+                          <div className="text-[#ffdfc0] font-medium">{payment.userName}</div>
+                          <div className="text-xs text-[#91dcac] mt-1">{payment.email}</div>
+                          <div className="text-xs text-[#91dcac]">{payment.phone}</div>
+                        </td>
 
-                        {/* Total price: prefer first payment.amount, fallback to registration.totalAmount */}
-                        <td className="p-3 text-[#91dcac]">
+                        {/* Registration Details */}
+                        <td className="p-3">
+                          <div className="text-[#ffdfc0] font-medium capitalize">{payment.registrationType}</div>
+                          {payment.groupName && (
+                            <div className="text-xs text-[#91dcac] mt-1">Group: {payment.groupName}</div>
+                          )}
+                          <div className="text-xs text-[#73e9dd] mt-1">
+                            {new Date(payment.createdAt).toLocaleDateString('id-ID', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </td>
+
+                        {/* Participants Info */}
+                        <td className="p-3">
+                          <div className="text-[#ffdfc0] font-medium mb-1">{payment.participantCount} participant(s)</div>
+                          {payment.categoryCounts && Object.keys(payment.categoryCounts).length > 0 && (
+                            <div className="text-xs text-[#91dcac] space-y-1">
+                              {Object.entries(payment.categoryCounts).map(([cat, count]) => (
+                                <div key={cat}>• {cat}: {String(count)}</div>
+                              ))}
+                            </div>
+                          )}
+                          {payment.jerseySizes && Object.keys(payment.jerseySizes).length > 0 && (
+                            <div className="text-xs text-[#73e9dd] mt-2">
+                              Jerseys: {Object.entries(payment.jerseySizes).map(([size, count]) => `${size}(${count})`).join(', ')}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Total price */}
+                        <td className="p-3 text-[#91dcac] font-bold">
                           {(() => {
                             const amt = payment.payments?.[0]?.amount ?? payment.totalAmount ?? null;
                             return amt ? `Rp ${Number(amt).toLocaleString('id-ID')}` : 'N/A';
                           })()}
                         </td>
 
-                        {/* Proof thumbnail: use server-side proxy /api/payments/proof/:paymentId when available */}
+                        {/* Proof thumbnail */}
                         <td className="p-3">
                           {payment.payments && payment.payments[0] ? (
                             (() => {
@@ -170,7 +212,7 @@ export default function LODashboard() {
                               const proxy = p.id ? `/api/payments/proof/${p.id}` : p.proofOfPayment;
                               return (
                                 <a href={proxy} target="_blank" rel="noreferrer">
-                                  <img src={proxy} alt="proof" className="w-20 h-14 object-cover rounded-md border" />
+                                  <img src={proxy} alt="proof" className="w-24 h-16 object-cover rounded-md border border-[#73e9dd] hover:scale-105 transition-transform" />
                                 </a>
                               );
                             })()
@@ -181,14 +223,16 @@ export default function LODashboard() {
                         
                         {/* Actions */}
                         <td className="p-3">
-                          <button className="bg-[#91dcac] hover:bg-[#73e9dd] text-[#18181b] px-4 py-2 mr-2 rounded transition-colors duration-150 font-bold text-sm" onClick={() => handleAccept(payment.registrationId)}>Accept</button>
-                          <button className="bg-[#f581a4] hover:bg-[#ffdfc0] text-[#18181b] px-4 py-2 rounded transition-colors duration-150 font-bold text-sm" onClick={() => handleDecline(payment.registrationId)}>Decline</button>
+                          <div className="flex flex-col gap-2">
+                            <button className="bg-[#91dcac] hover:bg-[#73e9dd] text-[#18181b] px-4 py-2 rounded transition-colors duration-150 font-bold text-sm whitespace-nowrap" onClick={() => handleAccept(payment.registrationId)}>Accept</button>
+                            <button className="bg-[#f581a4] hover:bg-[#ffdfc0] text-[#18181b] px-4 py-2 rounded transition-colors duration-150 font-bold text-sm whitespace-nowrap" onClick={() => handleDecline(payment.registrationId)}>Decline</button>
+                          </div>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={4} className="p-4 text-center text-[#ffdfc0]">No pending payments found.</td>
+                      <td colSpan={6} className="p-4 text-center text-[#ffdfc0]">No pending payments found.</td>
                     </tr>
                   )}
                 </tbody>
@@ -200,18 +244,54 @@ export default function LODashboard() {
               {filteredPayments.length > 0 ? (
                 filteredPayments.map(payment => (
                   <div key={payment.registrationId} className="bg-[#232326] rounded-lg p-4 border border-[#73e9dd] shadow">
-                    {/* User Name */}
-                    <div className="mb-3">
-                      <span className="text-xs text-[#73e9dd] font-semibold uppercase">User Name</span>
+                    {/* User Info */}
+                    <div className="mb-3 pb-3 border-b border-[#73e9dd]/30">
+                      <span className="text-xs text-[#73e9dd] font-semibold uppercase block mb-1">User Information</span>
                       <p className="text-[#ffdfc0] font-medium text-lg">{payment.userName}</p>
+                      <p className="text-sm text-[#91dcac]">{payment.email}</p>
+                      <p className="text-sm text-[#91dcac]">{payment.phone}</p>
+                    </div>
+
+                    {/* Registration Type & Date */}
+                    <div className="mb-3 pb-3 border-b border-[#73e9dd]/30">
+                      <span className="text-xs text-[#73e9dd] font-semibold uppercase block mb-1">Registration</span>
+                      <p className="text-[#ffdfc0] capitalize">{payment.registrationType}</p>
+                      {payment.groupName && (
+                        <p className="text-sm text-[#91dcac]">Group: {payment.groupName}</p>
+                      )}
+                      <p className="text-xs text-[#73e9dd] mt-1">
+                        {new Date(payment.createdAt).toLocaleDateString('id-ID', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+
+                    {/* Participants */}
+                    <div className="mb-3 pb-3 border-b border-[#73e9dd]/30">
+                      <span className="text-xs text-[#73e9dd] font-semibold uppercase block mb-1">Participants</span>
+                      <p className="text-[#ffdfc0] font-medium">{payment.participantCount} participant(s)</p>
+                      {payment.categoryCounts && Object.keys(payment.categoryCounts).length > 0 && (
+                        <div className="text-sm text-[#91dcac] mt-2 space-y-1">
+                          {Object.entries(payment.categoryCounts).map(([cat, count]) => (
+                            <div key={cat}>• {cat}: {String(count)}</div>
+                          ))}
+                        </div>
+                      )}
+                      {payment.jerseySizes && Object.keys(payment.jerseySizes).length > 0 && (
+                        <div className="text-xs text-[#73e9dd] mt-2">
+                          Jerseys: {Object.entries(payment.jerseySizes).map(([size, count]) => `${size}(${count})`).join(', ')}
+                        </div>
+                      )}
                     </div>
 
                     {/* Total Price */}
-                    <div className="mb-3">
-                      <span className="text-xs text-[#73e9dd] font-semibold uppercase">
-                        {activeTab === 'community' ? 'Group Name' : 'Total Price'}
-                      </span>
-                      <p className="text-[#91dcac]">
+                    <div className="mb-3 pb-3 border-b border-[#73e9dd]/30">
+                      <span className="text-xs text-[#73e9dd] font-semibold uppercase block mb-1">Total Price</span>
+                      <p className="text-[#91dcac] text-xl font-bold">
                         {(() => {
                           const amt = payment.payments?.[0]?.amount ?? payment.totalAmount ?? null;
                           return amt ? `Rp ${Number(amt).toLocaleString('id-ID')}` : 'N/A';
