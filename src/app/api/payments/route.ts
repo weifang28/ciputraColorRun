@@ -27,34 +27,28 @@ async function generateAccessCode(
     "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
   >
 ): Promise<string> {
-  // 1. Create the base code: lowercase, replace non-alphanumeric with '_', trim trailing '_'
-  const baseCode = fullName
+  // Normalize name -> ascii, lowercase, remove non-alphanumeric, spaces -> underscore
+  const normalized = (fullName || "user")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip diacritics
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "") // Remove special characters
-    .replace(/\s+/g, "_") // Replace one or more spaces with a single underscore
-    .replace(/_$/, ""); // Remove trailing underscore if any
+    .replace(/[^a-z0-9\s]/g, "") // remove punctuation
+    .trim()
+    .replace(/\s+/g, "_") // spaces -> underscore
+    .replace(/^_+|_+$/g, ""); // trim leading/trailing underscores
 
-  let accessCode = baseCode;
+  const base = normalized || `user`;
+
+  let code = base;
   let counter = 0;
 
-  // 2. Check for uniqueness and append a number if it already exists
-  // We loop until we find a code that is not in the database.
   while (true) {
-    const existingUser = await prismaTx.user.findUnique({
-      where: { accessCode: accessCode },
-    });
-
-    if (!existingUser) {
-      // This code is unique, we can use it.
-      break;
-    }
-
-    // This code is taken, increment counter and try again
-    counter++;
-    accessCode = `${baseCode}_${counter}`;
+    const exists = await prismaTx.user.findUnique({ where: { accessCode: code } });
+    if (!exists) return code;
+    counter += 1;
+    code = `${base}_${counter}`;
   }
-
-  return accessCode;
 }
 
 /**
@@ -185,14 +179,8 @@ export async function POST(req: Request) {
           ? await prismaTx.user.findUnique({ where: { email } })
           : null;
 
-      // helper to create a quick access code if needed
-      const quickAccessCode = (name?: string) =>
-        `${(name || "u").replace(/\s+/g, "").slice(0, 6)}-${Date.now()
-          .toString(36)
-          .slice(-6)}`;
-
       if (!user) {
-        const accessCode = quickAccessCode(fullName);
+        const accessCode = await generateAccessCode(fullName || "user", prismaTx);
         user = await prismaTx.user.create({
           data: {
             name: fullName,

@@ -81,17 +81,7 @@ export default function RegistrationPage() {
         })();
     }, []);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-emerald-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600 font-semibold text-lg">Loading registration form...</p>
-                </div>
-            </div>
-        );
-    }
-
+    // --- Move all hook-based computations here so they always run in the same order ---
     // Check if user has family bundle in cart
     const hasFamilyBundle = useMemo(() => {
         return items.some(item => item.type === "family");
