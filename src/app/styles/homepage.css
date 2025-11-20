@@ -1285,7 +1285,8 @@
 
 /* Card styling (keeps look consistent with other cards on the page) */
 .timeline-card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.96));
+  /* changed background to be slightly more transparent so underlying gradient shows */
+  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.88));
   border: 1px solid rgba(16,24,40,0.04);
   border-radius: 12px;
   padding: 1.25rem;
@@ -1398,6 +1399,16 @@
 @media (max-width: 420px) {
   .jersey-input { height: 36px; line-height: 36px; }
   .jersey-input::placeholder { line-height: 36px; }
+}
+
+.timeline-section {
+  background: linear-gradient(90deg, #a7cca9 0%, #da9c9d 100%);
+  background-repeat: no-repeat;
+  background-position: center;
+  /* optional subtle fixed feel on large screens */
+  background-attachment: fixed;
+  /* keep existing padding/spacing from utility classes, preserve text color */
+  color: inherit;
 }
 
 /* end timeline fixes */

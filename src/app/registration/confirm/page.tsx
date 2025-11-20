@@ -253,7 +253,7 @@ export default function ConfirmPaymentPage() {
             </p>
 
             <a
-                href="https://chat.whatsapp.com/GROUP_LINK_DI_SINI"
+                href="https://chat.whatsapp.com/HkYS1Oi3CyqFWeVJ7d18Ve"
                 target="_blank"
                 className="block w-full bg-green-500 text-white py-3 rounded-full font-semibold hover:bg-green-600 transition"
             >
