@@ -252,7 +252,7 @@ export async function POST(req: Request) {
             jerseyId: jerseyId ?? (await prismaTx.jerseyOption.findFirst())?.id ?? 1,
             bibNumber: bib,
           });
-        } else if (item.type === "community") {
+        } else if (item.type === "community" || item.type === "family") {
           const jerseysMap: Record<string, number> = item.jerseys || {};
           for (const [size, cnt] of Object.entries(jerseysMap)) {
             const count = Number(cnt) || 0;
