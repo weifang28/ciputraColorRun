@@ -1,13 +1,16 @@
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status') || 'pending';
+
     const registrations = await prisma.registration.findMany({
       where: {
-        paymentStatus: 'pending',
+        paymentStatus: status as any,
       },
       include: {
         user: true,
@@ -24,7 +27,9 @@ export async function GET(request: Request) {
       },
     });
 
+    // Transform to match expected format
     const payments = registrations.map(reg => {
+      // Calculate category counts
       const categoryCounts: Record<string, number> = {};
       const jerseySizes: Record<string, number> = {};
       
@@ -42,7 +47,7 @@ export async function GET(request: Request) {
         email: reg.user.email,
         phone: reg.user.phone,
         registrationType: reg.registrationType,
-        groupName: reg.groupName || 'N/A',
+        groupName: reg.groupName || undefined,
         totalAmount: reg.totalAmount,
         createdAt: reg.createdAt,
         paymentStatus: reg.paymentStatus,
@@ -69,7 +74,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(payments);
   } catch (error) {
-    console.error("Error fetching pending payments:", error);
+    console.error('Error fetching payments:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
