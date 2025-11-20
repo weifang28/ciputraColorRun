@@ -328,8 +328,10 @@ export async function POST(req: Request) {
       }, {} as Record<number, number>);
 
       const createdQrCodes: any[] = [];
-      for (const [catIdStr, totalPacks] of Object.entries(grouped)) {
+      // Object.entries can produce loose types; assert tuple type and coerce values to number
+      for (const [catIdStr, totalPacksRaw] of Object.entries(grouped) as [string, number][]) {
         const catId = Number(catIdStr);
+        const totalPacks = Number(totalPacksRaw || 0);
         const code =
           typeof crypto?.randomUUID === "function"
             ? crypto.randomUUID()
