@@ -298,7 +298,7 @@ export async function POST(req: Request) {
       // --- NEW: create EarlyBirdClaim when applicable (for individual registrations) ---
       // This ensures categories API will reflect consumed early-bird slots immediately.
       if (registrationType === "individual") {
-        const claimedByCategory = Array.from(new Set(createdParticipants.map(r => r.categoryId)));
+        const claimedByCategory = Array.from(new Set(createdParticipants.map((r: any) => r.categoryId)));
         for (const catId of claimedByCategory) {
           const cat = await prismaTx.raceCategory.findUnique({ where: { id: catId } });
           if (!cat) continue;
