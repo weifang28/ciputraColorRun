@@ -58,7 +58,8 @@ export async function GET(request: Request) {
           id: p.id,
           amount: p.amount,
           proofOfPayment: p.proofOfPayment,
-          proofSenderName: p.proofSenderName, // NEW
+          // cast to any because Prisma client types may be stale during migration
+          proofSenderName: (p as any).proofSenderName,
           status: p.status,
         })),
         user: {
