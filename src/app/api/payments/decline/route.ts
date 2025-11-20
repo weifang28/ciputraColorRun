@@ -47,10 +47,13 @@ export async function POST(request: Request) {
       });
 
       if (participants && participants.length > 0) {
-        const countsByCategory: Record<number, number> = participants.reduce((acc, p) => {
-          acc[p.categoryId] = (acc[p.categoryId] || 0) + 1;
-          return acc;
-        }, {} as Record<number, number>);
+        const countsByCategory: Record<number, number> = participants
+          .filter((p) => p.categoryId != null)
+          .reduce((acc, p) => {
+            const cid = Number(p.categoryId);
+            acc[cid] = (acc[cid] || 0) + 1;
+            return acc;
+          }, {} as Record<number, number>);
 
         for (const [catIdStr, cnt] of Object.entries(countsByCategory)) {
           const catId = Number(catIdStr);
