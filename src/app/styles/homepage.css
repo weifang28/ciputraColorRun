@@ -1018,158 +1018,194 @@
     display: none;
   }
 
-  /* keep horizontal scroller active and prevent inner vertical scrollbar */
+  /* wrapper becomes horizontal scroller */
   .pricing-table-wrap {
-    overflow-x: auto;
-    overflow-y: hidden; /* keep vertical overflow hidden */
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch;
     scroll-padding: 1rem;
     padding-bottom: 0.5rem;
     max-width: 100%;
+    width: 100%;
   }
 
-  /* keep the table layout so it stays horizontally scrollable */
+  /* keep real table layout so it looks like desktop, allow overflow */
   .pricing-table {
-    display: table;
-    width: max-content; /* allow horizontal overflow instead of collapsing columns */
-    min-width: 780px;   /* same desktop min so horizontal scroll appears on narrow viewports */
+    display: table !important;
+    width: max-content !important;
+    min-width: 720px; /* adjust if you add/remove columns */
     border-collapse: collapse;
     background: transparent;
     box-shadow: none;
     border: none;
   }
 
-  /* keep the header visible and readable */
-  .pricing-table thead {
-    display: table-header-group;
+  /* keep the header readable and sticky on vertical scroll */
+  .pricing-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(255,255,255,0.97);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    white-space: nowrap;
+    padding: 10px 14px;
   }
+
+  /* ensure cells don't wrap and maintain column widths while scrolling */
+  .pricing-table tbody td,
   .pricing-table thead th {
     white-space: nowrap;
     padding: 10px 14px;
-  }
-
-  /* normal table body rows/cells (no stacking) */
-  .pricing-table tbody {
-    display: table-row-group;
-    width: 100%;
-  }
-  .pricing-table tbody tr {
-    display: table-row;
-    background: transparent;
-    box-shadow: none;
-    border-radius: 0;
-    margin: 0;
-    padding: 0;
-  }
-  .pricing-table tbody td {
-    display: table-cell;
-    white-space: nowrap;
     vertical-align: middle;
-    padding: 10px 14px;
-    border-bottom: 1px solid rgba(31,98,81,0.06);
   }
 
-  /* keep sticky first column behavior */
+  /* sticky left column — opaque so it never stacks on top of content */
   .pricing-table tbody td.col-item,
   .pricing-table thead th.col-item {
     position: sticky;
     left: 0;
-    z-index: 6;
-    background: rgba(255,255,255,0.95);
-    box-shadow: 2px 0 8px rgba(16,24,40,0.04);
+    z-index: 12;
+    background: #ffffff; /* opaque to mask scrolled content */
+    box-shadow: 6px 0 14px rgba(16,24,40,0.06);
+    white-space: nowrap;
   }
 
-  /* ensure nothing forces additional horizontal overflow */
+  /* keep rows as table-rows so layout matches desktop */
+  .pricing-table tbody tr {
+    display: table-row;
+  }
+
+  /* safety: make sure no other rules force stacked-card UI */
   .pricing-table, .pricing-table * {
     box-sizing: border-box;
-    max-width: none;
-    overflow-wrap: normal;
+    max-width: none !important;
+    overflow-wrap: normal !important;
   }
 }
 
-/* Pricing title gradient */
-.pricing-title-gradient {
-  background: linear-gradient(
-    90deg,
-    #4D9D56 0%,
-    #FFE1C4 25%,
-    #682950 50%,
-    #F581A4 75%,
-    #4E765C 100%
-  );
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-/* ===== Timeline styles ===== */
-.timeline-section {
-  position: relative;
-  padding: 3rem 0;
-  color: var(--foreground);
-  background: linear-gradient(90deg, #a0d4ac, #e2969c);
-  background-size: cover;
-  background-position: center;
-}
-
-.timeline-scroll-wrap {
-  position: relative;
-  z-index: 2;
-  overflow-x: visible;        /* no horizontal scrolling */
-  overflow-y: visible;
-  padding: 1.5rem 0;
-  -webkit-overflow-scrolling: auto;
-  scroll-padding: 1rem;
-}
-
-/* Use a responsive grid so cards lay out in rows instead of a single horizontal strip */
-.timeline-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  width: 100%;
+/* ===== Benefits section styling (mobile + desktop polish) =====
+   - Keeps desktop look intact; improves spacing, readability and touch targets on mobile.
+   - Uses existing class names used in the page: .benefits-section, .benefits-grid, .benefit-card, .benefit-icon-wrap, .benefit-title, .benefit-description
+*/
+.benefits-section {
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 0 1rem;
-  align-items: start;
-  justify-items: stretch;
-  box-sizing: border-box;
+  padding: 2.5rem 1rem;
 }
 
-/* Keep card sizing modest and responsive */
-.timeline-card {
-  width: 100%;
-  max-width: 420px;
-  min-height: 160px;
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+/* Card */
+.benefit-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.96));
+  border: 1px solid rgba(16,24,40,0.04);
+  border-radius: 14px;
   padding: 1.25rem;
-  border-radius: 12px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+  min-height: 170px;
+  transition: transform 220ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms ease, border-color 220ms ease;
+  box-shadow: 0 8px 20px rgba(16,24,40,0.04);
 }
 
-/* Mobile: single column with slightly reduced paddings */
-@media (max-width: 640px) {
-  .timeline-cards {
-    grid-template-columns: 1fr;
+/* subtle hover / focus for pointer devices */
+.benefit-card:hover,
+.benefit-card:focus-within {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px rgba(16,24,40,0.08);
+  border-color: rgba(16,24,40,0.06);
+}
+
+/* Icon wrapper */
+.benefit-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(145,220,172,0.15), rgba(245,129,164,0.12));
+  box-shadow: 0 6px 18px rgba(16,24,40,0.04);
+  flex-shrink: 0;
+}
+
+/* Icon / image sizing inside the wrapper */
+.benefit-icon-wrap img,
+.benefit-icon-wrap svg,
+.benefit-image {
+  width: 48px;
+  height: 48px;
+  display: block;
+  object-fit: contain;
+}
+
+/* Title and description */
+.benefit-title {
+  margin-top: 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1F6251; /* dark green */
+  line-height: 1.1;
+}
+
+.benefit-description {
+  color: #52605f;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}
+
+/* Responsive: stack on small screens, increase touch targets */
+@media (max-width: 900px) {
+  .benefits-grid {
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
-    padding: 0 0.75rem;
   }
-  .timeline-card {
-    padding: 1rem;
-    min-height: 140px;
-  }
+
+  .benefit-card { min-height: 150px; padding: 1rem; }
 }
 
-/* ===== Benefits Section (after pricing table) ===== */
-.benefits-section {
-  position: relative;
-  z-index: 2;
-  margin-top: 3rem;
+@media (max-width: 520px) {
+  .benefits-grid {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .benefit-card {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    gap: 0.9rem;
+    padding: 0.9rem;
+    min-height: 84px;
+  }
+
+  .benefit-icon-wrap { width: 56px; height: 56px; border-radius: 12px; }
+  .benefit-icon-wrap img,
+  .benefit-icon-wrap svg,
+  .benefit-image { width: 36px; height: 36px; }
+
+  .benefit-title { font-size: 1rem; }
+  .benefit-description { font-size: 0.9rem; }
 }
 
+/* ===== Pricing & Benefits visual tweaks =====
+   - Make the last benefit card ("Benefit Lainnya") span the full width of the 3-card row on larger screens
+   - Keep desktop layout unchanged; ensure mobile stacks normally
+   - Add gradient text for HARGA TIKET and BENEFIT PENDAFTARAN headings
+*/
+
+/* Gradient headings (used by .pricing-title-gradient and .benefit-section-title in src/app/page.tsx) */
+.pricing-title-gradient,
 .benefit-section-title {
   background: linear-gradient(
     90deg,
@@ -1179,305 +1215,189 @@
     #F581A4 75%,
     #4E765C 100%
   );
-  background-clip: text;
   -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  letter-spacing: 1.5px;
 }
 
-.benefits-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.5rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.benefit-card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
-  backdrop-filter: blur(8px) saturate(1.02);
-  -webkit-backdrop-filter: blur(8px) saturate(1.02);
-  border: 1px solid rgba(31,98,81,0.12);
-  border-radius: 16px;
-  padding: 2rem 1.5rem;
-  text-align: center;
-  transition: transform 280ms cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 280ms ease;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.benefit-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 48px rgba(16,24,40,0.12);
-  border-color: rgba(145,220,172,0.24);
-}
-
-.benefit-icon-wrap {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(145,220,172,0.12), rgba(245,129,164,0.08));
+/* Make the fourth benefit card span full width of the three-column grid on medium+ screens */
+.benefits-grid .benefit-card:last-child {
+  grid-column: 1 / -1;
+  min-height: 220px; /* larger visual weight */
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.5rem;
-  position: relative;
-  overflow: hidden;
-  flex-shrink: 0;
+  text-align: center;
+  padding: 1.5rem;
 }
 
-.benefit-icon-wrap::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent 60%);
-  pointer-events: none;
-}
-
-.benefit-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-.benefit-svg {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  filter: drop-shadow(0 4px 12px rgba(145,220,172,0.2));
-}
-
-.benefit-title {
-  font-family: var(--font-moderniz);
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #1F6251;
-  margin: 0;
-  letter-spacing: 0.3px;
-}
-
-.benefit-description {
-  font-family: var(--font-mustica);
-  font-size: 0.875rem;
-  color: #52605f;
-  line-height: 1.5;
-  margin: 0;
-}
-
-/* Responsive: tablet adjustments */
-@media (max-width: 1024px) {
-  .benefits-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.25rem;
-  }
-
-  .benefit-card {
-    padding: 1.5rem 1.25rem;
-  }
-
-  .benefit-icon-wrap {
-    width: 70px;
-    height: 70px;
-  }
-
-  .benefit-svg {
-    width: 36px;
-    height: 36px;
-  }
-
-  .benefit-title {
-    font-size: 1rem;
-  }
-
-  .benefit-description {
-    font-size: 0.8125rem;
+/* Keep proportion on medium screens */
+@media (max-width: 900px) {
+  .benefits-grid .benefit-card:last-child {
+    grid-column: 1 / -1;
+    min-height: 180px;
   }
 }
 
-/* Responsive: mobile adjustments */
-@media (max-width: 640px) {
-  .benefits-section {
-    margin-top: 2rem;
-  }
-
+/* On very small screens, keep stacked single-column layout (do not force spanning) */
+@media (max-width: 520px) {
   .benefits-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
   }
-
-  .benefit-card {
-    padding: 1.25rem 1rem;
-    border-radius: 12px;
-  }
-
-  .benefit-icon-wrap {
-    width: 64px;
-    height: 64px;
-  }
-
-  .benefit-svg {
-    width: 32px;
-    height: 32px;
-  }
-
-  .benefit-title {
-    font-size: 0.9375rem;
-  }
-
-  .benefit-description {
-    font-size: 0.75rem;
+  .benefits-grid .benefit-card:last-child {
+    grid-column: auto;
+    min-height: 84px; /* match smaller card height */
+    padding: 0.9rem;
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
   }
 }
 
-/* --- Mobile: improved, compact & non-overflowing pricing cards --- */
-@media (max-width: 720px) {
-  .pricing-decor-large,
-  .pricing-decor-small {
-    display: none;
-  }
+/* Minor polish: slightly larger title inside the spanning card */
+.benefits-grid .benefit-card:last-child .benefit-title {
+  font-size: 1.12rem;
+  font-weight: 900;
+}
 
-  /* keep horizontal scroller active and prevent inner vertical scrollbar */
-  .pricing-table-wrap {
-    overflow-x: auto;
-    overflow-y: hidden; /* keep vertical overflow hidden */
+/* ===== Timeline section fixes =====
+   - Restore desktop grid layout (unchanged visually)
+   - On small screens make the timeline horizontally scrollable
+   - Keep each timeline card opaque, readable and with consistent padding/shadow
+   - Do NOT affect other sections
+*/
+.timeline-scroll-wrap {
+  /* Desktop: normal flow. Mobile will allow horizontal scroll. */
+  overflow-x: visible;
+  overflow-y: visible;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Default (desktop/tablet) grid layout so desktop looks identical */
+.timeline-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+/* Card styling (keeps look consistent with other cards on the page) */
+.timeline-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.96));
+  border: 1px solid rgba(16,24,40,0.04);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 10px 28px rgba(16,24,40,0.06);
+  color: #23312b;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 140px;
+}
+
+/* Local elements inside the card */
+.timeline-badge {
+  display: inline-block;
+  padding: 0.32rem 0.6rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(145,220,172,0.14), rgba(245,129,164,0.08));
+  color: #1f6251;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.4px;
+}
+.timeline-date {
+  font-weight: 700;
+  color: #682950;
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+}
+.timeline-text {
+  color: #52605f;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+/* MOBILE: horizontal scroll behavior while preserving desktop appearance */
+@media (max-width: 900px) {
+  /* Mobile: stack timeline cards vertically (single column) */
+  .timeline-scroll-wrap {
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    padding-bottom: 0;
     -webkit-overflow-scrolling: touch;
-    scroll-padding: 1rem;
-    padding-bottom: 0.5rem;
-    max-width: 100%;
   }
 
-  /* keep the table layout so it stays horizontally scrollable */
-  .pricing-table {
-    display: table;
-    width: max-content; /* allow horizontal overflow instead of collapsing columns */
-    min-width: 780px;   /* same desktop min so horizontal scroll appears on narrow viewports */
-    border-collapse: collapse;
-    background: transparent;
-    box-shadow: none;
-    border: none;
-  }
-
-  /* keep the header visible and readable */
-  .pricing-table thead {
-    display: table-header-group;
-  }
-  .pricing-table thead th {
-    white-space: nowrap;
-    padding: 10px 14px;
-  }
-
-  /* normal table body rows/cells (no stacking) */
-  .pricing-table tbody {
-    display: table-row-group;
+  /* Force single-column stacking so timeline reads top->down like a normal vertical list */
+  .timeline-cards {
+    display: block;
+    gap: 0;
     width: 100%;
   }
-  .pricing-table tbody tr {
-    display: table-row;
-    background: transparent;
-    box-shadow: none;
-    border-radius: 0;
-    margin: 0;
-    padding: 0;
-  }
-  .pricing-table tbody td {
-    display: table-cell;
-    white-space: nowrap;
-    vertical-align: middle;
-    padding: 10px 14px;
-    border-bottom: 1px solid rgba(31,98,81,0.06);
-  }
 
-  /* keep sticky first column behavior */
-  .pricing-table tbody td.col-item,
-  .pricing-table thead th.col-item {
-    position: sticky;
-    left: 0;
-    z-index: 6;
-    background: rgba(255,255,255,0.95);
-    box-shadow: 2px 0 8px rgba(16,24,40,0.04);
-  }
-
-  /* ensure nothing forces additional horizontal overflow */
-  .pricing-table, .pricing-table * {
-    box-sizing: border-box;
-    max-width: none;
-    overflow-wrap: normal;
-  }
-}
-
-/* --- Force pricing table to be non-scrollable and fully responsive --- */
-/* Place this at the end so it overrides previous rules */
-.pricing-table-wrap {
-  overflow-x: hidden !important;
-  overflow-y: hidden !important;
-  -webkit-overflow-scrolling: auto !important;
-}
-
-/* Allow the table to shrink instead of forcing horizontal scroll */
-.pricing-table {
-  min-width: 0 !important;
-  width: 100% !important;
-  table-layout: auto !important;
-  border-collapse: collapse;
-}
-
-/* Make cells wrap instead of forcing wide columns */
-.pricing-table thead th,
-.pricing-table tbody td {
-  white-space: normal !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
-}
-
-/* Disable sticky header behavior (sticky can force layout that causes scroll) */
-.pricing-table thead th {
-  position: static !important;
-  top: auto !important;
-  z-index: auto !important;
-}
-
-/* Mobile: convert rows into stacked cards (no horizontal scroll) */
-@media (max-width: 720px) {
-  .pricing-table {
-    display: block !important;
-  }
-
-  .pricing-table thead {
-    display: none !important;
-  }
-
-  .pricing-table tbody {
-    display: block !important;
-  }
-
-  .pricing-table tbody tr {
+  .timeline-card {
     display: block;
-    margin-bottom: 0.75rem;
-    background: transparent;
-    border-radius: 8px;
-    padding: 0.5rem;
+    width: 100%;
+    min-width: auto;
+    margin-bottom: 1rem;
+    flex: none;
   }
 
-  .pricing-table tbody td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.6rem 0.5rem;
-    border-bottom: 1px dashed rgba(0,0,0,0.04);
-  }
-
-  .pricing-table tbody td.col-item {
-    font-weight: 700;
+  .timeline-card:last-child {
+    margin-bottom: 0;
   }
 }
 
-/* Safety: ensure table wrapper cannot create internal vertical scrollbar */
-html body .pricing-table-wrap,
-html body .pricing-table {
-  max-height: none !important;
-  overflow: visible !important;
+/* Safety: ensure global overflow-x:hidden (if present) doesn't permanently hide the scrollbar */
+.timeline-scroll-wrap::-webkit-scrollbar {
+  height: 8px;
 }
+.timeline-scroll-wrap::-webkit-scrollbar-thumb {
+  background: rgba(31,98,81,0.12);
+  border-radius: 999px;
+}
+
+.jersey-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-bottom: 2px solid #e5e7eb;
+  background: transparent;
+  color: #111827;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 40px;            /* vertically center value */
+  vertical-align: middle;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  appearance: none;
+  outline: none;
+}
+
+/* ensure placeholders also use same line-height */
+.jersey-input::placeholder {
+  color: #9ca3af;
+  line-height: 40px;
+}
+
+/* small horizontal nudge when needed */
+.jersey-input.shift-right {
+  transform: translateX(8px);
+}
+
+/* Focus state */
+.jersey-input:focus {
+  border-bottom-color: #10b981;
+  box-shadow: none;
+}
+
+/* Small screens tweak */
+@media (max-width: 420px) {
+  .jersey-input { height: 36px; line-height: 36px; }
+  .jersey-input::placeholder { line-height: 36px; }
+}
+
+/* end timeline fixes */
