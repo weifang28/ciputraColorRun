@@ -12,12 +12,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing qrCodeData' }, { status: 400 });
     }
 
-    // If this is a self-claim, require password (admin-known)
-    if (claimType === 'self') {
-      const secret = process.env.CLAIM_PASSWORD || process.env.ADMIN_PASS;
-      if (!secret || password !== secret) {
-        return NextResponse.json({ error: 'Invalid claim password' }, { status: 401 });
-      }
+    // Require password for all claims
+    const CLAIM_PASSWORD = process.env.CLAIM_PASS;
+    if (!password || password !== CLAIM_PASSWORD) {
+      return NextResponse.json({ error: 'Invalid claim password. Only authorized staff can claim race packs.' }, { status: 401 });
     }
 
     // Find QR
