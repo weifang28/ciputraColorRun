@@ -240,7 +240,7 @@ export default function LODashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f1724] via-[#18181b] to-[#0f1724] p-4 sm:p-6 lg:p-8 pt-24">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto pt-20">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>

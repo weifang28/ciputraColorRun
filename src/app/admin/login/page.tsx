@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // ensure Set-Cookie from server is stored
+        credentials: "include",
         body: JSON.stringify({ username, password }),
       });
 
@@ -38,18 +38,43 @@ export default function AdminLoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-[#0f1724] p-6">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm bg-[#0b1220] p-6 rounded shadow">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-sm bg-[#0b1220] p-6 rounded shadow"
+        autoComplete="off"
+      >
         <h1 className="text-xl font-bold text-[#91DCAC] mb-4">Admin Login</h1>
 
         {error && <div className="mb-3 text-sm text-red-400 bg-red-900/20 p-2 rounded">{error}</div>}
 
         <label className="block mb-2 text-xs text-[#cbd5e1]">Username</label>
-        <input value={username} onChange={(e) => setUsername(e.target.value)} className="w-full mb-3 px-3 py-2 rounded bg-[#0b1228] border border-[#1f2937] text-[#e6eef3]" />
+        <input
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="w-full mb-3 px-3 py-2 rounded bg-[#0b1228] border border-[#1f2937] text-[#e6eef3]"
+          type="text"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          required
+        />
 
         <label className="block mb-2 text-xs text-[#cbd5e1]">Password</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mb-4 px-3 py-2 rounded bg-[#0b1228] border border-[#1f2937] text-[#e6eef3]" />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full mb-4 px-3 py-2 rounded bg-[#0b1228] border border-[#1f2937] text-[#e6eef3]"
+          autoComplete="new-password"
+          required
+        />
 
-        <button type="submit" disabled={loading} className="w-full px-4 py-2 bg-[#91DCAC] text-black font-semibold rounded">
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full px-4 py-2 bg-[#91DCAC] text-black font-semibold rounded hover:bg-[#7dc99a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           {loading ? "Signing in…" : "Sign in"}
         </button>
 
