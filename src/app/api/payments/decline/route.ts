@@ -25,16 +25,53 @@ export async function POST(request: Request) {
 
     // Update both payment records and registration status inside a transaction
     const registration = await prisma.$transaction(async (tx) => {
+      // mark pending payments as declined
       await tx.payment.updateMany({
         where: { registrationId, status: 'pending' },
         data: { status: 'declined' },
       });
 
+      // update registration status to declined
       const reg = await tx.registration.update({
         where: { id: registrationId },
         data: { paymentStatus: 'declined' },
         include: { user: true },
       });
+
+      // --- NEW: restore early-bird capacity ---
+      // Best-effort: remove up to N earlyBirdClaim rows per category where N = number of participants in this registration for that category.
+      // This does not change schema and works with anonymous earlyBirdClaim rows (created via createMany with categoryId).
+      const participants = await tx.participant.findMany({
+        where: { registrationId },
+        select: { categoryId: true },
+      });
+
+      if (participants && participants.length > 0) {
+        const countsByCategory: Record<number, number> = participants.reduce((acc, p) => {
+          acc[p.categoryId] = (acc[p.categoryId] || 0) + 1;
+          return acc;
+        }, {} as Record<number, number>);
+
+        for (const [catIdStr, cnt] of Object.entries(countsByCategory)) {
+          const catId = Number(catIdStr);
+          if (!catId || cnt <= 0) continue;
+
+          // Find up to `cnt` existing claim rows for this category (most-recent first)
+          const claimsToRemove = await tx.earlyBirdClaim.findMany({
+            where: { categoryId: catId },
+            orderBy: { createdAt: 'desc' },
+            take: cnt,
+            select: { id: true },
+          });
+
+          if (claimsToRemove.length > 0) {
+            await tx.earlyBirdClaim.deleteMany({
+              where: { id: { in: claimsToRemove.map((c) => c.id) } },
+            });
+          }
+        }
+      }
+      // --- END NEW ---
 
       return reg;
     });

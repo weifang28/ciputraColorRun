@@ -283,6 +283,33 @@ export async function POST(req: Request) {
         });
       }
 
+      // --- NEW: create EarlyBirdClaim when applicable (for individual registrations) ---
+      // This ensures categories API will reflect consumed early-bird slots immediately.
+      if (registrationType === "individual") {
+        const claimedByCategory = Array.from(new Set(participantRows.map(r => r.categoryId)));
+        for (const catId of claimedByCategory) {
+          const cat = await prismaTx.raceCategory.findUnique({ where: { id: catId } });
+          if (!cat) continue;
+          const capacity = typeof cat.earlyBirdCapacity === "number" ? cat.earlyBirdCapacity : null;
+          if (capacity && capacity > 0) {
+            const claimsCount = await prismaTx.earlyBirdClaim.count({ where: { categoryId: catId } });
+            const toCreate = Math.max(0, Math.min(
+              // number of participants for this category in this registration
+              participantRows.filter(r => r.categoryId === catId).length,
+              // remaining capacity
+              capacity - claimsCount
+            ));
+            if (toCreate > 0) {
+              // create simple claim rows (schema only requires categoryId)
+              await prismaTx.earlyBirdClaim.createMany({
+                data: Array.from({ length: toCreate }, () => ({ categoryId: catId })),
+              });
+            }
+          }
+        }
+      }
+      // --- END NEW CODE ---
+
       // Group participants by category to create QR codes
       const grouped = participantRows.reduce<Record<number, number>>((acc, r) => {
         acc[r.categoryId] = (acc[r.categoryId] || 0) + 1;

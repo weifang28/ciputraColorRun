@@ -134,7 +134,7 @@ export default function Home() {
 					data-aos="fade-down"
 					data-aos-duration="1000"
 				>
-					MAIN SPONSOR
+					MAIN SPONSORS
 				</h1>
 
 				<div
