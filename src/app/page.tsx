@@ -71,8 +71,11 @@ export default function Home() {
 			<div
 				className="home_top pt-20"
 				style={{
-					// backgroundImage: `linear-gradient(rgba(141,214,166,0.6) 0%, rgba(203,220,209,0.4) 50%, rgba(239,146,155,0.5) 100%), url('${jumbotronImage}')`,
-					backgroundImage: "url('/images/homeBg.jpg')",
+					// gradient overlay above the image
+					backgroundImage: `linear-gradient(rgba(141,214,166,0.6) 0%, rgba(203,220,209,0.4) 50%, rgba(239,146,155,0.5) 100%), url('/images/homeBg.jpg')`,
+					backgroundSize: "cover",
+					backgroundPosition: "center",
+					backgroundRepeat: "no-repeat",
 				}}
 			>
 				<div className="home_top_content">
@@ -439,10 +442,10 @@ export default function Home() {
 						>
 							<div className="benefit-icon-wrap bg-gradient-to-br from-[#4EF9CD]/20 to-[#73E9DD]/10">
 								<svg
-									className="benefit-svg"
-									viewBox="0 0 24 24"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
+								 className="benefit-svg"
+								 viewBox="0 0 24 24"
+								 fill="none"
+								 xmlns="http://www.w3.org/2000/svg"
 								>
 									<path
 										d="M9 11L12 14L22 4"
