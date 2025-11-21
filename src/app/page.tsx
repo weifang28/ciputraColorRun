@@ -12,7 +12,7 @@ import DocDecor from "./components/DocDecor";
 export default function Home() {
     const [loading, setLoading] = useState(true);
 	// Jumbotron image path (move from CSS to inline so Vercel serves it reliably)
-	const jumbotronImage = "/homepage/home_bg.jpg";
+	const jumbotronImage = "/images/home_bg.jpg";
 
      // Refresh AOS animations when page loads
      useEffect(() => {
@@ -240,19 +240,19 @@ export default function Home() {
 						<thead>
 							<tr>
 								<th scope="col" className="col-item">
-									Kategori
+									Category
 								</th>
 								<th scope="col" className="col-main">
-									Harga Dasar
+									Base Price
 								</th>
 								<th scope="col" className="col-tier">
-									Komunitas 10-29
+									Community 10-29
 								</th>
 								<th scope="col" className="col-tier">
-									Komunitas 30-59
+									Community 30-59
 								</th>
 								<th scope="col" className="col-tier">
-									Komunitas ≥60
+									Community ≥60
 								</th>
 								<th scope="col" className="col-note">
 									Early bird / Bundle
@@ -319,7 +319,7 @@ export default function Home() {
 								<td className="col-note" data-label="Promo">
 									Early bird: Rp 130.000
 									<br />
-									Bundling family (4 orang): Rp 145.000 / orang
+									Bundling family (4 people): Rp 145.000 / person
 								</td>
 							</tr>
 						</tbody>
@@ -329,7 +329,7 @@ export default function Home() {
 				{/* Benefits Section */}
 				<div className="benefits-section mt-12" data-aos="fade-up">
 					<h3 className="text-3xl md:text-4xl font-moderniz font-extrabold text-center mb-10 benefit-section-title">
-						BENEFIT PENDAFTARAN
+						BENEFIT // WHAT YOU GET
 					</h3>
 
 					<div className="benefits-grid">
@@ -346,10 +346,9 @@ export default function Home() {
 									className="benefit-image"
 								/>
 							</div>
-							<h4 className="benefit-title">Jersey & Medali</h4>
+							<h4 className="benefit-title">Jersey & Medal</h4>
 							<p className="benefit-description">
-								Dapatkan jersey eksklusif dan medali finisher untuk setiap
-								peserta
+								Exclusive race jersey designed for style and comfort, plus a collectible finisher medal to mark your achievement.
 							</p>
 						</div>
 
@@ -389,9 +388,9 @@ export default function Home() {
 									</defs>
 								</svg>
 							</div>
-							<h4 className="benefit-title">Fresh Money</h4>
+							<h4 className="benefit-title">Podium (5K & 10K)</h4>
 							<p className="benefit-description">
-								Hadiah uang tunai untuk juara 1, 2, dan 3 di setiap kategori
+								Compete for glory! Trophies and exclusive prizes await the top finishers in the 5K and 10K competitive categories
 							</p>
 						</div>
 
@@ -426,7 +425,9 @@ export default function Home() {
 								</svg>
 							</div>
 							<h4 className="benefit-title">Powder Color War</h4>
-							<p className="benefit-description"></p>
+							<p className="benefit-description">
+								Immerse yourself in the euphoria of our signature Color War using safe, non-toxic powder. (Note: This part is fully optional if you prefer to stay clean!)
+							</p>
 						</div>
 
 						{/* Additional Benefits Card */}
@@ -458,9 +459,9 @@ export default function Home() {
 									/>
 								</svg>
 							</div>
-							<h4 className="benefit-title">Benefit Lainnya</h4>
+							<h4 className="benefit-title">Other Benefits</h4>
 							<p className="benefit-description">
-								Konsumsi, doorprize, entertainment, dan banyak lagi!
+								Enjoy full hydration support, live music entertainment, and a goody bag packed with exciting sponsor perks.
 							</p>
 						</div>
 					</div>
@@ -566,19 +567,34 @@ export default function Home() {
 									Start / Finish
 								</h3>
 							</div>
-							<p className="font-mustica text-[#52605f] mt-2">
-								Start dan finish akan berada diBoth Start and Finish gate are located in {" "}
-								<strong>Universitas Ciputra Surabaya</strong>.
-							</p>
-							<div className="venue-map mt-4" aria-hidden>
-								{/* Embedded Google Maps (Universitas Ciputra Surabaya) */}
-								<iframe
-									title="Universitas Ciputra Surabaya - Racepack Claim Location"
-									src="https://www.google.com/maps?q=Universitas+Ciputra+Surabaya&z=16&output=embed"
-									loading="lazy"
-									referrerPolicy="no-referrer-when-downgrade"
-									className="venue-iframe"
-								/>
+                            <p className="font-mustica text-[#52605f] mt-2">
+                                Start dan finish akan berada diBoth Start and Finish gate are located in {" "}
+                                <strong>Universitas Ciputra Surabaya</strong>.
+                            </p>
+
+							{/* Minimalistic map card — click to open full Google Maps */}
+							<div className="venue-map-wrapper mt-4">
+								<div className="venue-map-card" role="group" aria-label="Race venue map">
+									<div className="venue-map-top">
+										<span className="venue-map-title">Universitas Ciputra Surabaya</span>
+										<a
+											href="https://www.google.com/maps?q=Universitas+Ciputra+Surabaya"
+											target="_blank"
+											rel="noreferrer"
+											className="venue-map-link"
+										>
+											Open in Google Maps
+										</a>
+									</div>
+									<iframe
+										title="Universitas Ciputra Surabaya - Racepack Claim Location"
+										src="https://www.google.com/maps?q=Universitas+Ciputra+Surabaya&z=15&output=embed"
+										loading="lazy"
+										referrerPolicy="no-referrer-when-downgrade"
+										className="venue-iframe"
+										aria-hidden={false}
+									/>
+								</div>
 							</div>
 							<p className="mt-4 text-sm text-[#52605f]">
 								Assembly point and route will be announced later via registered e-mail and event’s homepage. Additionally follow our Instagram <a className = "underline font-bold" href = "https://instagram.com/ciputrarun.uc">@ciputrarun.uc</a> as well for additional information.
@@ -591,7 +607,7 @@ export default function Home() {
 									Need help? Contact us
 								</Link>
 							</div>
-						</div>
+                        </div>
 					</div>
 				</div>
 			</section>

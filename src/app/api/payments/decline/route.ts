@@ -130,57 +130,45 @@ async function sendDeclineEmail(
   });
 
   const mailOptions = {
-    from: `"Ciputra Color Run" <${user}>`,
+    from: `"Ciputra Color Run 2026" <${user}>`,
     to: email,
-    subject: 'Ciputra Color Run - Payment Declined',
+    subject: 'Oops! Your Registration Didn’t Go Through 🛑',
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
-        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">Payment Declined</h1>
+      <div style="font-family: Inter, Arial, sans-serif; max-width: 680px; margin: 0 auto; padding: 20px; color:#111827;">
+        <h1 style="margin:0 0 8px 0; font-size:22px; color:#0f172a;">We Could Not Complete Your Registration</h1>
+        <p style="margin:0 0 14px 0; font-size:16px; color:#374151;">
+          It looks like we hit a bump in the road. Unfortunately, your registration for <strong>Ciputra Color Run 2026</strong> was not successful and has not been verified.
+        </p>
+
+        <h3 style="margin-top:10px; margin-bottom:6px; color:#0b63a3;">Why did this happen?</h3>
+        <ul style="margin:0 0 14px 18px; color:#374151; line-height:1.6;">
+          <li><strong>Payment Timeout:</strong> The time limit to complete the payment expired.</li>
+          <li><strong>Transaction Issue:</strong> The payment was declined by the bank or e-wallet (insufficient funds or system error).</li>
+          <li><strong>Connection Error:</strong> An unstable internet connection interrupted the checkout process.</li>
+        </ul>
+
+        <h3 style="margin-top:6px; margin-bottom:6px; color:#0b63a3;">What should you do?</h3>
+        <p style="margin:0 0 16px 0; color:#374151;">
+          Don’t worry! If you were not charged, you can simply try registering again. If you believe a deduction was made from your account, please contact our support team immediately with your transaction proof.
+        </p>
+
+        <div style="text-align:center; margin:18px 0;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/registration" 
+             style="display:inline-block; padding:12px 28px; background:#059669; color:#fff; border-radius:999px; text-decoration:none; font-weight:600;">
+            Try Registering Again
+          </a>
         </div>
-        
-        <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <p style="font-size: 16px; color: #374151; line-height: 1.6;">Dear <strong>${name}</strong>,</p>
-          
-          <p style="font-size: 16px; color: #374151; line-height: 1.6;">
-            Unfortunately, your payment for registration <strong>#${registrationId}</strong> has been declined.
-          </p>
-          
-          <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px;">
-            <p style="margin: 0; color: #991b1b; font-size: 15px;">
-              <strong>Reason:</strong> ${reason}
-            </p>
-          </div>
-          
-          <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 4px;">
-            <p style="margin: 0 0 10px 0; color: #1e40af; font-size: 15px;"><strong>What to do next:</strong></p>
-            <ol style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 14px; line-height: 1.8;">
-              <li>Please check your payment proof and ensure it's clear and complete</li>
-              <li>Make sure the transfer amount matches your registration total</li>
-              <li>Re-register with a valid payment proof</li>
-              <li>If you have questions, please contact our support team</li>
-            </ol>
-          </div>
-          
-          <div style="text-align: center; margin-top: 30px;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/registration" 
-               style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px;">
-              Register Again
-            </a>
-          </div>
-          
-          <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-            If you believe this is a mistake or need assistance, please reply to this email or contact us through WhatsApp.
-          </p>
-          
-          <p style="font-size: 14px; color: #6b7280; margin-top: 10px;">
-            Best regards,<br/>
-            <strong style="color: #374151;">Ciputra Color Run Team</strong>
-          </p>
-        </div>
+
+        <hr style="border:none; border-top:1px solid #e5e7eb; margin:20px 0;" />
+
+        <p style="margin:0 0 6px 0; color:#374151;">Need help? Contact us at:</p>
+        <p style="margin:4px 0 0 0; color:#374151;"><strong>Abel</strong><br/>WA: 0895410319676</p>
+        <p style="margin:6px 0 0 0; color:#374151;"><strong>Elysian</strong><br/>WA: 0811306658</p>
+
+        <p style="margin-top:18px; font-size:13px; color:#6b7280;">If you believe this is a mistake, reply to this email and include your payment proof so we can investigate.</p>
       </div>
     `,
   };
-
+  
   await transporter.sendMail(mailOptions);
 }
