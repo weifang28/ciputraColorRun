@@ -12,7 +12,7 @@ import DocDecor from "./components/DocDecor";
 export default function Home() {
     const [loading, setLoading] = useState(true);
 	// Jumbotron image path (move from CSS to inline so Vercel serves it reliably)
-	const jumbotronImage = "/images/home_bg.jpg";
+	const jumbotronImage = "/images/home_bg.jpg"; // ensure this file exists in /public/images/
 
      // Refresh AOS animations when page loads
      useEffect(() => {
@@ -68,12 +68,16 @@ export default function Home() {
 	return (
 		<main className="bg-white overflow-hidden">
 			{/* Jumbotron with inline background image (gradient overlay kept inline) */}
-			<div
-				className="home_top pt-20"
-				style={{
-					backgroundImage: `linear-gradient(rgba(141,214,166,0.6) 0%, rgba(203,220,209,0.4) 50%, rgba(239,146,155,0.5) 100%), url('${jumbotronImage}')`,
-				}}
-			>
+			<div className="home_top pt-20 relative">
+				{/* Background image served by Next/Image for reliable Vercel handling */}
+				<Image
+					src={jumbotronImage}
+					alt="Jumbotron background"
+					fill
+					priority
+					className="object-cover -z-10"
+					sizes="(min-width:1024px) 1200px, 100vw"
+				/>
 				<div className="home_top_content">
 					<img
 						src="/images/logo.png"
