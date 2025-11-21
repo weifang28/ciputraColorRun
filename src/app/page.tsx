@@ -71,7 +71,8 @@ export default function Home() {
 			<div
 				className="home_top pt-20"
 				style={{
-					backgroundImage: `linear-gradient(rgba(141,214,166,0.6) 0%, rgba(203,220,209,0.4) 50%, rgba(239,146,155,0.5) 100%), url('${jumbotronImage}')`,
+					// backgroundImage: `linear-gradient(rgba(141,214,166,0.6) 0%, rgba(203,220,209,0.4) 50%, rgba(239,146,155,0.5) 100%), url('${jumbotronImage}')`,
+					backgroundImage: "url('/images/homeBg.jpg')",
 				}}
 			>
 				<div className="home_top_content">
