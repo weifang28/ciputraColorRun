@@ -260,7 +260,7 @@ export default function NavBar() {
                                                     }}
                                                     className="text-white font-semibold"
                                                 >
-                                                    LOGIN
+                                                    <b>LOGIN</b>
                                                 </button>
                                             )}
                                         </div>
