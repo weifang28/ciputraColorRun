@@ -436,7 +436,7 @@ export default function ClaimPacksPage() {
                           <div className="flex flex-wrap gap-1 mb-2">
                             {categories.map((cat, idx) => (
                               <span key={idx} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-medium">
-                                {cat}
+                                {String(cat)}
                               </span>
                             ))}
                           </div>
