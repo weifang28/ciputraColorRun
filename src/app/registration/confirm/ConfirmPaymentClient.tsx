@@ -191,6 +191,27 @@ export default function ConfirmPaymentClient() {
 
                     {/* Upload Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Transfer Address Section */}
+                        <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-lg mb-4">
+                            <h3 className="font-bold text-emerald-800 mb-2 flex items-center gap-2">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                </svg>
+                                Transfer Destination
+                            </h3>
+                            <div className="space-y-1">
+                                <p className="text-sm text-gray-700">
+                                    <span className="font-semibold">Account Number:</span> 8620762491
+                                </p>
+                                <p className="text-sm text-gray-700">
+                                    <span className="font-semibold">Account Name:</span> LOUIE NATHANIEL CHRISTOPHER
+                                </p>
+                                <p className="text-xs text-emerald-700 mt-2 font-medium">
+                                    ⚠️ Please transfer the exact amount and upload clear proof of payment below
+                                </p>
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium mb-2">Proof Sender Name (as shown on transfer)</label>
                             <input

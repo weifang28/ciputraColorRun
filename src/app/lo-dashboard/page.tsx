@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, Calendar, MapPin, AlertCircle, LogOut, FileText, IdCard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { showToast } from "../../lib/toast";
 
 const TABS = [
   { key: 'pending', label: 'Pending', status: 'pending', color: 'yellow' },
@@ -125,7 +126,7 @@ export default function LODashboard() {
   }
 
   const handleAccept = async (registrationId: number) => {
-    if (!confirm('Confirm this payment? QR code will be sent to user email.')) return;
+    if (!window.confirm('Confirm this payment? QR code will be sent to user email.')) return;
     
     try {
       const res = await fetch('/api/payments/confirm', {
@@ -140,53 +141,36 @@ export default function LODashboard() {
         throw new Error(body?.error || body?.message || 'Failed to confirm');
       }
 
-      alert('Payment confirmed successfully! QR code sent to user email.');
+     showToast('Payment confirmed successfully! QR code sent to user email.', 'success');
       fetchPayments();
-      fetchStatusCounts(); // Refresh counts
-      setShowDetailsModal(false);
+      fetchStatusCounts();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+     showToast('Error confirming payment: ' + (err?.message || String(err)), 'error');
     }
   };
 
   const handleDecline = async (registrationId: number) => {
-    setPendingDeclineId(registrationId);
-    setShowDeclineModal(true);
-  };
+    const reason = prompt('Enter decline reason (optional):');
+   if (reason === null) return; // User cancelled
 
-  const confirmDecline = async () => {
-    if (!pendingDeclineId) return;
-    
-    if (!declineReason.trim()) {
-      alert('Please provide a reason for declining this payment');
-      return;
-    }
-    
     try {
       const res = await fetch('/api/payments/decline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ 
-          registrationId: pendingDeclineId,
-          reason: declineReason 
-        }),
+        body: JSON.stringify({ registrationId, reason: reason || 'No reason provided' }),
       });
 
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(body?.error || 'Failed to decline');
+        throw new Error(body?.error || body?.message || 'Failed to decline');
       }
 
-      alert('Payment declined successfully. Email notification sent to user.');
+     showToast('Payment declined successfully. Email sent to user.', 'success');
       fetchPayments();
       fetchStatusCounts();
-      setShowDetailsModal(false);
-      setShowDeclineModal(false);
-      setDeclineReason("");
-      setPendingDeclineId(null);
     } catch (err: any) {
-      alert('Error: ' + err.message);
+     showToast('Error declining payment: ' + (err?.message || String(err)), 'error');
     }
   };
 

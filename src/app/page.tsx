@@ -106,7 +106,7 @@ export default function Home() {
 				className="home_top pt-20"
 				style={{
 					// gradient overlay above the image
-					backgroundImage: `linear-gradient(rgba(141,214,166,0.6) 0%, rgba(203,220,209,0.4) 50%, rgba(239,146,155,0.5) 100%), url('${jumbotronImage}')`,
+					backgroundImage: `linear-gradient(rgba(152,232,206,0.6) 0%, rgba(255,225,196,0.4) 50%, rgba(238,150,157,0.5) 100%), url('${jumbotronImage}')`,
 					backgroundSize: "cover",
 					backgroundPosition: "center",
 					backgroundRepeat: "no-repeat",
@@ -266,14 +266,14 @@ export default function Home() {
 				</div>
 
 				<h2 className="pricing-title text-2xl md:text-3xl font-moderniz font-bold text-center mb-6">
-					<span className="pricing-title-gradient">HARGA TIKET</span>
+					<span className="pricing-title-gradient">TICKET PRICES</span>
 				</h2>
 
 				<div className="pricing-table-wrap">
 					<table
 						className="pricing-table"
 						role="table"
-						aria-label="Harga Tiket Ciputra Color Run"
+						aria-label="Ciputra Color Run Ticket Prices"
 					>
 						<thead>
 							<tr>
@@ -352,7 +352,7 @@ export default function Home() {
 									Rp 135.000
 								</td>
 								<td className="col-tier" data-label="Komunitas ≥60">
-									—
+									Rp 135.000
 								</td>
 								<td className="col-note" data-label="Promo">
 									Early bird: Rp 130.000
@@ -367,7 +367,7 @@ export default function Home() {
 				{/* Benefits Section */}
 				<div className="benefits-section mt-12" data-aos="fade-up">
 					<h3 className="text-3xl md:text-4xl font-moderniz font-extrabold text-center mb-10 benefit-section-title">
-						BENEFIT // WHAT YOU GET
+						BENEFITS
 					</h3>
 
 					<div className="benefits-grid">
@@ -379,9 +379,10 @@ export default function Home() {
 						>
 							<div className="benefit-icon-wrap">
 								<img
-									src="/homepage/jersey-medal.png"
+									src="/homepage/medal_2.png"
 									alt="Jersey & Medali"
 									className="benefit-image"
+									
 								/>
 							</div>
 							<h4 className="benefit-title">Jersey & Medal</h4>
@@ -515,13 +516,7 @@ export default function Home() {
 					>
 						TIMELINE
 					</h2>
-					<p
-						className="text-center text-gray-600 font-mustica mb-8"
-						data-aos="fade-up"
-						data-aos-delay="100"
-					>
-						Jadwal Penting Event
-					</p>
+					
 
 					{/* Horizontal scrollable timeline cards */}
 					<div

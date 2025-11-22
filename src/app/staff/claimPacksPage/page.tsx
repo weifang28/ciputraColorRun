@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Package, User, Calendar, MapPin, Search, Eye, X } from 'lucide-react';
+import { showToast } from '../../../lib/toast';
 
 interface ClaimDetail {
   id: number;
@@ -52,7 +53,7 @@ export default function ClaimPacksPage() {
   const [selectedClaim, setSelectedClaim] = useState<ClaimRecord | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  const STAFF_PASSWORD = "CirunGacor2026";
+  const STAFF_PASSWORD = process.env.NEXT_PUBLIC_CLAIM_PAGE_PASS;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -65,7 +66,7 @@ export default function ClaimPacksPage() {
     if (password === STAFF_PASSWORD) {
       setIsAuthenticated(true);
     } else {
-      alert("Incorrect password. Access denied.");
+      showToast("Incorrect password. Access denied.", "error");
       setPassword("");
     }
   };
@@ -73,18 +74,19 @@ export default function ClaimPacksPage() {
   const fetchClaims = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/racePack/claims', { credentials: 'include' });
-      // try to parse JSON body for helpful error info
-      const body = await res.json().catch(() => null);
+      const res = await fetch('/api/racePack/claims', {
+        credentials: 'include',
+      });
+      
       if (!res.ok) {
-        const msg = (body && (body.error || body.message)) || res.statusText || `HTTP ${res.status}`;
-        throw new Error(msg);
+        throw new Error('Failed to fetch claims');
       }
-      setClaims(body?.claims || []);
-    } catch (err: any) {
-      console.error('fetchClaims error:', err);
-      // surface message to UI so you can see what the server returned
-      alert('Failed to fetch claims: ' + (err?.message || String(err)));
+      
+      const data = await res.json();
+      setClaims(data.claims || []);
+    } catch (error) {
+      console.error('Error fetching claims:', error);
+      showToast('Error fetching claims data', 'error');
     } finally {
       setLoading(false);
     }
@@ -129,7 +131,7 @@ export default function ClaimPacksPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-black"
                 placeholder="Enter staff password"
                 required
               />

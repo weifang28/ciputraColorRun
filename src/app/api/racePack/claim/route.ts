@@ -13,9 +13,10 @@ export async function POST(request: Request) {
     }
 
     // Require password for all claims
-    const CLAIM_PASSWORD = process.env.CLAIM_PASS;
-    if (!password || password !== CLAIM_PASSWORD) {
-      return NextResponse.json({ error: 'Invalid claim password. Only authorized staff can claim race packs.' }, { status: 401 });
+    // Validate password server-side only
+    const expectedPassword = process.env.CLAIM_PASS;
+    if (password !== expectedPassword) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Find QR

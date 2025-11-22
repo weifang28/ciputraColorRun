@@ -10,8 +10,8 @@ export function showToast(message: string, variant?: "success" | "error" | "info
   import("sonner")
     .then(({ toast }) => {
       try {
-        if (variant === "success") return toast.success(message);
-        if (variant === "error") return toast.error(message);
+        if (variant === "success") return toast.success(message, { duration: 1500 });
+        if (variant === "error") return toast.error(message, { duration: 1500 });
         return toast(message);
       } catch (e) {
         // eslint-disable-next-line no-console

@@ -287,19 +287,19 @@ export default function RegistrationPage() {
         if (type === "family") {
             // Family bundle validation
             if (category.name !== "3km") {
-                alert("Family bundle is only available for 3km category");
+                showToast("Family bundle is only available for 3km category", "error");
                 return;
             }
 
             if (hasCommunityRegistration) {
-                alert("You cannot add a family bundle when you have community registrations in cart. Please checkout separately.");
+                showToast("You cannot add a family bundle when you have community registrations in cart. Please checkout separately.", "error");
                 return;
             }
 
             const bundleSize = category.bundleSize || 4;
             const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
             if (totalJerseys !== bundleSize) {
-                alert(`Jersey count (${totalJerseys}) must match family bundle size (${bundleSize})`);
+                showToast(`Jersey count (${totalJerseys}) must match family bundle size (${bundleSize})`, "error");
                 return;
             }
 
@@ -324,8 +324,12 @@ export default function RegistrationPage() {
         // Community validation
         const currentParticipants = Number(participants || 0);
         
-        if (currentParticipants < 10) {
-            showToast("Community registration requires a minimum of 10 participants per category", "error");
+        // NEW: Check total participants including cart
+        const totalInCart = getTotalCommunityParticipants();
+        const totalWithCurrent = totalInCart + currentParticipants;
+        
+        if (totalWithCurrent < 10) {
+            showToast(`Community registration requires a minimum of 10 total participants. You currently have ${totalInCart} in cart. Add at least ${10 - totalInCart} more.`, "error");
             return;
         }
 
@@ -334,14 +338,13 @@ export default function RegistrationPage() {
             return;
         }
 
-        // Validate jersey distribution matches participant count
+        // FIXED: Validate jersey distribution matches participant count - MUST MATCH EXACTLY
         const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
         if (totalJerseys !== currentParticipants) {
-            alert(`Jersey count (${totalJerseys}) must match participant count (${currentParticipants}) for this category`);
-            return;
+            showToast(`Jersey count (${totalJerseys}) must exactly match participant count (${currentParticipants}). Please adjust jersey sizes before adding to cart.`, "error");
+            return; // PREVENT adding to cart
         }
 
-        const totalWithCurrent = getTotalCommunityParticipants() + currentParticipants;
         const pricePerPerson = calculatePrice(category, totalWithCurrent);
 
         savePersonalDetailsToSession();
@@ -394,7 +397,7 @@ export default function RegistrationPage() {
             const totalWithCurrent = getTotalCommunityParticipants() + currentParticipants;
 
             if (totalWithCurrent < 10) {
-                alert(`Community registration requires minimum 10 total participants. You currently have ${getTotalCommunityParticipants()} in cart.`);
+                showToast(`Community registration requires minimum 10 total participants. You currently have ${getTotalCommunityParticipants()} in cart.`, "error");
                 return;
             }
 
@@ -1029,11 +1032,25 @@ export default function RegistrationPage() {
                                     <div className="pt-4">
                                         <button
                                             onClick={handleAddToCart}
-                                            disabled={!participants || Number(participants) < 10 || Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0) !== Number(participants || 0)}
+                                            disabled={
+                                                !participants || 
+                                                (getTotalCommunityParticipants() + Number(participants || 0)) < 10 ||
+                                                Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0) !== Number(participants || 0)
+                                            }
                                             className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                                         >
                                             ADD CATEGORY TO CART
                                         </button>
+                                        {Number(participants || 0) > 0 && Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0) !== Number(participants || 0) && (
+                                            <p className="text-center text-xs text-red-600 mt-2">
+                                                ⚠️ Jersey count must match participant count to add to cart
+                                            </p>
+                                        )}
+                                        {(getTotalCommunityParticipants() + Number(participants || 0)) < 10 && (
+                                            <p className="text-center text-xs text-gray-500 mt-2">
+                                                Need {10 - (getTotalCommunityParticipants() + Number(participants || 0))} more total participants (minimum 10)
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>

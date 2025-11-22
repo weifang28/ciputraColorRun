@@ -4,6 +4,7 @@ import { useCart } from "../context/CartContext";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { showToast } from "../../lib/toast";
 
 export default function CartPage() {
   const { items, removeItem, clearCart, updateItem } = useCart();
@@ -105,12 +106,12 @@ export default function CartPage() {
 
   async function handleCheckout() {
     if (items.length === 0) {
-      alert("Your cart is empty!");
+      showToast("Your cart is empty!", "error");
       return;
     }
 
     if (!fullName || !email || !phone) {
-      alert("Please complete your personal information first!");
+      showToast("Please complete your personal information first!", "error");
       return;
     }
 

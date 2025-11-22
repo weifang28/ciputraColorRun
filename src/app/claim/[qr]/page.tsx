@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { showToast } from "../../../lib/toast";
 
 export default function ClaimPage() {
   const params = useParams();
@@ -45,17 +46,12 @@ export default function ClaimPage() {
     if (!token) return;
     
     if (selectedIds.length === 0) {
-      alert("Please select at least one participant to claim.");
+      showToast("Please select at least one participant to claim.", "error");
       return;
     }
     
     if (!password) {
-      alert("Password is required to claim race packs.");
-      return;
-    }
-
-    if (password !== "CirunMantap") {
-      alert("Incorrect password. Only authorized staff can claim race packs.");
+      showToast("Password is required to claim race packs.", "error");
       return;
     }
 
@@ -69,18 +65,17 @@ export default function ClaimPage() {
           participantIds: selectedIds,
           claimedBy: claimedBy || "staff",
           claimType: "staff",
-          password: password,
+          password: password, // Validated server-side only
         }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body?.error || body?.message || res.statusText);
       
-      alert(`Successfully claimed ${selectedIds.length} race pack(s)!`);
+      showToast(`Successfully claimed ${selectedIds.length} race pack(s)!`, "success");
       
-      // Reload to show updated claimed state
       router.replace(window.location.pathname);
     } catch (err: any) {
-      alert("Claim failed: " + (err?.message || String(err)));
+      showToast("Claim failed: " + (err?.message || String(err)), "error");
     } finally {
       setClaiming(false);
     }
