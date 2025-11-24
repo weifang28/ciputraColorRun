@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { v2 as cloudinary } from "cloudinary";
+import nodemailer from "nodemailer";
 
 const prisma = new PrismaClient();
 
@@ -73,6 +74,49 @@ function generateBibNumber(categoryName: string | undefined, participantId: numb
   const paddedId = participantId.toString().padStart(paddingLength, "0");
   
   return `${prefix}${paddedId}`;
+}
+
+async function sendRegistrationEmail(email: string | undefined, name: string | undefined, registrationId: number) {
+  if (!email) return;
+  const host = process.env.EMAIL_HOST;
+  const port = Number(process.env.EMAIL_PORT);
+  const secure = (process.env.EMAIL_SECURE) === 'true';
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+
+  if (!user || !pass) {
+    console.warn('[sendRegistrationEmail] SMTP not configured, skipping email');
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+  });
+
+  const mailHtml = `
+    <div style="font-family:Inter, Arial, sans-serif; color:#111827;">
+      <h2>Your registration is received — Ciputra Color Run</h2>
+      <p>Hi ${name || 'Participant'},</p>
+      <p>Thank you for submitting your payment proof. We've received your registration (Order #: ${registrationId}). Our team will verify the payment shortly.</p>
+      <p>If approved, you'll receive an access code and QR code via email. Meanwhile, join our WhatsApp group for updates: <a href="https://chat.whatsapp.com/HkYS1Oi3CyqFWeVJ7d18Ve">Join WhatsApp Group</a></p>
+      <p>Regards,<br/>Ciputra Color Run Team</p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"Ciputra Color Run" <${user}>`,
+      to: email,
+      subject: 'Registration received — Ciputra Color Run',
+      html: mailHtml,
+    });
+    console.log('[sendRegistrationEmail] Sent to', email);
+  } catch (err) {
+    console.error('[sendRegistrationEmail] error', err);
+  }
 }
 
 export async function POST(req: Request) {
@@ -377,6 +421,15 @@ export async function POST(req: Request) {
     const configured = Number(process.env.PRISMA_TX_TIMEOUT || 15000);
     const txTimeout = Math.min(Math.max(0, configured || 15000), 15000);
      const result = await prisma.$transaction((tx: any) => createRegistrationAndPayment(tx), { timeout: txTimeout });
+
+    // fire-and-forget email (do not block main response)
+    (async () => {
+      try {
+        await sendRegistrationEmail(result.registration.user?.email, result.registration.user?.name, result.registration.id);
+      } catch (e) {
+        console.error('[payments POST] sendRegistrationEmail failed', e);
+      }
+    })();
 
     return NextResponse.json({
       success: true,

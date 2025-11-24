@@ -138,7 +138,15 @@ export default function CartPage() {
   }
 
   return (
-    <main className="flex bg-gradient-to-br from-emerald-100/30 via-transparent to-rose-100/30 min-h-screen pt-28 pb-16">
+    <main
+      className="flex min-h-screen pt-28 pb-16"
+      style={{
+        backgroundImage: "url('/images/generalBg.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
       <div className="mx-auto w-full max-w-4xl px-4">
         <h1 className="text-4xl md:text-6xl text-center font-bold mb-8 tracking-wide text-white drop-shadow-lg">
           YOUR CART

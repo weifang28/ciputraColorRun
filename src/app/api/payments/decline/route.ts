@@ -112,9 +112,9 @@ async function sendDeclineEmail(
   registrationId: number,
   reason: string
 ): Promise<void> {
-  const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
-  const port = Number(process.env.EMAIL_PORT || 465);
-  const secure = (process.env.EMAIL_SECURE || 'true') === 'true';
+  const host = process.env.EMAIL_HOST;
+  const port = Number(process.env.EMAIL_PORT);
+  const secure = (process.env.EMAIL_SECURE) === 'true';
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
 

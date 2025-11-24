@@ -379,7 +379,7 @@ export default function Home() {
 						>
 							<div className="benefit-icon-wrap">
 								<img
-									src="/homepage/medal_2.png"
+									src="/homepage/medal2.png"
 									alt="Jersey & Medali"
 									className="benefit-image"
 									
@@ -601,7 +601,7 @@ export default function Home() {
 								</h3>
 							</div>
                             <p className="font-mustica text-[#52605f] mt-2">
-                                Start dan finish akan berada diBoth Start and Finish gate are located in {" "}
+                            Both Start and Finish gate are located in {" "}
                                 <strong>Universitas Ciputra Surabaya</strong>.
                             </p>
 
@@ -633,12 +633,12 @@ export default function Home() {
 								Assembly point and route will be announced later via registered e-mail and event’s homepage. Additionally follow our Instagram <a className = "underline font-bold" href = "https://instagram.com/ciputrarun.uc">@ciputrarun.uc</a> as well for additional information.
 							</p>
 							<div className="mt-4">
-								<Link
+								{/* <Link
 									href="/registration"
 									className="inline-block btn-register-ghost"
 								>
 									Need help? Contact us
-								</Link>
+								</Link> */}
 							</div>
                         </div>
 					</div>

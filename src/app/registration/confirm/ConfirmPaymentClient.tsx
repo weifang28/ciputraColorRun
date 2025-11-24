@@ -296,8 +296,11 @@ export default function ConfirmPaymentClient() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 max-w-sm w-full text-center shadow-xl animate-fadeIn">
                 <h3 className="text-xl text-[#602d4e] font-bold mb-2">Pembayaran Berhasil!</h3>
-                <p className="text-[#602d4e]/80 mb-6">
-                    Terima kasih! Silakan gabung ke grup WhatsApp untuk info penting acara. Kode akses akan diberikan ketika pembayaran telah di cek kembali
+                <p className="text-[#602d4e]/80 mb-4">
+                    Terima kasih! Silakan gabung ke grup WhatsApp untuk info penting acara. Kode akses akan diberikan ketika pembayaran telah di cek kembali.
+                </p>
+                <p className="text-[#602d4e]/80 mb-4">
+                    Kami juga telah mengirimkan email konfirmasi ke <strong>{email}</strong>. Mohon cek inbox (dan spam) untuk konfirmasi selanjutnya.
                 </p>
     
                 <a

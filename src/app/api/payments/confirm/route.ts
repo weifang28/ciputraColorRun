@@ -59,9 +59,9 @@ export async function POST(request: Request) {
          <p>Use this code in the mobile app or profile page to manage your registration.</p>`
       : `<p>Your registration has been confirmed. No access code available.</p>`;
 
-    const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
-    const port = Number(process.env.EMAIL_PORT || 465);
-    const secure = (process.env.EMAIL_SECURE || 'true') === 'true';
+    const host = process.env.EMAIL_HOST;
+    const port = Number(process.env.EMAIL_PORT);
+    const secure = (process.env.EMAIL_SECURE) === 'true';
     const user = process.env.EMAIL_USER;
     const pass = process.env.EMAIL_PASS;
 
