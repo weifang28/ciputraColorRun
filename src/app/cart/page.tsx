@@ -4,14 +4,16 @@ import { useCart } from "../context/CartContext";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { showToast } from "../../lib/toast";
 
 export default function CartPage() {
-  const { items, removeItem, clearCart, totalPrice } = useCart();
+  const { items, removeItem, clearCart, updateItem } = useCart();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [categories, setCategories] = useState<any[]>([]);
 
   // Load personal details from sessionStorage
   useEffect(() => {
@@ -24,25 +26,95 @@ export default function CartPage() {
     }
   }, []);
 
+  // Load categories and recalculate prices on mount and whenever items change
   useEffect(() => {
-    // Simulate initial load
-    const timer = setTimeout(() => setLoading(false), 400);
-    return () => clearTimeout(timer);
-  }, []);
+    async function loadAndRecalculate() {
+      try {
+        const res = await fetch("/api/categories");
+        if (res.ok) {
+          const cats = await res.json();
+          setCategories(cats);
 
-  const handleCheckout = () => {
+          // Recalculate all community/family prices
+          const communityTotal = items.reduce((sum, it) => {
+            if (it.type === "community") return sum + (Number(it.participants) || 0);
+            if (it.type === "family") return sum + (Number(it.participants) || 4);
+            return sum;
+          }, 0);
+
+          for (const it of items) {
+            if (it.type === "community" || it.type === "family") {
+              const cat = cats.find((c: any) => Number(c.id) === Number(it.categoryId));
+              const bundleType = it.type === "family" ? "family" : undefined;
+              const newPrice = calculatePrice(cat, communityTotal, bundleType);
+              if (Number(it.price) !== Number(newPrice)) {
+                updateItem({ ...it, price: newPrice });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load categories:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadAndRecalculate();
+  }, [items.length]); // Re-run when number of items changes
+
+  function calculatePrice(category: any, totalParticipants: number, bundleType?: "family"): number {
+    if (!category) return 0;
+
+    if (bundleType === "family" && category.bundlePrice) {
+      return Number(category.bundlePrice);
+    }
+
+    if (category.tier3Price && category.tier3Min && totalParticipants >= category.tier3Min) {
+      return Number(category.tier3Price);
+    }
+
+    if (category.tier2Price && category.tier2Min) {
+      if (category.tier2Max) {
+        if (totalParticipants >= category.tier2Min && totalParticipants <= category.tier2Max) {
+          return Number(category.tier2Price);
+        }
+      } else {
+        if (totalParticipants >= category.tier2Min) {
+          return Number(category.tier2Price);
+        }
+      }
+    }
+
+    if (category.tier1Price && category.tier1Min && category.tier1Max) {
+      if (totalParticipants >= category.tier1Min && totalParticipants <= category.tier1Max) {
+        return Number(category.tier1Price);
+      }
+    }
+
+    return Number(category.basePrice);
+  }
+
+  // Calculate real-time total price
+  const totalPrice = items.reduce((sum, item) => {
+    if (item.type === "individual") {
+      return sum + item.price;
+    } else {
+      return sum + item.price * (item.participants || 0);
+    }
+  }, 0);
+
+  async function handleCheckout() {
     if (items.length === 0) {
-      alert("Your cart is empty!");
+      showToast("Your cart is empty!", "error");
       return;
     }
 
     if (!fullName || !email || !phone) {
-      alert("Please complete your personal information first!");
-      router.push("/registration");
+      showToast("Please complete your personal information first!", "error");
       return;
     }
 
-    // Navigate to confirm page with cart data
     const qs = new URLSearchParams({
       fullName,
       email,
@@ -50,7 +122,7 @@ export default function CartPage() {
       fromCart: "true",
     }).toString();
     router.push(`/registration/confirm?${qs}`);
-  };
+  }
 
   if (loading) {
     return (
@@ -66,7 +138,15 @@ export default function CartPage() {
   }
 
   return (
-    <main className="flex bg-gradient-to-br from-emerald-100/30 via-transparent to-rose-100/30 min-h-screen pt-28 pb-16">
+    <main
+      className="flex min-h-screen pt-28 pb-16"
+      style={{
+        backgroundImage: "url('/images/generalBg.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
       <div className="mx-auto w-full max-w-4xl px-4">
         <h1 className="text-4xl md:text-6xl text-center font-bold mb-8 tracking-wide text-white drop-shadow-lg">
           YOUR CART
@@ -96,7 +176,7 @@ export default function CartPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                          {item.type === "community" ? "Community" : "Individual"}
+                          {item.type === "community" ? "Community" : item.type === "family" ? "Family" : "Individual"}
                         </span>
                         <span className="text-sm font-medium text-gray-700">
                           {item.categoryName}
@@ -121,7 +201,7 @@ export default function CartPage() {
                               .join(", ")}
                           </p>
                           <p className="font-semibold text-gray-800 mt-1">
-                            Rp{" "}
+                            Rp {item.price.toLocaleString("id-ID")} × {item.participants} = Rp{" "}
                             {(
                               (item.participants || 0) * item.price
                             ).toLocaleString("id-ID")}
@@ -159,7 +239,7 @@ export default function CartPage() {
                 </button>
                 <button
                   onClick={handleCheckout}
-                  className="flex-1 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-200 to-emerald-100 text-white font-bold shadow hover:shadow-lg transition-all"
+                  className="flex-1 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow hover:shadow-lg transition-all"
                 >
                   Proceed to Checkout
                 </button>

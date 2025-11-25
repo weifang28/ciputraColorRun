@@ -3,7 +3,8 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useCart } from "../../context/CartContext";
 import { useState, useEffect, Suspense } from "react";
-import ConfirmPaymentClient from "./ConfirmPaymentClient";
+import  ConfirmPaymentClient from "./ConfirmPaymentClient"
+
 
 export default function Page() {
   return (

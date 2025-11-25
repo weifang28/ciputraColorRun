@@ -5,16 +5,17 @@ import { Toaster as Sonner, ToasterProps } from "sonner";
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
-
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      className="toaster group"
+      // Add `fixed-center` so we can pin to center with CSS
+      className="toaster fixed-center group"
+      // Force red background + white text via CSS variables Sonner consumes
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
+          "--normal-bg": "#9fd4ab",        // red-600
+          "--normal-text": "#ffffff",      // white text
+          "--normal-border": "#7bbf8c",    // darker red border
         } as React.CSSProperties
       }
       {...props}

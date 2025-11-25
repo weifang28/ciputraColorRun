@@ -42,7 +42,7 @@ export default function UserLoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50 p-6">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-6">
-        <h1 className="text-2xl font-bold mb-4">Login with Access Code</h1>
+        <h1 className="text-2xl font-bold mb-4 text-black">Login with Access Code</h1>
         <p className="text-sm mb-4 text-gray-600">
           Enter your registration access code (sent to your email) to view your profile and purchases.
         </p>
@@ -55,7 +55,7 @@ export default function UserLoginPage() {
             <input
               value={accessCode}
               onChange={(e) => setAccessCode(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border rounded-md"
+              className="mt-1 w-full px-3 py-2 border rounded-md text-black"
               placeholder="e.g. test_user or code from email"
               autoFocus
             />
@@ -72,7 +72,7 @@ export default function UserLoginPage() {
             <button
               type="button"
               onClick={() => router.push("/registration")}
-              className="px-4 py-2 border rounded-md"
+              className="px-4 py-2 border rounded-md text-gray-600"
             >
               Register
             </button>

@@ -11,7 +11,9 @@ export default function AdminConfirmedPage() {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch("/api/payments/confirmed", { credentials: "include" });
+        const res = await fetch('/api/payments/all?status=confirmed', {
+          credentials: 'include',
+        });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body?.error || res.statusText);
         if (mounted) setRegs(body.registrations || []);

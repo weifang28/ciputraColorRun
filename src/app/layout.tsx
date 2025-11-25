@@ -5,6 +5,7 @@ import NavBar from "./components/NavBar";
 import { CartProvider } from "./context/CartContext";
 import Script from "next/script";
 import Footer from "./components/Footer";
+import ClientToaster from "./components/ClientToaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,14 +38,23 @@ export default function RootLayout({
           crossOrigin="anonymous"
           referrerPolicy="no-referrer"
         />
+
+        {/* Favicons: prefer PNG logo, provide ICO fallback for older browsers */}
+        <link rel="icon" href="/images/logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/images/logo.png" />
+        <link rel="shortcut icon" href="/favicon.ico" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <CartProvider>
           <NavBar />
-          {children}
+          {/* ensure page content is pushed below fixed navbar */}
+          <div className="">{children}</div>
         </CartProvider>
-        
-        {/* AOS JavaScript (load library) */}
+
+        {/* Client-only toast container */}
+        <ClientToaster />
+
+        {/* AOS script / init */}
         <Script
           src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"
           integrity="sha512-A7AYk1fGKX6S2SsHywmPkrnzTZHrgiVT7GcQkLGDe2ev0aWb8zejytzS8wjo7PGEXKqJOrjQ4oORtnimIRZBtw=="
@@ -52,7 +62,6 @@ export default function RootLayout({
           referrerPolicy="no-referrer"
           strategy="afterInteractive"
         />
-
         {/* Inline initializer (polls for AOS and calls init) */}
         <script
           // inline script must be a string; run afterInteractive script will load AOS,

@@ -3,7 +3,40 @@
 /* Add Google Fonts for Moderniz (fallback to Montserrat) and Mustica Pro SemiBold (Poppins 600 used) */
 
 
+/* --- Add local font loading for Moderniz and Mustica Pro (semi-bold) --- */
+/* Place your font files in /public/fonts/ (see notes below) */
+@font-face {
+  font-family: "Moderniz";
+  src: url("/fonts/Moderniz-Regular.woff2") format("woff2"),
+       url("/fonts/Moderniz-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Moderniz";
+  src: url("/fonts/Moderniz-SemiBold.woff2") format("woff2"),
+       url("/fonts/Moderniz-SemiBold.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mustica Pro";
+  src: url("/fonts/MusticaPro-SemiBold.woff2") format("woff2"),
+       url("/fonts/MusticaPro-SemiBold.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Fallbacks if local fonts aren't available:
+   Moderniz -> system sans-serif fallback
+   Mustica Pro -> Poppins / system sans-serif */
 :root {
+  --font-moderniz: "Moderniz", "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mustica: "Mustica Pro", "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
   --background: #ffffff;
   --foreground: #171717;
 
@@ -40,7 +73,9 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-moderniz);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Prevent accidental horizontal overflow on small/embedded devices (iPad, Nest Hub) */
@@ -137,4 +172,54 @@ html, body {
 .card-icon {
   width: 50px;
   height: 50px;
+}
+
+/* Center the Sonner Toaster in the viewport and ensure it's above other UI */
+.toaster.fixed-center {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-80%, -100%) !important;
+  z-index: 9999 !important;
+  width: auto !important;
+  max-width: 90vw !important;
+  pointer-events: auto;
+}
+
+/* Ensure toast content doesn't overflow on very small screens */
+.toaster.fixed-center .sonner-toast {
+  max-width: 90vw;
+  box-sizing: border-box;
+}
+
+/* Mobile: ensure Sonner Toaster is centered on small viewports without touching desktop layout */
+@media (max-width: 640px) {
+  .toaster.fixed-center {
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+}
+
+/* Nav glassmorphism helper -> simplified translucent navbar (no heavy blur) */
+.nav-glass {
+  /* slightly translucent dark bar (similar to bg-black/30) */
+  background-color: rgba(0, 0, 0, 0.28);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.12);
+}
+
+/* Dark mode variant: slightly stronger translucency */
+.dark .nav-glass {
+  background-color: rgba(0, 0, 0, 0.32);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* keep mobile panel visually consistent but not heavily blurred */
+.w-full.max-w-md.bg-white\/10,
+.w-full.max-w-md.dark\:bg-black\/28 {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }

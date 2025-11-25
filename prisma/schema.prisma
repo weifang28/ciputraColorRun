@@ -96,15 +96,18 @@ model Participant {
 }
 
 model Payment {
-  id             Int          @id @default(autoincrement())
-  registrationId Int
-  transactionId  String       @unique
-  proofOfPayment String
-  status         String       @default("pending")
-  paidAt         DateTime?
-  amount         Decimal?     @db.Decimal(10, 2)
-  createdAt      DateTime     @default(now())
-  registration   Registration @relation(fields: [registrationId], references: [id])
+  id               Int       @id @default(autoincrement())
+  registrationId   Int
+  transactionId    String
+  proofOfPayment   String?
+  proofSenderName  String?
+  paidAt           DateTime?   // NEW: time of settlement / external paid timestamp
+  status           String    @default("pending")
+  amount           Decimal?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  registration     Registration @relation(fields: [registrationId], references: [id])
 }
 
 model QrCode {
