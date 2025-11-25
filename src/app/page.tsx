@@ -379,7 +379,7 @@ export default function Home() {
 						>
 							<div className="benefit-icon-wrap">
 								<img
-									src="/homepage/medal_2.png"
+									src="/images/homepage/medal_2.png"
 									alt="Jersey & Medali"
 									className="benefit-image"
 									
