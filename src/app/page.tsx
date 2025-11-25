@@ -379,7 +379,7 @@ export default function Home() {
 						>
 							<div className="benefit-icon-wrap">
 								<img
-									src="/homepage/medal2.png"
+									src="/homepage/medal_2.png"
 									alt="Jersey & Medali"
 									className="benefit-image"
 									
@@ -526,7 +526,7 @@ export default function Home() {
 					>
 						<div className="timeline-cards">
 							<div className="timeline-card">
-								<div className="timeline-badge">REGISTRASI</div>
+								<div className="timeline-badge">REGISTRATION</div>
 								<div className="timeline-date">
 									1 Desember 2025 — 28 Maret 2026
 								</div>
