@@ -114,6 +114,51 @@ export async function POST(request: Request) {
         include: { user: true, payments: true },
       });
 
+      // --- NEW: Deduct jersey quantities for this registration ---
+      // Gather participants and decrement jerseyOption.quantity by the number of participants per size
+      const participants = await tx.participant.findMany({
+        where: { registrationId },
+        select: { jerseyId: true },
+      });
+
+      if (participants && participants.length > 0) {
+        const counts: Record<number, number> = {};
+        for (const p of participants) {
+          if (typeof p.jerseyId === 'number') {
+            counts[p.jerseyId] = (counts[p.jerseyId] || 0) + 1;
+          }
+        }
+
+        // Decrement each jersey option quantity atomically
+        for (const [jerseyIdStr, cnt] of Object.entries(counts)) {
+          const jId = Number(jerseyIdStr);
+          try {
+            // Use decrement to avoid race conditions
+            await tx.jerseyOption.update({
+              where: { id: jId },
+              data: {
+                quantity: { decrement: cnt },
+              },
+            });
+          } catch (err) {
+            console.warn(`[confirm] Failed to decrement jersey (${jId}) by ${cnt}:`, err);
+            // As a safety, attempt to clamp to zero if update fails due to negative constraint
+            try {
+              const existing = await tx.jerseyOption.findUnique({ where: { id: jId }, select: { quantity: true } });
+              if (existing && typeof existing.quantity === 'number' && existing.quantity < 0) {
+                await tx.jerseyOption.update({
+                  where: { id: jId },
+                  data: { quantity: 0 },
+                });
+              }
+            } catch (e) {
+              console.error('[confirm] Failed to clamp jersey quantity to 0:', e);
+            }
+          }
+        }
+      }
+      // --- END NEW logic ---
+
       return reg;
     });
 

@@ -234,9 +234,32 @@ export default function RegistrationPage() {
         setJerseys((s) => ({ ...s, [size]: value }));
     }
 
+    // Add helpers (place these above validatePersonalDetails)
+    function isValidEmail(value: string) {
+      // simple, practical email pattern (not full RFC)
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+    }
+
+    function isValidPhone(value: string) {
+      // allow optional + and digits only (9-15 digits). strips spaces/dashes before test.
+      const cleaned = (value || "").replace(/[\s-]/g, "");
+      return /^\+?\d{9,15}$/.test(cleaned);
+    }
+
     function validatePersonalDetails(): boolean {
         if (!fullName || !email || !phone || !birthDate || !currentAddress || !idCardPhoto) {
             showToast("Please fill all required fields (Name, Email, Phone, Birth Date, Address, and ID Card/Passport Photo)", "error");
+            return false;
+        }
+
+        // Format checks
+        if (!isValidEmail(email)) {
+            showToast("Please enter a valid email address", "error");
+            return false;
+        }
+
+        if (!isValidPhone(phone)) {
+            showToast("Please enter a valid phone number (include country code, e.g. +628123...)", "error");
             return false;
         }
 
@@ -247,6 +270,11 @@ export default function RegistrationPage() {
             }
             if (!medicalHistory) {
                 showToast("Please provide medical history information (or write 'None')", "error");
+                return false;
+            }
+            // validate emergency phone format as well
+            if (!isValidPhone(emergencyPhone)) {
+                showToast("Please enter a valid emergency contact number (include country code)", "error");
                 return false;
             }
         }
@@ -656,6 +684,8 @@ export default function RegistrationPage() {
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors text-base"
                                     placeholder="your.email@example.com"
                                     required
+                                    pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                                    title="Enter a valid email address (e.g. name@example.com)"
                                 />
                             </div>
 
@@ -668,6 +698,9 @@ export default function RegistrationPage() {
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors text-base"
                                     placeholder="+62 812 3456 7890"
                                     required
+                                    inputMode="tel"
+                                    pattern="^\+?\d{9,15}$"
+                                    title="Enter a valid phone number, include country code (e.g. +628123...)"
                                 />
                             </div>
                         </div>
