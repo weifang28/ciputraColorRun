@@ -500,7 +500,7 @@ export default function Home() {
 							</div>
 							<h4 className="benefit-title">Other Benefits</h4>
 							<p className="benefit-description">
-								Enjoy full hydration support, live music entertainment, and a goody bag packed with exciting sponsor perks.
+								Enjoy full hydration support, entertainment, and a goody bag packed with exciting sponsor perks.
 							</p>
 						</div>
 					</div>
@@ -526,7 +526,7 @@ export default function Home() {
 					>
 						<div className="timeline-cards">
 							<div className="timeline-card">
-								<div className="timeline-badge">REGISTRATION</div>
+								<div className="timeline-badge">OPEN REGISTRATION</div>
 								<div className="timeline-date">
 									1 Desember 2025 — 28 Maret 2026
 								</div>
@@ -536,7 +536,7 @@ export default function Home() {
 							</div>
 
 							<div className="timeline-card">
-								<div className="timeline-badge">RACE PACK CLAIM</div>
+								<div className="timeline-badge">RACE PACK COLLECTION</div>
 								<div className="timeline-date">9 — 11 April 2026</div>
 								<p className="timeline-text">
 									
@@ -544,7 +544,7 @@ export default function Home() {
 							</div>
 
 							<div className="timeline-card">
-								<div className="timeline-badge">RUNNING DAY</div>
+								<div className="timeline-badge">RACE DAY</div>
 								<div className="timeline-date">12 April 2026</div>
 								<p className="timeline-text">
 								
@@ -564,15 +564,14 @@ export default function Home() {
 								<h3 className="font-moderniz text-xl text-[#1F6251]">
 									Race Pack Claim
 								</h3>
-								<span className="badge-small">Important</span>
+								<span className="badge-small"><strong>Important</strong></span>
 							</div>
 							<p className="font-mustica text-[#52605f] mt-3">
-								Get your gear ready for the big day! You can pick up your Race Pack at
-								<strong> Corepreneur, 1st Floor, UC Tower.</strong>.
+								Get your gear ready for the big day! You can pick up your Race Pack at:
 							</p>
 							<ul className="claim-list mt-4">
 								<li>
-									<strong>Location:</strong> Corepreneur, Universitas Ciputra
+									<strong>Location:</strong> Corepreneur 1st Floor, UC Tower
 								</li>
 								<li>
 									<strong>Dates:</strong> 9 — 11 April 2026

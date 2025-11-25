@@ -627,7 +627,7 @@ export default function RegistrationPage() {
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
                                 className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors text-base"
-                                placeholder="Enter your full name as per KTP/Passport"
+                                placeholder="Enter your full name as per Valid ID"
                                 required
                             />
                         </div>
