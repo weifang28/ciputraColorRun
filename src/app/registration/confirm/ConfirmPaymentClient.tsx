@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useCart } from "../../context/CartContext";
 import { useState, useEffect } from "react";
 import PaymentSuccessModal from "../../components/PaymentSuccessModal";
+import TutorialModal from "../../components/TutorialModal";
 
 export default function ConfirmPaymentClient() {
     const [showPopup, setShowPopup] = useState(false);
@@ -28,11 +29,21 @@ export default function ConfirmPaymentClient() {
     const [emergencyPhone, setEmergencyPhone] = useState<string>("");
     const [medicalHistory, setMedicalHistory] = useState<string>("");
     const [groupName, setGroupName] = useState<string>("");
+    const [showUploadTutorial, setShowUploadTutorial] = useState(false);
 
     const [proofFile, setProofFile] = useState<File | null>(null);
     const [fileName, setFileName] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const uploadTutorialSteps = [
+      {
+        title: "Upload Payment Confirmation",
+        description: "Upload an image of the proof of payment (PNG, JPG, JPEG). Make sure the amount and sender name are visible.",
+        image: "/images/tutorial/tut5.png",
+        tip: "Make sure to send the payment to the correct address and include the sender name as shown on the transfer."
+      }
+    ];
 
     useEffect(() => {
         // Load from context first, then fallback to sessionStorage
@@ -236,6 +247,19 @@ export default function ConfirmPaymentClient() {
                             <label className="block text-sm font-medium mb-2">
                                 Upload Payment Proof *
                             </label>
+
+                           {/* small helper link to open the tutorial modal */}
+                           <div className="flex items-center justify-between mb-2">
+                             <span className="text-xs text-gray-500">Accepted: PNG, JPG, JPEG (Max 10MB)</span>
+                             <button
+                               type="button"
+                               onClick={() => setShowUploadTutorial(true)}
+                               className="text-xs text-emerald-600 hover:underline"
+                             >
+                               How to upload?
+                             </button>
+                           </div>
+
                             <label
                                 htmlFor="proofUpload"
                                 className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-emerald-400 transition-colors flex items-center justify-center gap-3"
@@ -261,6 +285,15 @@ export default function ConfirmPaymentClient() {
                                 }}
                                 required
                             />
+
+                           {/* Tutorial modal for upload help */}
+                           {showUploadTutorial && (
+                             <TutorialModal
+                               isOpen={showUploadTutorial}
+                               steps={uploadTutorialSteps}
+                               onClose={() => setShowUploadTutorial(false)}
+                             />
+                           )}
                         </div>
 
                         {error && (

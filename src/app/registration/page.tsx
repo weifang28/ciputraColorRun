@@ -70,19 +70,19 @@ export default function RegistrationPage() {
     // Tutorial steps - you can add/edit these easily
     const tutorialSteps = [
       {
-        title: "Fill Personal Details and pick registration type",
+        title: "Fill Personal Details and Pick Registration Type",
         description: "Start off by filling your personal details and picking the registration type (Individual/Community/Family)",
         image: "/images/tutorial/tut1.png",
         tip: "Prepare ID and payment proof."
       },
       {
-        title: "Choose race distance, and jersey sizes",
+        title: "Choose Race Distance, and Jersey Sizes",
         description: 'Choose the race distance, jersey sizes and click "Add Category To Cart" button to save the order and to add more orders',
         image: "/images/tutorial/tut2.png",
         tip: "Make sure that the jersey quantity is the same as the participant"
       },
       {
-        title: "Agree to terms and conditions",
+        title: "Agree To Terms and Conditions",
         description: "Agree to the terms and conditions of the event",
         image: "/images/tutorial/tut3.png",
         tip: "Read carefully"
@@ -565,7 +565,7 @@ export default function RegistrationPage() {
 
                 <section className="bg-white/95 backdrop-blur-md rounded-lg p-8 md:p-10 shadow-lg text-gray-800" data-aos="zoom-in" data-aos-delay="200">
                     <h2 className="text-2xl font-bold text-center mb-1 text-gray-800 font-moderniz">REGISTRATION FORM</h2>
-                    <p className="text-center text-sm text-gray-600 mb-6 font-mustica">Enter the details to get going.</p>
+                    <p className="text-center text-sm text-gray-600 mb-6 font-mustica">Enter the details to get going</p>
 
                     {/* MOVED: Registration Type radios now on top for easier access */}
                     <div className="space-y-3 mb-6">
@@ -591,7 +591,7 @@ export default function RegistrationPage() {
                                     </div>
                                     <span className={`text-sm font-semibold text-center ${type === "community" ? 'text-emerald-700' : hasFamilyBundle ? 'text-gray-400' : 'text-gray-700'}`}>
                                         Community
-                                        <span className="block text-xs font-normal">(Min 10)</span>
+                                        <span className="block text-xs font-normal">(Min. 10)</span>
                                     </span>
                                     {hasFamilyBundle && <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-2 py-1 rounded-full">⚠</span>}
                                 </div>
