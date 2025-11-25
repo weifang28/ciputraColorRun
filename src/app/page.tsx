@@ -528,7 +528,7 @@ export default function Home() {
 							<div className="timeline-card">
 								<div className="timeline-badge">OPEN REGISTRATION</div>
 								<div className="timeline-date">
-									1 Desember 2025 — 28 Maret 2026
+									1 December 2025 — 28 March 2026
 								</div>
 								<p className="timeline-text">
 								
