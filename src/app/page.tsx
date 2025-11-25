@@ -116,7 +116,7 @@ export default function Home() {
 					<img
 						src="/images/logo.png"
 						alt="Ciputra Color Run Logo"
-						className="home_top_logo"
+						className="home_top_logo pt-10"
 						data-aos="zoom-in"
 						data-aos-duration="1000"
 						data-aos-delay="100"
@@ -229,7 +229,7 @@ export default function Home() {
 							</p>
 							<p className="text-sm md:text-base text-white/80 mb-4 md:mb-6 leading-relaxed">
 								The finish line is just the beginning. Get ready for our
-								signature Color War, a spectacular party where participants
+							
 								celebrate under a shower of colorful powder. <br />
 								<br />
 								From casuals to professionals, individuals to families, everyone
@@ -518,7 +518,7 @@ export default function Home() {
 					</h2>
 					
 
-					{/* Horizontal scrollable timeline cards */}
+					{/* Horizontal xable timeline cards */}
 					<div
 						className="timeline-scroll-wrap"
 						data-aos="fade-up"
@@ -607,26 +607,29 @@ export default function Home() {
 							{/* Minimalistic map card — click to open full Google Maps */}
 							<div className="venue-map-wrapper mt-4">
 								<div className="venue-map-card" role="group" aria-label="Race venue map">
-									<div className="venue-map-top">
-										<span className="venue-map-title">Universitas Ciputra Surabaya</span>
-										<a
-											href="https://www.google.com/maps?q=Universitas+Ciputra+Surabaya"
-											target="_blank"
-											rel="noreferrer"
-											className="venue-map-link"
-										>
-											Open in Google Maps
-										</a>
-									</div>
-									<iframe
-										title="Universitas Ciputra Surabaya - Racepack Claim Location"
-										src="https://www.google.com/maps?q=Universitas+Ciputra+Surabaya&z=15&output=embed"
-										loading="lazy"
-										referrerPolicy="no-referrer-when-downgrade"
-										className="venue-iframe"
-										aria-hidden={false}
-									/>
-								</div>
+                                    <div className="venue-map-top">
+                                        <span className="venue-map-title">Universitas Ciputra Surabaya</span>
+                                        <a
+                                            href="https://www.google.com/maps?q=Universitas+Ciputra+Surabaya"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="venue-map-link"
+                                        >
+                                            Open in Google Maps
+                                        </a>
+                                    </div>
+                                    <iframe
+                                        src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d494.69981702612677!2d112.6314999987017!3d-7.286434733495391!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sid!4v1764055698752!5m2!1sen!2sid"
+                                        width={600}
+                                        height={450}
+                                        style={{ border: 0 }}
+                                        allowFullScreen
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                        className="venue-iframe"
+                                        title="Universitas Ciputra Surabaya - Racepack Claim Location"
+                                    />
+                                </div>
 							</div>
 							<p className="mt-4 text-sm text-[#52605f]">
 								Assembly point and route will be announced later via registered e-mail and event’s homepage. Additionally follow our Instagram <a className = "underline font-bold" href = "https://instagram.com/ciputrarun.uc">@ciputrarun.uc</a> as well for additional information.

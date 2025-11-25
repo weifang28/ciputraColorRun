@@ -1109,15 +1109,24 @@
     vertical-align: middle;
   }
 
-  /* sticky left column — opaque so it never stacks on top of content */
+  /* On mobile, do NOT keep the first column sticky (so it won't follow the scroll).
+     Instead make it opaque and add a subtle shadow only when the table content is scrolled.
+     JS toggles the .scrolled class on .pricing-table-wrap when scrollLeft > 0 */
   .pricing-table tbody td.col-item,
   .pricing-table thead th.col-item {
-    position: sticky;
-    left: 0;
-    z-index: 12;
-    background: #ffffff; /* opaque to mask scrolled content */
-    box-shadow: 6px 0 14px rgba(16,24,40,0.06);
+    position: static !important;
+    left: auto !important;
+    z-index: 5;
+    background: #ffffff; /* opaque so it's readable over scroller */
+    box-shadow: none;
     white-space: nowrap;
+    transition: box-shadow 180ms ease;
+  }
+
+  /* visual separator when the user has scrolled the table horizontally */
+  .pricing-table-wrap.scrolled .pricing-table tbody td.col-item,
+  .pricing-table-wrap.scrolled .pricing-table thead th.col-item {
+    box-shadow: 6px 0 18px rgba(16,24,40,0.06);
   }
 
   /* keep rows as table-rows so layout matches desktop */
@@ -1564,4 +1573,37 @@ label[for="idCardPhoto"]:hover,
 label[for="idCardPhoto"]:focus-within {
   border-bottom-color: #e687a4 !important;
   transition: border-color 0.18s;
+}
+
+@media (max-width: 720px) {
+  /* Make the pricing wrapper scrollable on mobile (keeps previous behaviour) */
+  .pricing-table-wrap {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding: 1rem;
+    padding-bottom: 0.5rem;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* On mobile, do NOT keep the first column sticky (so it won't follow the scroll).
+     Instead make it opaque and add a subtle shadow only when the table content is scrolled.
+     JS toggles the .scrolled class on .pricing-table-wrap when scrollLeft > 0 */
+  .pricing-table tbody td.col-item,
+  .pricing-table thead th.col-item {
+    position: static !important;
+    left: auto !important;
+    z-index: 5;
+    background: #ffffff; /* opaque so it's readable over scroller */
+    box-shadow: none;
+    white-space: nowrap;
+    transition: box-shadow 180ms ease;
+  }
+
+  /* visual separator when the user has scrolled the table horizontally */
+  .pricing-table-wrap.scrolled .pricing-table tbody td.col-item,
+  .pricing-table-wrap.scrolled .pricing-table thead th.col-item {
+    box-shadow: 6px 0 18px rgba(16,24,40,0.06);
+  }
 }

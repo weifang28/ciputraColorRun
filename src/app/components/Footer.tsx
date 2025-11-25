@@ -26,18 +26,18 @@ export default function Footer() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                     <div className="md:col-span-2" data-aos="fade-right">
                         <h3 className="text-lg sm:text-2xl font-bold mb-2 tracking-wider">
-                            Need help or further information? Please contact us!
+                            Need help or further information? Feel free to contact us!
                         </h3>
 
                         <div className="flex flex-col sm:flex-row sm:items-start gap-6">
                             <div>
                                 <p className="text-sm sm:text-lg font-semibold mb-0.5">Abel</p>
-                                <p className="text-xs sm:text-base opacity-90">WA: 0895410319676</p>
+                                <p className="text-xs sm:text-base opacity-90">WhatsApp: 0895410319676</p>
                             </div>
 
                             <div>
                                 <p className="text-sm sm:text-lg font-semibold mb-0.5">Elysian</p>
-                                <p className="text-xs sm:text-base opacity-90">WA: 0811306658</p>
+                                <p className="text-xs sm:text-base opacity-90">WhatsApp: 0811306658</p>
                             </div>
                         </div>
 

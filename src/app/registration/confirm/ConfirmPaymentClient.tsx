@@ -280,11 +280,12 @@ export default function ConfirmPaymentClient() {
                             <button
                                 type="submit"
                                 disabled={isSubmitting}
-                                className={`flex-1 px-6 py-3 rounded-full font-semibold transition-all ${
+                                className={`flex-1 px-6 py-3 rounded-full font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-emerald-300 ${
                                     isSubmitting
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-emerald-200 to-emerald-100 text-white hover:shadow-lg'
+                                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-md'
                                 }`}
+                                style={{ letterSpacing: '0.2px' }}
                             >
                                 {isSubmitting ? "Uploading..." : "Submit Payment"}
                             </button>

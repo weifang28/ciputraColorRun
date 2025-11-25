@@ -297,13 +297,13 @@ export default function App() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="text-center">
               {/* Footer badge */}
-              <div className="mb-6">
+              {/* <div className="mb-6">
                 <div className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-gradient-to-r from-[#FFF1C5]/80 to-[#FFDFC0]/80 backdrop-blur-xl border border-white/80 shadow-2xl">
                   <div className="w-2 h-2 rounded-full bg-gradient-to-r from-[#91DCAC] to-[#91DCAC] animate-pulse"></div>
                   <p className="text-sm text-[#682950]">Ciputra Color Run 2026</p>
                   <div className="w-2 h-2 rounded-full bg-gradient-to-r from-[#91DCAC] to-[#91DCAC] animate-pulse"></div>
                 </div>
-              </div>
+              </div> */}
               
               {/* Decorative line */}
               <div className="h-1 w-64 mx-auto bg-gradient-to-r from-transparent via-[#D9D9D9]/50 to-transparent rounded-full"></div>

@@ -76,7 +76,7 @@ export default function RegistrationPage() {
         tip: "Prepare ID and payment proof."
       },
       {
-        title: "Choose race distance, and jersey sizes.",
+        title: "Choose race distance, and jersey sizes",
         description: 'Choose the race distance, jersey sizes and click "Add Category To Cart" button to save the order and to add more orders',
         image: "/images/tutorial/tut2.png",
         tip: "Make sure that the jersey quantity is the same as the participant"
@@ -93,12 +93,7 @@ export default function RegistrationPage() {
         image: "/images/tutorial/tut4.png",
         tip: "Make sure that the pricing is the same"
       },
-      {
-        title: "Upload Payment Confirmation",
-        description: "Upload an image of the proof of payment",
-        image: "/images/tutorial/tut5.png",
-        tip: "Make sure to send the payment to the correct address"
-      }
+      // Upload step moved to confirmation page
     ];
 
     useEffect(() => {
