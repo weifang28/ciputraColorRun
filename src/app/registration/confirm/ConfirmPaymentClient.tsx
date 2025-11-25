@@ -344,13 +344,6 @@ export default function ConfirmPaymentClient() {
                 >
                     Join Grup WhatsApp
                 </a>
-    
-                <button
-                    onClick={() => router.push("/")}
-                    className="mt-3 w-full py-3 rounded-full border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
-                >
-                    Kembali ke Beranda
-                </button>
             </div>
         </div>
     )}
