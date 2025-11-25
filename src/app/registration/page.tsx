@@ -587,7 +587,7 @@ export default function RegistrationPage() {
             }}
         >
             <div className="mx-auto w-full max-w-5xl px-4">
-                <h1 className="text-4xl md:text-6xl text-center font-bold mb-8 tracking-wide text-white drop-shadow-lg font-moderniz">
+                <h1 className="text-4xl md:text-6xl text-center font-bold mb-8 tracking-wide unified-gradient-title font-moderniz">
                     CIPUTRA COLOR RUN
                 </h1>
 

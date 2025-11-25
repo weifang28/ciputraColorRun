@@ -214,11 +214,11 @@ export default function Home() {
 
 						{/* Right: Text content overlays the background image */}
 						<div
-							className="relative bg-gradient-to-r from-[#a0d4ac]/50 to-[#e2969c]/90 p-6 sm:p-8 md:p-12 md:pl-20 flex flex-col justify-center min-h-[400px]"
+							className="about-right relative p-6 sm:p-8 md:p-12 md:pl-20 flex flex-col justify-center min-h-[400px]"
 							data-aos="fade-left"
 							data-aos-duration="1200"
 						>
-							<h2 className="text-2xl md:text-4xl font-bold mb-4 md:mb-6 text-white">
+							<h2 className="text-2xl md:text-4xl font-bold mb-4 md:mb-6 unified-gradient-title">
 								About Ciputra Color Run
 							</h2>
 							<p className="text-base md:text-lg text-white/90 mb-3 md:mb-4 leading-relaxed">
