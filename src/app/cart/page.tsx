@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "../context/CartContext";
+import type { CartItem } from "../context/CartContext";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
