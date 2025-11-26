@@ -74,7 +74,7 @@ export default function Footer() {
             {/* Copyright */}
             <div className="bg-gray-900 py-3">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-gray-300 text-xs sm:text-sm">
-                    &copy; 2026 Ciputra Color Run. All rights reserved.
+                    &copy; {new Date().getFullYear()} Ciputra Color Run. All rights reserved.
                 </div>
             </div>
         </footer>

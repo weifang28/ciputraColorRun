@@ -252,7 +252,7 @@ export default function ConfirmPaymentClient() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-2">Proof Sender Name (as shown on transfer)</label>
+                            <label className="block text-sm font-medium mb-2">Sender's Name (as shown on transfer) <strong className = "text-red-500">*</strong></label>
                             <input
                                 type="text"
                                 value={proofSenderName}
@@ -267,7 +267,7 @@ export default function ConfirmPaymentClient() {
                             </label>
 
                            {/* small helper link to open the tutorial modal */}
-                           <div className="flex items-center justify-between mb-2">
+                           {/* <div className="flex items-center justify-between mb-2">
                              <span className="text-xs text-gray-500">Accepted: PNG, JPG, JPEG (Max 10MB)</span>
                              <button
                                type="button"
@@ -276,7 +276,7 @@ export default function ConfirmPaymentClient() {
                              >
                                How to upload?
                              </button>
-                           </div>
+                           </div> */}
 
                             <label
                                 htmlFor="proofUpload"
@@ -314,11 +314,11 @@ export default function ConfirmPaymentClient() {
                            )}
                         </div>
 
-                        {error && (
+                        {/* {error && (
                             <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
                                 {error}
                             </div>
-                        )}
+                        )} */}
 
                         <div className="flex gap-3">
                             <button

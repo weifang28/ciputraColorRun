@@ -255,41 +255,56 @@ export default function RegistrationPage() {
             return false;
         }
 
-        // Format checks
-        if (!isValidEmail(email)) {
-            showToast("Please enter a valid email address", "error");
+        // Birth date must be a valid date and not in the future
+        const parsedBirth = new Date(birthDate);
+        if (isNaN(parsedBirth.getTime())) {
+            showToast("Please enter a valid birth date", "error");
+            return false;
+        }
+        const today = new Date();
+        // compare only date parts to avoid timezone differences
+        const birthDateOnly = new Date(parsedBirth.getFullYear(), parsedBirth.getMonth(), parsedBirth.getDate());
+        const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        if (birthDateOnly > todayOnly) {
+            showToast("Birth date cannot be in the future", "error");
             return false;
         }
 
-        if (!isValidPhone(phone)) {
-            showToast("Please enter a valid WhatsApp number starting with 0 (e.g. 081234567890)", "error");
+    // Format checks
+    if (!isValidEmail(email)) {
+        showToast("Please enter a valid email address", "error");
+        return false;
+    }
+
+    if (!isValidPhone(phone)) {
+        showToast("Please enter a valid WhatsApp number starting with 0 (e.g. 081234567890)", "error");
+        return false;
+    }
+
+    if (type === "individual") {
+        if (!emergencyPhone) {
+            showToast("Please provide an emergency contact number", "error");
             return false;
         }
-
-        if (type === "individual") {
-            if (!emergencyPhone) {
-                showToast("Please provide an emergency contact number", "error");
-                return false;
-            }
-            if (!medicalHistory) {
-                showToast("Please provide medical history information (or write 'None')", "error");
-                return false;
-            }
-            // validate emergency phone format as well
-            if (!isValidPhone(emergencyPhone)) {
-                showToast("Please enter a valid emergency contact number starting with 0 (e.g. 081234567890)", "error");
-                return false;
-            }
+        if (!medicalHistory) {
+            showToast("Please provide medical history information (or write 'None')", "error");
+            return false;
         }
-
-        if (type === "community") {
-            if (!groupName || groupName.trim() === "") {
-                showToast("Please provide a community/group name", "error");
-                return false;
-            }
+        // validate emergency phone format as well
+        if (!isValidPhone(emergencyPhone)) {
+            showToast("Please enter a valid emergency contact number starting with 0 (e.g. 081234567890)", "error");
+            return false;
         }
+    }
 
-        return true;
+    if (type === "community") {
+        if (!groupName || groupName.trim() === "") {
+            showToast("Please provide a community/group name", "error");
+            return false;
+        }
+    }
+
+    return true;
     }
 
     async function savePersonalDetailsToSession() {
@@ -648,7 +663,7 @@ export default function RegistrationPage() {
                     {/* Personal details */}
                     <div className="space-y-4">
                         <div className="grid gap-3">
-                            <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Full Name (as per ID Card) *</label>
+                            <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Full Name (as per ID Card) <strong className = "text-red-500">*</strong></label>
                             <input
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
@@ -679,7 +694,7 @@ export default function RegistrationPage() {
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="grid gap-3">
-                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Email *</label>
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Email <strong className="text-red-500">*</strong></label>
                                 <input
                                     type="email"
                                     value={email}
@@ -693,7 +708,7 @@ export default function RegistrationPage() {
                             </div>
 
                             <div className="grid gap-3">
-                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">WhatsApp Number *</label>
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">WhatsApp Number <strong className="text-red-500">*</strong></label>
                                 <input
                                     type="tel"
                                     value={phone}
@@ -711,7 +726,7 @@ export default function RegistrationPage() {
                         {/* Emergency Phone - Only for Individual */}
                         {type === "individual" && (
                             <div className="grid gap-3">
-                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Emergency Contact Number *</label>
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Emergency Contact Number <strong className="text-red-500">*</strong></label>
                                 <input
                                     type="tel"
                                     value={emergencyPhone}
@@ -728,7 +743,7 @@ export default function RegistrationPage() {
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="grid gap-3">
-                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Birth Date *</label>
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Birth Date <strong className="text-red-500">*</strong></label>
                                 <input
                                     type="date"
                                     value={birthDate}
@@ -739,7 +754,7 @@ export default function RegistrationPage() {
                             </div>
 
                             <div className="grid gap-3">
-                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Gender *</label>
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Gender <strong className="text-red-500">*</strong></label>
                                 <select
                                     value={gender}
                                     onChange={(e) => setGender(e.target.value as "male" | "female")}
@@ -753,7 +768,7 @@ export default function RegistrationPage() {
                         </div>
 
                         <div className="grid gap-3">
-                            <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Current Address *</label>
+                            <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Current Address <strong className="text-red-500">*</strong></label>
                             <textarea
                                 value={currentAddress}
                                 onChange={(e) => setCurrentAddress(e.target.value)}
@@ -766,7 +781,7 @@ export default function RegistrationPage() {
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="grid gap-3">
-                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Nationality *</label>
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Nationality <strong className="text-red-500">*</strong></label>
                                 <select
                                     value={nationality}
                                     onChange={(e) => setNationality(e.target.value as "WNI" | "WNA")}
@@ -807,14 +822,14 @@ export default function RegistrationPage() {
                                     }}
                                     required
                                 />
-                                <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG (Max 10MB, uploaded to cloud storage)</p>
+                                <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG (Max 10MB)</p>
                             </div>
                         </div>
 
                         {/* Medical History - Only for Individual */}
                         {type === "individual" && (
                             <div className="grid gap-3">
-                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Medical History *</label>
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Medical History <strong className = "text-red-600">*</strong></label>
                                 <textarea
                                     value={medicalHistory}
                                     onChange={(e) => setMedicalHistory(e.target.value)}
@@ -823,7 +838,6 @@ export default function RegistrationPage() {
                                     rows={3}
                                     required
                                 />
-                                <p className="text-xs text-gray-500">Please list any medical conditions we should be aware of, or write "None" if not applicable</p>
                             </div>
                         )}
 
