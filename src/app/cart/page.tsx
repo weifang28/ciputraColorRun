@@ -5,15 +5,18 @@ import { useRouter } from "next/navigation";
 import { ShoppingBag, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { showToast } from "../../lib/toast";
+import EditCartItemModal from "./EditCartItemModal";
 
 export default function CartPage() {
-  const { items, removeItem, clearCart, updateItem } = useCart();
+  const { items, removeItem, clearCart, updateItem, totalPrice } = useCart();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [categories, setCategories] = useState<any[]>([]);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<CartItem | null>(null);
 
   // Load personal details from sessionStorage
   useEffect(() => {
@@ -96,7 +99,7 @@ export default function CartPage() {
   }
 
   // Calculate real-time total price
-  const totalPrice = items.reduce((sum, item) => {
+  const totalPriceCalc = items.reduce((sum, item) => {
     if (item.type === "individual") {
       return sum + item.price;
     } else {
@@ -175,10 +178,10 @@ export default function CartPage() {
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                        <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold">
                           {item.type === "community" ? "Community" : item.type === "family" ? "Family" : "Individual"}
                         </span>
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="text-sm font-semibold text-gray-900">
                           {item.categoryName}
                         </span>
                       </div>
@@ -200,23 +203,26 @@ export default function CartPage() {
                               .map(([size, count]) => `${size}(${count})`)
                               .join(", ")}
                           </p>
-                          <p className="font-semibold text-gray-800 mt-1">
+                          <p className="font-bold text-gray-900 text-lg mt-1">
                             Rp {item.price.toLocaleString("id-ID")} × {item.participants} = Rp{" "}
-                            {(
-                              (item.participants || 0) * item.price
-                            ).toLocaleString("id-ID")}
+                            {((item.participants || 0) * item.price).toLocaleString("id-ID")}
                           </p>
                         </div>
                       )}
                     </div>
 
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="ml-4 p-2 rounded-full hover:bg-red-100 text-red-600 transition-colors"
-                      aria-label="Remove item"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <div className="ml-4 flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingItem(item);
+                          setIsEditOpen(true);
+                        }}
+                        className="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold shadow-md hover:from-emerald-700 hover:to-teal-700 transition"
+                        aria-label="Edit item"
+                      >
+                        Edit
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -247,6 +253,27 @@ export default function CartPage() {
             </>
           )}
         </section>
+
+        {/* Edit modal */}
+        {isEditOpen && editingItem && (
+          <EditCartItemModal
+            item={editingItem}
+            onClose={() => {
+              setIsEditOpen(false);
+              setEditingItem(null);
+            }}
+            onSave={(updated) => {
+              updateItem(updated);
+              setIsEditOpen(false);
+              setEditingItem(null);
+            }}
+            onRemove={() => {
+              removeItem(editingItem.id);
+              setIsEditOpen(false);
+              setEditingItem(null);
+            }}
+          />
+        )}
       </div>
     </main>
   );

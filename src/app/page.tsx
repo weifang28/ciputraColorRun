@@ -265,103 +265,113 @@ export default function Home() {
 					/>
 				</div>
 
-				<h2 className="pricing-title text-2xl md:text-3xl font-moderniz font-bold text-center mb-6">
-					<span className="pricing-title-gradient">TICKET PRICES</span>
+				<h2
+					className="pricing-title text-2xl md:text-3xl font-moderniz font-bold text-center mb-6"
+					data-aos="fade-up"
+					data-aos-delay="180"
+					data-aos-duration="800"
+				>
+					<span className="pricing-title-gradient" data-aos="fade-up" data-aos-delay="220" data-aos-duration="900">
+						TICKET PRICES
+					</span>
 				</h2>
 
-				<div className="pricing-table-wrap">
+				<div className="pricing-table-wrap ">
 					<table
 						className="pricing-table"
 						role="table"
 						aria-label="Ciputra Color Run Ticket Prices"
+						data-aos="fade-up"
+						data-aos-delay="300"
+						data-aos-duration="900"
 					>
-						<thead>
-							<tr>
-								<th scope="col" className="col-item">
-									Category
-								</th>
-								<th scope="col" className="col-main">
-									Base Price
-								</th>
-								<th scope="col" className="col-tier">
-									Community 10-29
-								</th>
-								<th scope="col" className="col-tier">
-									Community 30-59
-								</th>
-								<th scope="col" className="col-tier">
-									Community ≥60
-								</th>
-								<th scope="col" className="col-note">
-									Early bird / Bundle
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr>
-								<td className="col-item" data-label="Kategori">
-									10K
-								</td>
-								<td className="col-main font-mustica" data-label="Harga Dasar">
-									Rp 250.000
-								</td>
-								<td className="col-tier" data-label="Komunitas 10-29">
-									Rp 235.000
-								</td>
-								<td className="col-tier" data-label="Komunitas 30-59">
-									Rp 225.000
-								</td>
-								<td className="col-tier" data-label="Komunitas ≥60">
-									Rp 215.000
-								</td>
-								<td className="col-note" data-label="Promo">
-									Early bird: Rp 220.000
-								</td>
-							</tr>
-							<tr>
-								<td className="col-item" data-label="Kategori">
-									5K
-								</td>
-								<td className="col-main font-mustica" data-label="Harga Dasar">
-									Rp 200.000
-								</td>
-								<td className="col-tier" data-label="Komunitas 10-29">
-									Rp 190.000
-								</td>
-								<td className="col-tier" data-label="Komunitas 30-59">
-									Rp 180.000
-								</td>
-								<td className="col-tier" data-label="Komunitas ≥60">
-									Rp 170.000
-								</td>
-								<td className="col-note" data-label="Promo">
-									Early bird: Rp 180.000
-								</td>
-							</tr>
-							<tr>
-								<td className="col-item" data-label="Kategori">
-									3K
-								</td>
-								<td className="col-main font-mustica" data-label="Harga Dasar">
-									Rp 150.000
-								</td>
-								<td className="col-tier" data-label="Komunitas 10-29">
-									Rp 140.000
-								</td>
-								<td className="col-tier" data-label="Komunitas 30-59">
-									Rp 135.000
-								</td>
-								<td className="col-tier" data-label="Komunitas ≥60">
-									Rp 135.000
-								</td>
-								<td className="col-note" data-label="Promo">
-									Early bird: Rp 130.000
-									<br />
-									Bundling family (4 people): Rp 145.000 / person
-								</td>
-							</tr>
-						</tbody>
-					</table>
+                        <thead>
+                            <tr>
+                                <th scope="col" className="col-item">
+                                    Category
+                                </th>
+                                <th scope="col" className="col-main">
+                                    Normal Price
+                                </th>
+                                <th scope="col" className="col-tier">
+                                    Community 10-29
+                                </th>
+                                <th scope="col" className="col-tier">
+                                    Community 30-59
+                                </th>
+                                <th scope="col" className="col-tier">
+                                    Community ≥60
+                                </th>
+                                <th scope="col" className="col-note">
+                                    Early bird / Bundle
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td className="col-item" data-label="Kategori">
+                                    10K
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Harga Dasar">
+                                    Rp 250.000
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 10-29">
+                                    Rp 235.000
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 30-59">
+                                    Rp 225.000
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas ≥60">
+                                    Rp 215.000
+                                </td>
+                                <td className="col-note font-mustica font-bold text-white" data-label="Promo">
+                                    Early bird: Rp 220.000
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="col-item" data-label="Kategori">
+                                    5K
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Harga Dasar">
+                                    Rp 200.000
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 10-29">
+                                    Rp 190.000
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 30-59">
+                                    Rp 180.000
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas ≥60">
+                                    Rp 170.000
+                                </td>
+                                <td className="col-note font-mustica font-bold text-white" data-label="Promo">
+                                    Early bird: Rp 180.000
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="col-item" data-label="Kategori">
+                                    3K
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Harga Dasar">
+                                    Rp 150.000
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 10-29">
+                                    Rp 140.000
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 30-59">
+                                    Rp 135.000
+                                </td>
+                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas ≥60">
+                                    Rp 135.000
+                                </td>
+                                <td className="col-note font-mustica font-bold text-white" data-label="Promo">
+                                    Early bird: Rp 130.000
+                                    <br />
+                                    Bundling family (4 people): Rp 145.000 / person
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
 				</div>
 
 				{/* Benefits Section */}
@@ -509,51 +519,44 @@ export default function Home() {
 
 			{/* Timeline Section */}
 			<section className="timeline-section py-12 md:py-16">
-				<div className="max-w-6xl mx-auto px-4 sm:px-6">
-					<h2
-						className="text-3xl md:text-4xl font-bold text-center text-[#1F6251] mb-8 font-moderniz"
-						data-aos="fade-up"
-					>
-						TIMELINE
-					</h2>
-					
+                <div className="max-w-6xl mx-auto px-4 sm:px-6">
+                    <h2
+                        className="text-3xl md:text-4xl font-bold text-center text-[#1F6251] mb-8 font-moderniz"
+                        data-aos="fade-up"
+                    >
+                        TIMELINE
+                    </h2>
 
-					{/* Horizontal xable timeline cards */}
-					<div
-						className="timeline-scroll-wrap"
-						data-aos="fade-up"
-						data-aos-delay="200"
-					>
-						<div className="timeline-cards">
-							<div className="timeline-card">
-								<div className="timeline-badge">OPEN REGISTRATION</div>
-								<div className="timeline-date">
-									1 December 2025 — 28 March 2026
+					{/* Minimal semantic list timeline */}
+					<div className="timeline-scroll-wrap" data-aos="fade-up" data-aos-delay="200">
+						<ul className="timeline-list minimal" aria-label="Event timeline">
+							<li className="timeline-item minimal">
+								<div className="timeline-date">1 Dec 2025 — 28 Mar 2026</div>
+								<div>
+									<div className="timeline-title">Open registration</div>
+									<p className="timeline-text">Registration opens; early-bird pricing available.</p>
 								</div>
-								<p className="timeline-text">
-								
-								</p>
-							</div>
+							</li>
 
-							<div className="timeline-card">
-								<div className="timeline-badge">RACE PACK COLLECTION</div>
-								<div className="timeline-date">9 — 11 April 2026</div>
-								<p className="timeline-text">
-									
-								</p>
-							</div>
+							<li className="timeline-item minimal">
+								<div className="timeline-date">9 — 11 Apr 2026</div>
+								<div>
+									<div className="timeline-title">Race pack collection</div>
+									<p className="timeline-text">Pick up race packs at designated locations.</p>
+								</div>
+							</li>
 
-							<div className="timeline-card">
-								<div className="timeline-badge">RACE DAY</div>
-								<div className="timeline-date">12 April 2026</div>
-								<p className="timeline-text">
-								
-								</p>
-							</div>
-						</div>
+							<li className="timeline-item minimal">
+								<div className="timeline-date">12 Apr 2026</div>
+								<div>
+									<div className="timeline-title">Race day</div>
+									<p className="timeline-text">Event day — be at the assembly point on time.</p>
+								</div>
+							</li>
+						</ul>
 					</div>
-				</div>
-			</section>
+                </div>
+            </section>
 
 			{/* Claim Racepack & Venue Section */}
 			<section className="claim-venue-section py-10">
@@ -561,7 +564,7 @@ export default function Home() {
 					<div className="grid md:grid-cols-2 gap-8 items-stretch">
 						<div className="claim-card" data-aos="fade-up">
 							<div className="claim-card-header">
-								<h3 className="font-moderniz text-xl text-[#1F6251]">
+								<h3 className="font-moderniz text-xl text-[#1F6251] mt-1">
 									Race Pack Claim
 								</h3>
 								<span className="badge-small"><strong>Important</strong></span>

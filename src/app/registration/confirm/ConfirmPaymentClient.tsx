@@ -169,24 +169,42 @@ export default function ConfirmPaymentClient() {
                     <div className="mb-6">
                         <h3 className="font-semibold mb-3">Order Summary:</h3>
                         <div className="space-y-2">
-                            {items.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="flex justify-between text-sm border-b pb-2"
-                                >
-                                    <div>
-                                        <span className="font-medium">{item.categoryName}</span>
-                                        <span className="text-gray-500 ml-2">
-                                            {item.type === "community"
-                                                ? `${item.participants} participants`
-                                                : `Size ${item.jerseySize}`}
-                                        </span>
+                            {items.map((item) => {
+                                // friendly size/participants display:
+                                let secondaryLabel = "";
+                                if (item.type === "community" || item.type === "family") {
+                                    // prefer explicit jersey distribution if present
+                                    const jerseysObj: Record<string, number> = item.jerseys || {};
+                                    const pairs = Object.entries(jerseysObj)
+                                        .filter(([, cnt]) => Number(cnt) > 0)
+                                        .map(([size, cnt]) => `${size}(${cnt})`);
+
+                                    if (pairs.length > 0) {
+                                        secondaryLabel = pairs.join(", ");
+                                    } else {
+                                        // fallback to participants (family default 4)
+                                        const fallbackCount = item.participants ?? (item.type === "family" ? 4 : 0);
+                                        secondaryLabel = `${fallbackCount} participants`;
+                                    }
+                                } else {
+                                    // individual
+                                    secondaryLabel = `Size ${item.jerseySize || "—"}`;
+                                }
+
+                                const itemTotal = (item.type === "community" || item.type === "family")
+                                    ? Number(item.price) * Number(item.participants || 0)
+                                    : Number(item.price);
+
+                                return (
+                                    <div key={item.id} className="flex justify-between text-sm border-b pb-2">
+                                        <div>
+                                            <span className="font-medium">{item.categoryName}</span>
+                                            <span className="text-gray-500 ml-2">{secondaryLabel}</span>
+                                        </div>
+                                        <span className="font-medium">Rp {Number(itemTotal).toLocaleString("id-ID")}</span>
                                     </div>
-                                    <span className="font-medium">
-                                        Rp {(item.type === "community" ? item.price * (item.participants || 0) : item.price).toLocaleString("id-ID")}
-                                    </span>
-                                </div>
-                            ))}
+                                );
+                            })}
                             <div className="flex justify-between font-bold text-lg pt-2">
                                 <span>Total:</span>
                                 <span>Rp {totalPrice.toLocaleString("id-ID")}</span>

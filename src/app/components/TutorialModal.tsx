@@ -46,7 +46,10 @@ export default function TutorialModal({ isOpen, onClose, steps }: TutorialModalP
         <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-[#d1e9d5] to-[#e4a1a6]">
           <div>
             <h3 className="text-lg font-bold text-emerald-700">Registration Tutorial</h3>
-            <div className="text-sm text-emerald-600/90">Step {currentStep + 1} of {steps.length}</div>
+            {/* show step counter only if there is more than one step */}
+            {steps.length > 1 && (
+              <div className="text-sm text-emerald-600/90">Step {currentStep + 1} of {steps.length}</div>
+            )}
           </div>
           <button onClick={onClose} className="p-2 rounded" aria-label="Close">
             <X className="text-white" />
@@ -60,11 +63,25 @@ export default function TutorialModal({ isOpen, onClose, steps }: TutorialModalP
           />
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-hidden p-8">
           <h4 className="text-2xl font-semibold mb-3 text-[#602d4e]">{currentStepData.title}</h4>
           <p className="text-[#e687a4] mb-4">{currentStepData.description}</p>
 
-          <div className="w-full aspect-video bg-gray-100 rounded-lg overflow-hidden mb-4">
+          {/* Image area: make relative so we can absolutely position arrows */}
+          <div className="relative w-full aspect-video bg-gray-100 rounded-lg overflow-hidden mb-4">
+            {/* left arrow (overlaid) */}
+            {steps.length > 1 && (
+              <button
+                onClick={goToPrevStep}
+                disabled={currentStep === 0}
+                aria-label="Previous step"
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/90 shadow hover:bg-white disabled:opacity-40"
+              >
+                <ChevronLeft className="text-[#de9fa9]"/>
+              </button>
+            )}
+
+            {/* image */}
             <img
               src={currentStepData.image}
               alt={currentStepData.title}
@@ -73,6 +90,20 @@ export default function TutorialModal({ isOpen, onClose, steps }: TutorialModalP
                 (e.currentTarget as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450'%3E%3Crect fill='%23e6ffef' width='800' height='450'/%3E%3Ctext fill='%23004624' font-family='sans-serif' font-size='28' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3EPlaceholder Image%3C/text%3E%3C/svg%3E";
               }}
             />
+
+            {/* right arrow (overlaid) */}
+            {steps.length > 1 && (
+              <button
+                onClick={() => {
+                  if (currentStep < steps.length - 1) goToNextStep();
+                }}
+                disabled={currentStep >= steps.length - 1}
+                aria-label="Next step"
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/90 shadow hover:bg-white disabled:opacity-40"
+              >
+                <ChevronRight className="text-[#de9fa9]"/>
+              </button>
+            )}
           </div>
 
           {currentStepData.tip && (
@@ -82,39 +113,14 @@ export default function TutorialModal({ isOpen, onClose, steps }: TutorialModalP
           )}
         </div>
 
+        {/* Footer: arrows removed from here; primary action only on final step */}
         <div className="border-t border-gray-200 px-8 py-5 bg-gray-50">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={goToPrevStep}
-                disabled={currentStep === 0}
-                className="px-3 py-2 bg-gray-100 rounded disabled:opacity-50"
-              >
-                <ChevronLeft />
+          <div className="flex items-center justify-end gap-3">
+            {currentStep === steps.length - 1 && (
+              <button onClick={handleFinish} className="px-4 py-2 bg-emerald-600 text-white rounded">
+                Start Registration
               </button>
-              <div className="flex gap-1">
-                {steps.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentStep(i)}
-                    className={`w-2 h-2 rounded-full ${i === currentStep ? 'bg-emerald-600 w-8' : 'bg-gray-300'}`}
-                    aria-label={`Go to step ${i + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {currentStep < steps.length - 1 ? (
-                <button onClick={goToNextStep} className="px-4 py-2 bg-emerald-600 text-white rounded">
-                  Next
-                </button>
-              ) : (
-                <button onClick={handleFinish} className="px-4 py-2 bg-emerald-600 text-white rounded">
-                  Start Registration
-                </button>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>

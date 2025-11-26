@@ -82,12 +82,6 @@ export default function RegistrationPage() {
         tip: "Make sure that the jersey quantity is the same as the participant"
       },
       {
-        title: "Agree To Terms and Conditions",
-        description: "Agree to the terms and conditions of the event",
-        image: "/images/tutorial/tut3.png",
-        tip: "Read carefully"
-      },
-      {
         title: "Check Cart",
         description: "Check the cart, make sure it is the same with the order placed",
         image: "/images/tutorial/tut4.png",
@@ -240,10 +234,19 @@ export default function RegistrationPage() {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
     }
 
+    // Sanitize phone input: allow digits, spaces and dashes only (no letters)
+    function sanitizeLocalPhoneInput(value: string) {
+      // remove everything except digits, spaces and dashes
+      const cleaned = (value || "").replace(/[^\d\s-]/g, "");
+      // optionally collapse multiple spaces
+      return cleaned.replace(/\s{2,}/g, " ").trim();
+    }
+
     function isValidPhone(value: string) {
-      // allow optional + and digits only (9-15 digits). strips spaces/dashes before test.
+      // Require local-format phone starting with 0, digits only.
+      // Accepts 9..15 digits total (starts with 0). Example: 081234567890
       const cleaned = (value || "").replace(/[\s-]/g, "");
-      return /^\+?\d{9,15}$/.test(cleaned);
+      return /^0\d{8,14}$/.test(cleaned);
     }
 
     function validatePersonalDetails(): boolean {
@@ -259,7 +262,7 @@ export default function RegistrationPage() {
         }
 
         if (!isValidPhone(phone)) {
-            showToast("Please enter a valid phone number (include country code, e.g. +628123...)", "error");
+            showToast("Please enter a valid WhatsApp number starting with 0 (e.g. 081234567890)", "error");
             return false;
         }
 
@@ -274,7 +277,7 @@ export default function RegistrationPage() {
             }
             // validate emergency phone format as well
             if (!isValidPhone(emergencyPhone)) {
-                showToast("Please enter a valid emergency contact number (include country code)", "error");
+                showToast("Please enter a valid emergency contact number starting with 0 (e.g. 081234567890)", "error");
                 return false;
             }
         }
@@ -696,11 +699,11 @@ export default function RegistrationPage() {
                                     value={phone}
                                     onChange={(e) => setPhone(e.target.value)}
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors text-base"
-                                    placeholder="+62 812 3456 7890"
+                                    placeholder="0812 3456 7890"
                                     required
                                     inputMode="tel"
-                                    pattern="^\+?\d{9,15}$"
-                                    title="Enter a valid phone number, include country code (e.g. +628123...)"
+                                    pattern="^0\d{8,14}$"
+                                    title="Enter a valid local phone number starting with 0 (e.g. 081234567890)"
                                 />
                             </div>
                         </div>
@@ -714,8 +717,11 @@ export default function RegistrationPage() {
                                     value={emergencyPhone}
                                     onChange={(e) => setEmergencyPhone(e.target.value)}
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors text-base"
-                                    placeholder="+62 812 3456 7890"
+                                    placeholder="0812 3456 7890"
                                     required
+                                    inputMode="tel"
+                                    pattern="^0\d{8,14}$"
+                                    title="Enter a valid local phone number starting with 0 (e.g. 081234567890)"
                                 />
                             </div>
                         )}
@@ -774,14 +780,14 @@ export default function RegistrationPage() {
 
                             <div className="grid gap-3">
                                 <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                                    {nationality === "WNI" ? "KTP Photo" : "Passport Photo"} *
+                                    {nationality === "WNI" ? "ID Card Photo" : "Passport Photo"} <strong className = "text-red-600">*</strong>
                                 </label>
                                 <label 
                                     htmlFor="idCardPhoto"
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent cursor-pointer hover:border-blue-300 transition-colors flex items-center justify-between group"
                                 >
                                     <span className={`text-base ${idCardPhotoName ? "text-gray-800" : "text-gray-400"}`}>
-                                        {idCardPhotoName || `Upload ${nationality === "WNI" ? "KTP" : "Passport"}`}
+                                        {idCardPhotoName || `Upload ${nationality === "WNI" ? "ID Card" : "Passport"}`}
                                     </span>
                                     <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -827,7 +833,7 @@ export default function RegistrationPage() {
                     {/* Family Bundle Layout */}
                     {type === "family" && (
                         <div className="space-y-6 mt-6">
-                            <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                            {/* <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                                 <h3 className="font-semibold text-purple-900 mb-2">👨‍👩‍👧‍👦 Family Bundle - 3km Only</h3>
                                 <p className="text-sm text-purple-700">
                                     Special family package for 4 people at Rp 145,000/person (Total: Rp 580,000)
@@ -835,7 +841,7 @@ export default function RegistrationPage() {
                                 <p className="text-xs text-purple-600 mt-1">
                                     ⚠️ Note: Cannot be combined with community registration
                                 </p>
-                            </div>
+                            </div> */}
 
                             <div className="rounded-lg border border-gray-200 p-5 bg-white">
                                 <div className="space-y-5">
@@ -981,11 +987,11 @@ export default function RegistrationPage() {
                                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Number of Participants (for this category) *</label>
                                         <input
                                             type="number"
-                                            min={10}
+                                            min={getTotalCommunityParticipants() >= 10 ? 1 : 10}
                                             value={participants}
                                             onChange={(e) => setParticipants(e.target.value === "" ? "" : Number(e.target.value))}
                                             className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-emerald-500 focus:outline-none transition-colors text-base"
-                                            placeholder="Minimum 10 participants"
+                                            placeholder={getTotalCommunityParticipants() >= 10 ? "Enter participant amount" : "Minimum 10 participants"}
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
                                             This will be added to your community total ({getTotalCommunityParticipants()} currently in cart)

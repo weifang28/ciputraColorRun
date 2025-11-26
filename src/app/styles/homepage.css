@@ -161,6 +161,21 @@
     margin-bottom: 2rem;
 }
 
+/* Ensure the jumbotron description stays white on all devices/browsers */
+.home_top .home_description,
+.home_top_content .home_description {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important; /* Safari */
+  mix-blend-mode: normal !important; /* prevent background blend from changing color */
+}
+
+/* Also force links and any inline elements inside the description to stay white */
+.home_top .home_description a,
+.home_top_content .home_description * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 .sponsor-container {
     display: flex;
     justify-content: center;
@@ -933,27 +948,55 @@
 
 /* prevent columns from compressing too far — allow scroll instead */
 .pricing-table {
+  /* Explicit table-only background (uses your requested colors).
+     Using a CSS rule here avoids Tailwind JIT/purge issues with arbitrary classes. */
+  background: linear-gradient(90deg, #d5e8d7 0%, #daa4a7 100%) !important;
+  /* preserve existing look & layout */
   min-width: 780px;
   width: 100%;
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(16,24,40,0.06);
+  font-size: 0.95rem;
 }
 
-/* keep header visible while user scrolls horizontally/vertically */
+/* adjust header sticky background so it sits nicely on top of the new table bg */
 .pricing-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  /* preserve the existing header look while stuck */
-  background: linear-gradient(90deg, rgba(145,220,172,0.06), rgba(245,129,164,0.03));
-  backdrop-filter: blur(6px);
+  background: rgba(255,255,255,0.92);
 }
 
 /* tiny polish: ensure the first column remains readable when scrolling horizontally */
 .pricing-table tbody td.col-item {
-  position: sticky;
-  left: 0;
-  z-index: 5;
-  background: rgba(255,255,255,0.95);
-  box-shadow: 2px 0 8px rgba(16,24,40,0.04);
+  position: relative;
+  padding-left: 18px; /* reduced since dot removed */
+  font-weight: 700;
+  color: #682950 !important; /* always visible, override hover rules */
+  font-family: var(--font-moderniz);
+  background: transparent;
+}
+
+/* Remove the decorative gradient dot (was purely ornamental) */
+.pricing-table tbody td.col-item::before {
+  display: none !important;
+  content: none;
+}
+
+/* Ensure hover styles don't make text disappear — keep subtle row hover only */
+.pricing-table tbody tr:hover {
+  /* optional light tint on hover; set to transparent if you want none */
+  background: rgba(0,0,0,0.00);
+}
+
+/* Prevent other rules from changing category color on hover/active */
+.pricing-table tbody tr:hover td.col-item,
+.pricing-table tbody td.col-item {
+  color: #682950 !important;
+}
+
+/* Make sure body cells inherit color unless explicitly set */
+.pricing-table tbody td {
+  color: inherit;
 }
 
 /* clean table layout */
@@ -997,8 +1040,9 @@
   z-index: 3;
   text-align: left;
   padding: 14px 18px;
-  background: linear-gradient(90deg, rgba(145,220,172,0.06), rgba(245,129,164,0.03));
-  color: var(--accent-strong);
+  /* make header visually match the table gradient (works on desktop & mobile) */
+  background: linear-gradient(90deg, rgba(213,232,215,0.18) 0%, rgba(218,164,167,0.18) 100%);
+  color: #28543b; /* darker text for accessibility */
   font-weight: 700;
   letter-spacing: 0.2px;
   border-bottom: 1px solid rgba(16,24,40,0.06);
@@ -1017,22 +1061,15 @@
 /* category badge on first column for visual hierarchy */
 .pricing-table tbody td.col-item {
   position: relative;
-  padding-left: 48px;
+  padding-left: 18px; /* reduced since dot removed */
   font-weight: 700;
-  color: #682950;
+  color: #682950 !important; /* always visible, override hover rules */
   font-family: var(--font-moderniz);
+  background: transparent;
 }
 .pricing-table tbody td.col-item::before {
-  content: "";
-  position: absolute;
-  left: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-strong), var(--accent-muted));
-  box-shadow: 0 6px 18px rgba(145,220,172,0.12);
+  display: none !important;
+  content: none;
 }
 
 /* primary price column */
@@ -1044,7 +1081,7 @@
 }
 
 /* tier columns */
-.col-tier { width: 16%; text-align: left; color: #42504f; }
+.col-tier { width: 16%; text-align: left; color: #ffffff; }
 
 /* note column */
 .col-note { width: 22%; color: #52605f; white-space: pre-wrap; }
@@ -1058,6 +1095,13 @@
 .pricing-table tbody tr:hover td {
   background: var(--pricing-hover);
   transition: background 160ms ease;
+}
+
+/* Make only the pricing table body price/note cells bold white (does not affect other text) */
+.pricing-table tbody td.col-main,
+.pricing-table tbody td.col-tier,
+.pricing-table tbody td.col-note {
+  color: #602d4e !important;
 }
 
 /* responsive: transform table into informative cards on narrow screens */
@@ -1089,12 +1133,13 @@
     border: none;
   }
 
-  /* keep the header readable and sticky on vertical scroll */
+  /* keep the header readable and sticky on vertical scroll - keep header tint/gradient */
   .pricing-table thead th {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: rgba(255,255,255,0.97);
+    /* keep the header gradient visible even when scrolled on small screens */
+    background: linear-gradient(90deg, rgba(213,232,215,0.18) 0%, rgba(218,164,167,0.18) 100%);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     white-space: nowrap;
@@ -1109,15 +1154,13 @@
     vertical-align: middle;
   }
 
-  /* On mobile, do NOT keep the first column sticky (so it won't follow the scroll).
-     Instead make it opaque and add a subtle shadow only when the table content is scrolled.
-     JS toggles the .scrolled class on .pricing-table-wrap when scrollLeft > 0 */
+  /* On mobile, do NOT make first column opaque white — keep it transparent so the table gradient shows through */
   .pricing-table tbody td.col-item,
   .pricing-table thead th.col-item {
     position: static !important;
     left: auto !important;
     z-index: 5;
-    background: #ffffff; /* opaque so it's readable over scroller */
+    background: transparent !important; /* allow gradient/background to show */
     box-shadow: none;
     white-space: nowrap;
     transition: box-shadow 180ms ease;
@@ -1132,6 +1175,12 @@
   /* keep rows as table-rows so layout matches desktop */
   .pricing-table tbody tr {
     display: table-row;
+  }
+
+  /* Remove hover tint on rows for mobile — keep content colors consistent */
+  .pricing-table tbody tr:hover td {
+    background: transparent !important;
+    transition: none;
   }
 
   /* safety: make sure no other rules force stacked-card UI */
@@ -1154,7 +1203,7 @@
 
 .benefits-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.25rem;
   align-items: stretch;
 }
@@ -1170,17 +1219,20 @@
   align-items: center;
   text-align: center;
   gap: 0.75rem;
-  min-height: 170px;
-  transition: transform 220ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms ease, border-color 220ms ease;
-  box-shadow: 0 8px 20px rgba(16,24,40,0.04);
+  min-height: 150px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+
+  /* permanent outline / soft drop-shadow using #73E9DD */
+  box-shadow: 0 10px 30px rgba(115,233,221,0.10);
+  border-color: rgba(115,233,221,0.16);
 }
 
-/* subtle hover / focus for pointer devices */
+/* remove pop/zoom hover — keep same outline on hover/focus */
 .benefit-card:hover,
 .benefit-card:focus-within {
-  transform: translateY(-6px);
-  box-shadow: 0 18px 40px rgba(16,24,40,0.08);
-  border-color: rgba(16,24,40,0.06);
+  transform: none;
+  box-shadow: 0 10px 30px rgba(115,233,221,0.10);
+  border-color: rgba(115,233,221,0.20);
 }
 
 /* Icon wrapper */
@@ -1279,15 +1331,28 @@
   -webkit-text-fill-color: transparent;
 }
 
-/* Make the fourth benefit card span full width of the three-column grid on medium+ screens */
+/* Benefits grid: use 4 columns on wide screens (was 3 + last card spanning) */
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+/* Remove forced spanning of the last card (was used to make a big bottom card)
+   — now all 4 cards sit inline in the same row on large screens */
 .benefits-grid .benefit-card:last-child {
-  grid-column: 1 / -1;
-  min-height: 220px; /* larger visual weight */
-  display: flex;
+  grid-column: auto;
+  min-height: 84px;
+  padding: 1.25rem;
+  /* Put the icon on top and center the text to match other cards */
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   text-align: center;
-  padding: 1.5rem;
+}
+
+.benefits-grid .benefit-card:last-child .benefit-icon-wrap {
+  margin-bottom: 0.6rem;
 }
 
 /* Keep proportion on medium screens */
@@ -1464,6 +1529,34 @@ input:focus, textarea:focus, select:focus{
   .jersey-input::placeholder { line-height: 36px; }
 }
 
+.edit-jersey-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 0.75rem;               /* horizontal padding, keeps visual rhythm */
+  border: 0;
+  border-bottom: 2px solid #e5e7eb;
+  background: transparent;
+  color: #111827;
+  text-align: center;               /* center numbers horizontally */
+  font-size: 1rem;
+  line-height: 40px;                /* vertically center the numeric value */
+  vertical-align: middle;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  appearance: none;
+  outline: none;
+}
+
+/* hide native number spinners for cleaner centered appearance */
+.edit-jersey-input::-webkit-outer-spin-button,
+.edit-jersey-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.edit-jersey-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 .timeline-section {
   background: linear-gradient(90deg, #a7cca9 0%, #da9c9d 100%);
   background-repeat: no-repeat;
@@ -1595,7 +1688,7 @@ label[for="idCardPhoto"]:focus-within {
     position: static !important;
     left: auto !important;
     z-index: 5;
-    background: #ffffff; /* opaque so it's readable over scroller */
+    background: transparent !important; /* allow gradient/background to show */
     box-shadow: none;
     white-space: nowrap;
     transition: box-shadow 180ms ease;
