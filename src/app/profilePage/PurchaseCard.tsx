@@ -93,7 +93,7 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
         {/* Two Column Layout: Details on Left, QR on Right */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column: Purchase Details */}
-          <div className="space-y-6">
+          <div className="space-y-6 mb-8 lg:mb-0">
             {purchase.type === 'community' ? (
               <>
                 {/* Participant Count */}
@@ -131,13 +131,13 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
                 </div>
 
                 {/* Total Price */}
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[#91DDAF] border border-[#91DDAF] transition-all hover:shadow-lg">
-                  <div className="w-12 h-12 rounded-xl bg-white/30 flex items-center justify-center shadow-lg flex-shrink-0">
+                <div className="flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-br from-[#94DCAD]/20 to-[#4EF9CD]/15 border border-[#94DCAD]/50 transition-all hover:shadow-lg hover:border-[#94DCAD]/70">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#94DCAD] to-[#73E9DD] flex items-center justify-center shadow-lg flex-shrink-0">
                     <DollarSign className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm text-white/90 mb-1">Total Price</p>
-                    <p className="text-white">{formatRupiah(purchase.totalPrice)}</p>
+                    <p className="text-sm text-[#682950]/70 mb-1">Total Price</p>
+                    <p className="text-[#682950]">{formatRupiah(purchase.totalPrice)}</p>
                   </div>
                 </div>
               </>
@@ -155,13 +155,13 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
                 </div>
 
                 {/* Price */}
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[#91DDAF] border border-[#91DDAF] transition-all hover:shadow-lg">
-                  <div className="w-12 h-12 rounded-xl bg-white/30 flex items-center justify-center shadow-lg flex-shrink-0">
+                <div className="flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-br from-[#94DCAD]/20 to-[#4EF9CD]/15 border border-[#94DCAD]/50 transition-all hover:shadow-lg hover:border-[#94DCAD]/70">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#94DCAD] to-[#73E9DD] flex items-center justify-center shadow-lg flex-shrink-0">
                     <DollarSign className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm text-white/90 mb-1">Price</p>
-                    <p className="text-white">{formatRupiah(purchase.price)}</p>
+                    <p className="text-sm text-[#682950]/70 mb-1">Price</p>
+                    <p className="text-[#682950]">{formatRupiah(purchase.price)}</p>
                   </div>
                 </div>
               </>
@@ -169,25 +169,26 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
           </div>
 
           {/* Right Column: QR Code Section */}
-          <div className="flex flex-col">
-            <p className="text-sm text-[#682950]/70 mb-4 text-center">Registration QR Code</p>
-            <div className="relative group flex-1 flex items-center">
-              <div className="w-full aspect-square bg-gradient-to-br from-[#FFF1C5]/50 to-[#FFDFC0]/50 rounded-3xl flex items-center justify-center border-4 border-white shadow-2xl relative overflow-hidden transition-all hover:shadow-xl p-4">   
+          <div className="relative w-full">
+            <p className="absolute -top-8 left-0 right-0 text-center text-sm text-[#682950]/70">Registration QR Code</p>
+            
+            <div className="w-full aspect-square relative overflow-hidden bg-gradient-to-br from-[#FFF1C5]/50 to-[#FFDFC0]/50 rounded-3xl border-4 border-white shadow-2xl transition-all hover:shadow-xl">
+              <div className="absolute inset-0 flex items-center justify-center p-4">
                 {qrImage ? (
-                  <img src={qrImage} alt="QR Code" style={{ width: '100%', height: 'auto' }} />
+                  <img src={qrImage} alt="QR Code" className="w-full h-full object-contain" />
                 ) : (
                   <div className="relative z-10 flex flex-col items-center gap-3">
                     <QrCode className="w-24 h-24 text-[#682950]/50" />
                     <p className="text-sm text-[#682950]/60">QR Code Not Available</p>
                   </div>
                 )}
-
-                {/* Corner accents */}
-                <div className="absolute top-2 left-2 w-6 h-6 border-t-4 border-l-4 border-[#66EBE4] rounded-tl-2xl"></div>
-                <div className="absolute top-2 right-2 w-6 h-6 border-t-4 border-r-4 border-[#91DCAC] rounded-tr-2xl"></div>
-                <div className="absolute bottom-2 left-2 w-6 h-6 border-b-4 border-l-4 border-[#9DD290] rounded-bl-2xl"></div>
-                <div className="absolute bottom-2 right-2 w-6 h-6 border-b-4 border-r-4 border-[#91DCAC] rounded-br-2xl"></div>
               </div>
+
+              {/* Corner accents */}
+              <div className="absolute top-2 left-2 w-6 h-6 border-t-4 border-l-4 border-[#66EBE4] rounded-tl-2xl"></div>
+              <div className="absolute top-2 right-2 w-6 h-6 border-t-4 border-r-4 border-[#91DCAC] rounded-tr-2xl"></div>
+              <div className="absolute bottom-2 left-2 w-6 h-6 border-b-4 border-l-4 border-[#9DD290] rounded-bl-2xl"></div>
+              <div className="absolute bottom-2 right-2 w-6 h-6 border-b-4 border-r-4 border-[#91DCAC] rounded-br-2xl"></div>
             </div>
           </div>
         </div>
