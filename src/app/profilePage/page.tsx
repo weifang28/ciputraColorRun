@@ -239,7 +239,7 @@ export default function App() {
       <div className="relative z-10 min-h-screen pt-20">
         {/* Header */}
         <header className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-linear-to-r from-[#FFF1C5]/20 via-white/10 to-[#FFDFC0]/20 backdrop-blur-sm"></div>
+          <div className="absolute inset-0 bg-linear-to-r from-[#FFF1C5]/20 via-white/10 to-[#FFDFC0]/20"></div>
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
