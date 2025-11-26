@@ -223,3 +223,70 @@ html, body {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* === BASE RESET === */
+.pricing-table tr {
+  background-color: transparent !important;
+}
+
+.pricing-table th,
+.pricing-table td {
+  background-color: transparent !important;
+  border: none;
+  text-align: center !important;
+  vertical-align: middle !important;
+  padding: 14px 10px !important;
+}
+
+/* === HEADER === */
+.pricing-table th {
+  background-color: #dbdbdb !important;
+  color: #3d8b5f !important;
+  font-weight: 600;
+  white-space: nowrap !important; /* biar tidak turun baris */
+  font-size: 15px !important;
+}
+
+/* === BODY CELLS === */
+.pricing-table td {
+  background-color: #dbdbdb !important;
+  color: #333;
+}
+
+/* Zebra effect */
+.pricing-table tbody tr:nth-child(even) td {
+  background-color: #f7f3f3 !important;
+}
+
+/* === COLUMN-SPECIFIC STYLES === */
+.pricing-table .col-item,
+.pricing-table .col-main,
+.pricing-table .col-tier,
+.pricing-table .col-note {
+  background-color: #f7f3f3 !important;
+}
+
+/* Bundle column (lebih lebar & multiline) */
+.pricing-table th:nth-child(6),
+.pricing-table td:nth-child(6) {
+  width: 25%;
+}
+
+.pricing-table .col-note {
+  white-space: normal;
+  line-height: 1.4;
+}
+
+/* === COLUMN WIDTHS (1–5) === */
+.pricing-table th:nth-child(1),
+.pricing-table td:nth-child(1),
+.pricing-table th:nth-child(2),
+.pricing-table td:nth-child(2),
+.pricing-table th:nth-child(3),
+.pricing-table td:nth-child(3),
+.pricing-table th:nth-child(4),
+.pricing-table td:nth-child(4),
+.pricing-table th:nth-child(5),
+.pricing-table td:nth-child(5) {
+  width: 15%;
+}
