@@ -49,24 +49,15 @@
     display: inline-block;
     font-size: 5rem;
     font-weight: bolder;
-    /* High-contrast dark gradient - readable on all devices */
-    background: linear-gradient(
-        90deg,
-        #1a4d3a 0%,
-        #0d5c4a 35%,
-        #6b2d4a 65%,
-        #4a1a35 100%
-    );
-    background-size: 100% 100%;
-    background-position: center;
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-    z-index: 2;
-    /* stronger outline for visibility on any background */
-    -webkit-text-stroke: 0.5px rgba(0,0,0,0.2);
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+  /* White text - clear on all backgrounds */
+  background: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  z-index: 2;
+  /* subtle dark shadow for contrast on light areas */
+  text-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  -webkit-text-stroke: 0;
+  filter: none;
 }
 
 /* Responsive stroke for home title */
