@@ -281,7 +281,7 @@ export default function Home() {
 									Category
 								</th>
 								<th scope="col" className="col-main">
-									Base Price
+									Normal Price
 								</th>
 								<th scope="col" className="col-tier">
 									Community 10-29
@@ -463,7 +463,7 @@ export default function Home() {
 									/>
 								</svg>
 							</div>
-							<h4 className="benefit-title">Powder Color War</h4>
+							<h4 className="benefit-title">Color War Powder</h4>
 							<p className="benefit-description">
 								Immerse yourself in the euphoria of our signature Color War using safe, non-toxic powder. (Note: This part is fully optional if you prefer to stay clean!)
 							</p>
