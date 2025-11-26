@@ -89,7 +89,7 @@ export function UserInfoCard({ userName, email, phone, onUpdate }: UserInfoCardP
                   type="email"
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
-                  className="bg-gradient-to-r from-[#FFF1C5]/30 to-white/80 border-[#94DCAD]/40 focus:border-[#4EF9CD] rounded-xl h-12"
+                  className="text-black bg-gradient-to-r from-[#FFF1C5]/30 to-white/80 border-[#91DCAC]/40 focus:border-[#91DCAC] rounded-xl h-12"
                 />
               </div>
               <div className="space-y-2">
@@ -99,7 +99,9 @@ export function UserInfoCard({ userName, email, phone, onUpdate }: UserInfoCardP
                   type="tel"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  className="bg-gradient-to-r from-[#FFDFC0]/30 to-white/80 border-[#91DCAC]/40 focus:border-[#91DCAC] rounded-xl h-12"
+                  // ensure entered text is visible on light background
+                  className="text-black"
+                  /* note: keeps existing classes from caller when passed; if you need the same gradient style as email, add those classes here */
                 />
               </div>
               <Button

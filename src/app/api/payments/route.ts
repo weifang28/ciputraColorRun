@@ -1,13 +1,18 @@
 // src/app/api/payments/route.ts
 
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
 import { PrismaClient, Prisma } from "@prisma/client";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { v2 as cloudinary } from "cloudinary";
+import nodemailer from "nodemailer";
 
 const prisma = new PrismaClient();
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 /**
  * Generates a unique access code from a full name.
@@ -23,60 +28,95 @@ async function generateAccessCode(
     "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
   >
 ): Promise<string> {
-  // 1. Create the base code: lowercase, replace non-alphanumeric with '_', trim trailing '_'
-  const baseCode = fullName
+  // Normalize name -> ascii, lowercase, remove non-alphanumeric, spaces -> underscore
+  const normalized = (fullName || "user")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip diacritics
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "") // Remove special characters
-    .replace(/\s+/g, "_") // Replace one or more spaces with a single underscore
-    .replace(/_$/, ""); // Remove trailing underscore if any
+    .replace(/[^a-z0-9\s]/g, "") // remove punctuation
+    .trim()
+    .replace(/\s+/g, "_") // spaces -> underscore
+    .replace(/^_+|_+$/g, ""); // trim leading/trailing underscores
 
-  let accessCode = baseCode;
+  const base = normalized || `user`;
+
+  let code = base;
   let counter = 0;
 
-  // 2. Check for uniqueness and append a number if it already exists
-  // We loop until we find a code that is not in the database.
   while (true) {
-    const existingUser = await prismaTx.user.findUnique({
-      where: { accessCode: accessCode },
-    });
-
-    if (!existingUser) {
-      // This code is unique, we can use it.
-      break;
-    }
-
-    // This code is taken, increment counter and try again
-    counter++;
-    accessCode = `${baseCode}_${counter}`;
+    const exists = await prismaTx.user.findUnique({ where: { accessCode: code } });
+    if (!exists) return code;
+    counter += 1;
+    code = `${base}_${counter}`;
   }
-
-  return accessCode;
 }
 
 /**
- * Generate a bib number with category-based prefix and ensure uniqueness.
- * Example: categoryName "3K" -> prefix "3" -> bib "3XXXX" (4 random digits)
+ * Generate a bib number with category-based prefix and participant ID suffix.
+ * - 3km: "3" + 4-digit padded ID (e.g., "30001")
+ * - 5km: "5" + 4-digit padded ID (e.g., "50002")
+ * - 10km: "10" + 4-digit padded ID (e.g., "100003")
+ * 
+ * @param categoryName The race category name (e.g., "3km", "5km", "10km")
+ * @param participantId The participant's unique ID from the database
  */
-async function generateUniqueBib(
-  categoryName: string | undefined,
-  prismaTx: Omit<
-    PrismaClient,
-    "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
-  >
-): Promise<string> {
-  const prefixMatch = (categoryName || "").match(/^(\d{1,2})/);
-  const prefix = prefixMatch ? prefixMatch[1] : "0"; // fallback prefix
+function generateBibNumber(categoryName: string | undefined, participantId: number): string {
+  // Extract numeric prefix from category name
+  const match = (categoryName || "").match(/^(\d{1,2})/);
+  const prefix = match ? match[1] : "0"; // "3", "5", or "10"
+  
+  // Determine padding based on prefix length
+  // "3" or "5" -> 4 digits (total 5), "10" -> 4 digits (total 6)
+  const paddingLength = prefix === "10" ? 4 : 4;
+  
+  // Pad participant ID to ensure consistent length
+  const paddedId = participantId.toString().padStart(paddingLength, "0");
+  
+  return `${prefix}${paddedId}`;
+}
 
-  const makeCandidate = () => `${prefix}${Math.floor(1000 + Math.random() * 9000)}`;
+async function sendRegistrationEmail(email: string | undefined, name: string | undefined, registrationId: number) {
+  if (!email) return;
+  const host = process.env.EMAIL_HOST;
+  const port = Number(process.env.EMAIL_PORT);
+  const secure = (process.env.EMAIL_SECURE) === 'true';
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
 
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const candidate = makeCandidate();
-    const exists = await prismaTx.participant.findFirst({ where: { bibNumber: candidate } });
-    if (!exists) return candidate;
+  if (!user || !pass) {
+    console.warn('[sendRegistrationEmail] SMTP not configured, skipping email');
+    return;
   }
 
-  // Last resort: append timestamp
-  return `${prefix}${Date.now().toString().slice(-6)}`;
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+  });
+
+  const mailHtml = `
+    <div style="font-family:Inter, Arial, sans-serif; color:#111827;">
+      <h2>Your registration is received — Ciputra Color Run</h2>
+      <p>Hi ${name || 'Participant'},</p>
+      <p>Thank you for submitting your payment proof. We've received your registration (Order #: ${registrationId}). Our team will verify the payment shortly.</p>
+      <p>If approved, you'll receive an access code and QR code via email. Meanwhile, join our WhatsApp group for updates: <a href="https://chat.whatsapp.com/HkYS1Oi3CyqFWeVJ7d18Ve">Join WhatsApp Group</a></p>
+      <p>Regards,<br/>Ciputra Color Run Team</p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"Ciputra Color Run" <${user}>`,
+      to: email,
+      subject: 'Registration received — Ciputra Color Run',
+      html: mailHtml,
+    });
+    console.log('[sendRegistrationEmail] Sent to', email);
+  } catch (err) {
+    console.error('[sendRegistrationEmail] error', err);
+  }
 }
 
 export async function POST(req: Request) {
@@ -104,6 +144,8 @@ export async function POST(req: Request) {
     const medicalHistory = (form.get("medicalHistory") as string) || undefined;
     const registrationType =
       (form.get("registrationType") as string) || "individual";
+    const proofSenderName = (form.get("proofSenderName") as string) || undefined;
+    const groupName = (form.get("groupName") as string) || undefined;
 
     if (!proofFile) {
       return NextResponse.json(
@@ -120,82 +162,48 @@ export async function POST(req: Request) {
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    const proofBuffer = Buffer.from(await proofFile.arrayBuffer());
-    const proofExt = (proofFile.name?.split(".").pop() || "bin").replace(
-      /[^a-zA-Z0-9]/g,
-      ""
-    );
-    const proofFilename = `${txId}_proof.${proofExt}`;
-
-    const S3_BUCKET = process.env.S3_BUCKET_NAME || "";
-    const useS3 = !!S3_BUCKET;
-
-    // hoist S3 client so we can reuse it for proof + id uploads
-    let s3: S3Client | undefined;
-    if (useS3) {
-      s3 = new S3Client({
-        region: process.env.AWS_REGION || "us-east-1",
-        credentials:
-          process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-            ? {
-                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-              }
-            : undefined,
-      });
-    }
-
+    // Upload proof to Cloudinary
     let proofPath: string;
-    if (useS3 && s3) {
-      // upload to S3 (or compatible) and set public URL or path
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: `uploads/${proofFilename}`,
-          Body: proofBuffer,
-          ContentType: proofFile.type || `image/${proofExt}`,
-          ACL: "public-read",
-        })
-      );
+    try {
+      const proofBuffer = Buffer.from(await proofFile.arrayBuffer());
+      const proofBase64 = `data:${proofFile.type};base64,${proofBuffer.toString("base64")}`;
+      
+      const proofUpload = await cloudinary.uploader.upload(proofBase64, {
+        folder: "ciputra-color-run/proofs",
+        public_id: `${txId}_proof`,
+        resource_type: "image",
+      });
 
-      // public URL (adjust if using a custom domain or non-AWS provider)
-      const region = process.env.AWS_REGION || "us-east-1";
-      proofPath = `https://${S3_BUCKET}.s3.${region}.amazonaws.com/uploads/${proofFilename}`;
-    } else {
-      // fallback: write into ephemeral OS temp directory (works on serverless, not persistent)
-      const uploadsDir = path.join(os.tmpdir(), "uploads");
-      await fs.mkdir(uploadsDir, { recursive: true });
-      const proofFullPath = path.join(uploadsDir, proofFilename);
-      await fs.writeFile(proofFullPath, proofBuffer);
-      proofPath = `/tmp/uploads/${proofFilename}`; // store path/marker; note: not publicly accessible
+      proofPath = proofUpload.secure_url;
+      console.log("[payments] Uploaded proof to Cloudinary:", proofPath);
+    } catch (uploadErr) {
+      console.error("Cloudinary proof upload failed:", uploadErr);
+      return NextResponse.json(
+        { error: "Failed to upload proof image. Please try again." },
+        { status: 500 }
+      );
     }
 
-    // Save ID card photo if provided
+    // Upload ID card photo if provided
     let idCardPhotoPath: string | undefined;
     if (idCardPhotoFile) {
-      const idBuffer = Buffer.from(await idCardPhotoFile.arrayBuffer());
-      const idExt = (idCardPhotoFile.name?.split(".").pop() || "bin").replace(
-        /[^a-zA-Z0-9]/g,
-        ""
-      );
-      const idFilename = `${txId}_id.${idExt}`;
-      if (useS3 && s3) {
-        await s3.send(
-          new PutObjectCommand({
-            Bucket: S3_BUCKET,
-            Key: `uploads/${idFilename}`,
-            Body: idBuffer,
-            ContentType: idCardPhotoFile.type || `image/${idExt}`,
-            ACL: "public-read",
-          })
-        );
-        idCardPhotoPath = `https://${S3_BUCKET}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/uploads/${idFilename}`;
-      } else {
-        const idPath = path.join(os.tmpdir(), "uploads", idFilename);
-        await fs.writeFile(idPath, idBuffer);
-        idCardPhotoPath = `/tmp/uploads/${idFilename}`;
+      try {
+        const idBuffer = Buffer.from(await idCardPhotoFile.arrayBuffer());
+        const idBase64 = `data:${idCardPhotoFile.type};base64,${idBuffer.toString("base64")}`;
+        
+        const idUpload = await cloudinary.uploader.upload(idBase64, {
+          folder: "ciputra-color-run/id-cards",
+          public_id: `${txId}_id`,
+          resource_type: "image",
+        });
+
+        idCardPhotoPath = idUpload.secure_url;
+        console.log("[payments] Uploaded ID card to Cloudinary:", idCardPhotoPath);
+      } catch (uploadErr) {
+        console.error("Cloudinary ID card upload failed:", uploadErr);
+        // Don't fail the entire request, just log the error
       }
-    };
+    }
 
     // parse cart items JSON (if provided)
     let cartItems: any[] = [];
@@ -215,14 +223,8 @@ export async function POST(req: Request) {
           ? await prismaTx.user.findUnique({ where: { email } })
           : null;
 
-      // helper to create a quick access code if needed
-      const quickAccessCode = (name?: string) =>
-        `${(name || "u").replace(/\s+/g, "").slice(0, 6)}-${Date.now()
-          .toString(36)
-          .slice(-6)}`;
-
       if (!user) {
-        const accessCode = quickAccessCode(fullName);
+        const accessCode = await generateAccessCode(fullName || "user", prismaTx);
         user = await prismaTx.user.create({
           data: {
             name: fullName,
@@ -260,6 +262,7 @@ export async function POST(req: Request) {
           userId: user.id,
           registrationType,
           totalAmount: new Prisma.Decimal(String(amount ?? 0)),
+          groupName: groupName || undefined, // Add group name
         },
       });
 
@@ -268,7 +271,6 @@ export async function POST(req: Request) {
         registrationId: number;
         categoryId: number;
         jerseyId: number;
-        bibNumber?: string;
       }> = [];
 
       for (const item of cartItems || []) {
@@ -287,53 +289,95 @@ export async function POST(req: Request) {
             });
             if (j) jerseyId = j.id;
           }
-          const bib = await generateUniqueBib(category?.name, prismaTx);
           participantRows.push({
             registrationId: registration.id,
             categoryId,
             jerseyId: jerseyId ?? (await prismaTx.jerseyOption.findFirst())?.id ?? 1,
-            bibNumber: bib,
           });
-        } else if (item.type === "community") {
+        } else if (item.type === "community" || item.type === "family") {
           const jerseysMap: Record<string, number> = item.jerseys || {};
           for (const [size, cnt] of Object.entries(jerseysMap)) {
             const count = Number(cnt) || 0;
             if (count <= 0) continue;
             const jOpt = await prismaTx.jerseyOption.findUnique({ where: { size } });
             const jerseyId = jOpt ? jOpt.id : (await prismaTx.jerseyOption.findFirst())?.id ?? 1;
+
             for (let i = 0; i < count; i++) {
-              const bib = await generateUniqueBib(category?.name, prismaTx);
               participantRows.push({
                 registrationId: registration.id,
                 categoryId,
                 jerseyId,
-                bibNumber: bib,
               });
             }
           }
         }
       }
 
+      // Create participants WITHOUT bib numbers first (to get their IDs)
       if (participantRows.length > 0) {
         await prismaTx.participant.createMany({
           data: participantRows.map((r) => ({
             registrationId: r.registrationId,
             categoryId: r.categoryId,
             jerseyId: r.jerseyId,
-            bibNumber: r.bibNumber,
+            bibNumber: null, // will be updated below
           })),
         });
       }
 
+      // Now fetch the created participants and assign bib numbers based on their IDs
+      const createdParticipants = await prismaTx.participant.findMany({
+        where: { registrationId: registration.id },
+        include: { category: true },
+        orderBy: { id: 'asc' },
+      });
+
+      // Update each participant with their bib number
+      for (const participant of createdParticipants) {
+        const bibNumber = generateBibNumber(participant.category?.name, participant.id);
+        await prismaTx.participant.update({
+          where: { id: participant.id },
+          data: { bibNumber },
+        });
+      }
+
+      // --- NEW: create EarlyBirdClaim when applicable (for individual registrations) ---
+      // This ensures categories API will reflect consumed early-bird slots immediately.
+      if (registrationType === "individual") {
+        const claimedByCategory = Array.from(new Set(createdParticipants.map((r: any) => r.categoryId)));
+        for (const catId of claimedByCategory) {
+          const cat = await prismaTx.raceCategory.findUnique({ where: { id: catId } });
+          if (!cat) continue;
+          const capacity = typeof cat.earlyBirdCapacity === "number" ? cat.earlyBirdCapacity : null;
+          if (capacity && capacity > 0) {
+            const claimsCount = await prismaTx.earlyBirdClaim.count({ where: { categoryId: catId } });
+            const toCreate = Math.max(0, Math.min(
+              createdParticipants.filter((r: any) => r.categoryId === catId).length,
+              capacity - claimsCount
+            ));
+            if (toCreate > 0) {
+              // create simple claim rows (schema only requires categoryId)
+              await prismaTx.earlyBirdClaim.createMany({
+                data: Array.from({ length: toCreate }, () => ({ categoryId: catId })),
+              });
+            }
+          }
+        }
+      }
+      // --- END NEW CODE ---
+
       // Group participants by category to create QR codes
-      const grouped = participantRows.reduce<Record<number, number>>((acc, r) => {
-        acc[r.categoryId] = (acc[r.categoryId] || 0) + 1;
+      const grouped = createdParticipants.reduce((acc: Record<number, number>, r: any) => {
+        const cid = typeof r.categoryId === "number" ? r.categoryId : 0;
+        acc[cid] = (acc[cid] || 0) + 1;
         return acc;
-      }, {});
+      }, {} as Record<number, number>);
 
       const createdQrCodes: any[] = [];
-      for (const [catIdStr, totalPacks] of Object.entries(grouped)) {
+      // Object.entries can produce loose types; assert tuple type and coerce values to number
+      for (const [catIdStr, totalPacksRaw] of Object.entries(grouped) as [string, number][]) {
         const catId = Number(catIdStr);
+        const totalPacks = Number(totalPacksRaw || 0);
         const code =
           typeof crypto?.randomUUID === "function"
             ? crypto.randomUUID()
@@ -352,14 +396,14 @@ export async function POST(req: Request) {
         createdQrCodes.push(qr);
       }
 
-      // Create payment record
+      // Create payment record with Cloudinary URLs
       const paymentData: any = {
         registrationId: registration.id,
         transactionId: txId,
-        // store the actual uploaded path/URL (S3 URL or tmp path)
-        proofOfPayment: proofPath,
+        proofOfPayment: proofPath, // Cloudinary URL
         status: "pending",
         amount: new Prisma.Decimal(String(amount ?? 0)),
+        proofSenderName: proofSenderName, // NEW
       };
 
       if (amount !== undefined && !Number.isNaN(amount)) {
@@ -378,15 +422,25 @@ export async function POST(req: Request) {
     const txTimeout = Math.min(Math.max(0, configured || 15000), 15000);
      const result = await prisma.$transaction((tx: any) => createRegistrationAndPayment(tx), { timeout: txTimeout });
 
+    // fire-and-forget email (do not block main response)
+    (async () => {
+      try {
+        await sendRegistrationEmail(result.registration.user?.email, result.registration.user?.name, result.registration.id);
+      } catch (e) {
+        console.error('[payments POST] sendRegistrationEmail failed', e);
+      }
+    })();
+
     return NextResponse.json({
       success: true,
       payment: result.payment,
       qrCodes: result.createdQrCodes,
     });
-  } catch (err) {
-    console.error("Payment API error:", err);
-    const message =
-      err && (err as any).message ? (err as any).message : "internal";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error: any) {
+    console.error("POST /api/payments error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
 }

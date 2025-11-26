@@ -3,6 +3,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
+import "../styles/homepage.css"
+import { showToast } from "../../lib/toast";
+import TutorialModal from "../components/TutorialModal";
+
 
 interface Category {
     id: number;
@@ -27,7 +31,8 @@ export default function RegistrationPage() {
     const router = useRouter();
     const { addItem, items, setUserDetails } = useCart();
     const [type, setType] = useState<"individual" | "community" | "family">("individual");
-
+    
+    const [loading, setLoading] = useState(true);
     // categories loaded from server
     const [categories, setCategories] = useState<Category[]>([]);
     const [categoryId, setCategoryId] = useState<number | null>(null);
@@ -52,9 +57,44 @@ export default function RegistrationPage() {
     const [idCardPhotoName, setIdCardPhotoName] = useState<string | null>(null);
     const [registrationType, setRegistrationType] = useState<"individual" | "community" | "family">("individual");
 
+    // Group/Community name state
+    const [groupName, setGroupName] = useState("");
+
     // modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+    // Tutorial modal state
+    const [showTutorial, setShowTutorial] = useState(true); // show immediately
+
+    // Tutorial steps - you can add/edit these easily
+    const tutorialSteps = [
+      {
+        title: "Fill Personal Details and Pick Registration Type",
+        description: "Start off by filling your personal details and picking the registration type (Individual/Community/Family)",
+        image: "/images/tutorial/tut1.png",
+        tip: "Prepare ID and payment proof."
+      },
+      {
+        title: "Choose Race Distance, and Jersey Sizes",
+        description: 'Choose the race distance, jersey sizes and click "Add Category To Cart" button to save the order and to add more orders',
+        image: "/images/tutorial/tut2.png",
+        tip: "Make sure that the jersey quantity is the same as the participant"
+      },
+      {
+        title: "Agree To Terms and Conditions",
+        description: "Agree to the terms and conditions of the event",
+        image: "/images/tutorial/tut3.png",
+        tip: "Read carefully"
+      },
+      {
+        title: "Check Cart",
+        description: "Check the cart, make sure it is the same with the order placed",
+        image: "/images/tutorial/tut4.png",
+        tip: "Make sure that the pricing is the same"
+      },
+      // Upload step moved to confirmation page
+    ];
 
     useEffect(() => {
         if (typeof window !== 'undefined' && (window as any).AOS) {
@@ -70,10 +110,14 @@ export default function RegistrationPage() {
                 if (data.length > 0) setCategoryId(data[0].id);
             } catch (err) {
                 console.error("Failed to load categories:", err);
+                showToast("Failed to load categories. Please refresh the page.", "error");
+            } finally {
+                setLoading(false);
             }
         })();
     }, []);
 
+    // --- Move all hook-based computations here so they always run in the same order ---
     // Check if user has family bundle in cart
     const hasFamilyBundle = useMemo(() => {
         return items.some(item => item.type === "family");
@@ -87,8 +131,11 @@ export default function RegistrationPage() {
     // Calculate total community participants across all cart items
     function getTotalCommunityParticipants(): number {
         return items
-            .filter(item => item.type === "community")
-            .reduce((sum, item) => sum + (item.participants || 0), 0);
+            .filter(item => item.type === "community" || item.type === "family")
+            .reduce((sum, item) => {
+                if (item.type === "family") return sum + (item.participants || 4);
+                return sum + (item.participants || 0);
+            }, 0);
     }
 
     // Calculate price based on total participants
@@ -149,7 +196,7 @@ export default function RegistrationPage() {
         const totalWithCurrent = getTotalCommunityParticipants() + currentParticipants;
         
         return calculatePrice(category, type === "community" ? totalWithCurrent : 1);
-    }, [categoryId, categories, participants, items, type, useEarlyBird]);
+    }, [categoryId, categories, participants, items, type]);
 
     // Calculate subtotal for current category
     const currentSubtotal = useMemo(() => {
@@ -187,19 +234,54 @@ export default function RegistrationPage() {
         setJerseys((s) => ({ ...s, [size]: value }));
     }
 
+    // Add helpers (place these above validatePersonalDetails)
+    function isValidEmail(value: string) {
+      // simple, practical email pattern (not full RFC)
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+    }
+
+    function isValidPhone(value: string) {
+      // allow optional + and digits only (9-15 digits). strips spaces/dashes before test.
+      const cleaned = (value || "").replace(/[\s-]/g, "");
+      return /^\+?\d{9,15}$/.test(cleaned);
+    }
+
     function validatePersonalDetails(): boolean {
         if (!fullName || !email || !phone || !birthDate || !currentAddress || !idCardPhoto) {
-            alert("Please fill in all required fields (Name, Email, Phone, Birth Date, Address, and ID Card/Passport Photo)");
+            showToast("Please fill all required fields (Name, Email, Phone, Birth Date, Address, and ID Card/Passport Photo)", "error");
+            return false;
+        }
+
+        // Format checks
+        if (!isValidEmail(email)) {
+            showToast("Please enter a valid email address", "error");
+            return false;
+        }
+
+        if (!isValidPhone(phone)) {
+            showToast("Please enter a valid phone number (include country code, e.g. +628123...)", "error");
             return false;
         }
 
         if (type === "individual") {
             if (!emergencyPhone) {
-                alert("Please provide an emergency contact number");
+                showToast("Please provide an emergency contact number", "error");
                 return false;
             }
             if (!medicalHistory) {
-                alert("Please provide medical history information (or write 'None' if not applicable)");
+                showToast("Please provide medical history information (or write 'None')", "error");
+                return false;
+            }
+            // validate emergency phone format as well
+            if (!isValidPhone(emergencyPhone)) {
+                showToast("Please enter a valid emergency contact number (include country code)", "error");
+                return false;
+            }
+        }
+
+        if (type === "community") {
+            if (!groupName || groupName.trim() === "") {
+                showToast("Please provide a community/group name", "error");
                 return false;
             }
         }
@@ -219,6 +301,7 @@ export default function RegistrationPage() {
             sessionStorage.setItem("reg_nationality", nationality);
             sessionStorage.setItem("reg_medicalHistory", medicalHistory);
             sessionStorage.setItem("reg_registrationType", registrationType);
+            sessionStorage.setItem("reg_groupName", groupName);
 
             if (idCardPhoto) {
                 sessionStorage.setItem("reg_idCardPhotoName", idCardPhoto.name);
@@ -238,19 +321,19 @@ export default function RegistrationPage() {
         if (type === "family") {
             // Family bundle validation
             if (category.name !== "3km") {
-                alert("Family bundle is only available for 3km category");
+                showToast("Family bundle is only available for 3km category", "error");
                 return;
             }
 
             if (hasCommunityRegistration) {
-                alert("You cannot add a family bundle when you have community registrations in cart. Please checkout separately.");
+                showToast("You cannot add a family bundle when you have community registrations in cart. Please checkout separately.", "error");
                 return;
             }
 
             const bundleSize = category.bundleSize || 4;
             const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
             if (totalJerseys !== bundleSize) {
-                alert(`Jersey count (${totalJerseys}) must match family bundle size (${bundleSize})`);
+                showToast(`Jersey count (${totalJerseys}) must match family bundle size (${bundleSize})`, "error");
                 return;
             }
 
@@ -267,7 +350,7 @@ export default function RegistrationPage() {
                 ),
             });
 
-            alert(`Family bundle added! ${bundleSize} people at Rp ${currentPrice.toLocaleString("id-ID")}/person`);
+            showToast(`Family bundle added! ${bundleSize} people at Rp ${currentPrice.toLocaleString("id-ID")}/person`, "success");
             setJerseys({ XS: "", S: "", M: "", L: "", XL: "", XXL: "" });
             return;
         }
@@ -275,24 +358,27 @@ export default function RegistrationPage() {
         // Community validation
         const currentParticipants = Number(participants || 0);
         
-        if (currentParticipants < 10) {
-            alert("Community registration requires a minimum of 10 participants per category");
+        // NEW: Check total participants including cart
+        const totalInCart = getTotalCommunityParticipants();
+        const totalWithCurrent = totalInCart + currentParticipants;
+        
+        if (totalWithCurrent < 10) {
+            showToast(`Community registration requires a minimum of 10 total participants. You currently have ${totalInCart} in cart. Add at least ${10 - totalInCart} more.`, "error");
             return;
         }
 
         if (hasFamilyBundle) {
-            alert("You cannot add community registration when you have a family bundle in cart. Please checkout separately.");
+            showToast("You cannot add community registration when you have a family bundle in cart. Please checkout separately.", "error");
             return;
         }
 
-        // Validate jersey distribution matches participant count
+        // FIXED: Validate jersey distribution matches participant count - MUST MATCH EXACTLY
         const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
         if (totalJerseys !== currentParticipants) {
-            alert(`Jersey count (${totalJerseys}) must match participant count (${currentParticipants}) for this category`);
-            return;
+            showToast(`Jersey count (${totalJerseys}) must exactly match participant count (${currentParticipants}). Please adjust jersey sizes before adding to cart.`, "error");
+            return; // PREVENT adding to cart
         }
 
-        const totalWithCurrent = getTotalCommunityParticipants() + currentParticipants;
         const pricePerPerson = calculatePrice(category, totalWithCurrent);
 
         savePersonalDetailsToSession();
@@ -309,8 +395,8 @@ export default function RegistrationPage() {
             ),
         });
 
-        alert(`Category added! Total participants: ${totalWithCurrent}. Price per person: Rp ${pricePerPerson.toLocaleString("id-ID")}`);
-        
+        showToast(`Category added! Total participants: ${totalWithCurrent}. Price per person: Rp ${pricePerPerson.toLocaleString("id-ID")}`, "success");
+
         // Reset community fields to allow adding another category
         setParticipants("");
         setJerseys({ XS: "", S: "", M: "", L: "", XL: "", XXL: "" });
@@ -327,13 +413,13 @@ export default function RegistrationPage() {
         } else if (type === "family") {
             const category = categories.find((c) => c.id === categoryId);
             if (!category || !category.bundleSize) {
-                alert("Invalid family bundle selection");
+                showToast("Invalid family bundle selection", "error");
                 return;
             }
 
             const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
             if (totalJerseys !== category.bundleSize && totalJerseys > 0) {
-                alert(`Please complete jersey selection (${totalJerseys}/${category.bundleSize}) or clear it before checkout`);
+                showToast(`Please complete jersey selection (${totalJerseys}/${category.bundleSize}) or clear it before checkout`, "error");
                 return;
             }
 
@@ -345,7 +431,7 @@ export default function RegistrationPage() {
             const totalWithCurrent = getTotalCommunityParticipants() + currentParticipants;
 
             if (totalWithCurrent < 10) {
-                alert(`Community registration requires minimum 10 total participants. You currently have ${getTotalCommunityParticipants()} in cart.`);
+                showToast(`Community registration requires minimum 10 total participants. You currently have ${getTotalCommunityParticipants()} in cart.`, "error");
                 return;
             }
 
@@ -353,7 +439,7 @@ export default function RegistrationPage() {
             if (currentParticipants > 0) {
                 const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
                 if (totalJerseys !== currentParticipants) {
-                    alert(`Jersey count (${totalJerseys}) must match participant count (${currentParticipants}). Please complete or clear the current category before checkout.`);
+                    showToast(`Jersey count (${totalJerseys}) must match participant count (${currentParticipants}). Please complete or clear the current category before checkout.`, "error");
                     return;
                 }
             }
@@ -385,6 +471,7 @@ export default function RegistrationPage() {
             medicalHistory,
             idCardPhoto: idCardPhoto || undefined,
             registrationType,
+            groupName: type === "community" ? groupName : undefined,
         });
 
         if (type === "individual") {
@@ -430,6 +517,65 @@ export default function RegistrationPage() {
         router.push("/cart");
     }
 
+    // ADD THIS: Live tier info display for community
+    const tierInfo = useMemo(() => {
+        if (type !== "community" || !categoryId) return null;
+        const category = categories.find(c => c.id === categoryId);
+        if (!category) return null;
+
+        const currentParticipants = Number(participants || 0);
+        const totalInCart = getTotalCommunityParticipants();
+        const totalWithCurrent = totalInCart + currentParticipants;
+
+        let tier = "Base Price";
+        let nextTier = null;
+        let participantsToNext = 0;
+
+        if (category.tier3Price && category.tier3Min && totalWithCurrent >= category.tier3Min) {
+            tier = `Tier 3 (≥${category.tier3Min} people)`;
+        } else if (category.tier2Price && category.tier2Min) {
+            if (category.tier2Max && totalWithCurrent >= category.tier2Min && totalWithCurrent <= category.tier2Max) {
+                tier = `Tier 2 (${category.tier2Min}-${category.tier2Max} people)`;
+                if (category.tier3Price && category.tier3Min) {
+                    nextTier = `Tier 3`;
+                    participantsToNext = category.tier3Min - totalWithCurrent;
+                }
+            } else if (!category.tier2Max && totalWithCurrent >= category.tier2Min) {
+                tier = `Tier 2 (≥${category.tier2Min} people)`;
+            } else if (totalWithCurrent < category.tier2Min) {
+                if (category.tier1Price && category.tier1Min && category.tier1Max && totalWithCurrent >= category.tier1Min) {
+                    tier = `Tier 1 (${category.tier1Min}-${category.tier1Max} people)`;
+                    nextTier = "Tier 2";
+                    participantsToNext = category.tier2Min - totalWithCurrent;
+                } else {
+                    nextTier = category.tier1Min && totalWithCurrent < category.tier1Min ? "Tier 1" : "Tier 2";
+                    participantsToNext = (category.tier1Min && totalWithCurrent < category.tier1Min) 
+                        ? category.tier1Min - totalWithCurrent 
+                        : category.tier2Min - totalWithCurrent;
+                }
+            }
+        } else if (category.tier1Price && category.tier1Min && category.tier1Max) {
+            if (totalWithCurrent >= category.tier1Min && totalWithCurrent <= category.tier1Max) {
+                tier = `Tier 1 (${category.tier1Min}-${category.tier1Max} people)`;
+                if (category.tier2Price && category.tier2Min) {
+                    nextTier = "Tier 2";
+                    participantsToNext = category.tier2Min - totalWithCurrent;
+                }
+            } else if (totalWithCurrent < category.tier1Min) {
+                nextTier = "Tier 1";
+                participantsToNext = category.tier1Min - totalWithCurrent;
+            }
+        }
+
+        return {
+            tier,
+            nextTier,
+            participantsToNext,
+            totalInCart,
+            totalWithCurrent,
+        };
+    }, [type, categoryId, categories, participants, items]);
+
     return (
         <main
             className="flex min-h-screen pt-28 pb-16"
@@ -440,14 +586,61 @@ export default function RegistrationPage() {
                 backgroundRepeat: "no-repeat",
             }}
         >
-            <div className="mx-auto w-full max-w-2xl px-4">
-                <h1 className="text-4xl md:text-6xl text-center font-bold mb-8 tracking-wide text-white drop-shadow-lg font-moderniz" data-aos="fade-down">
+            <div className="mx-auto w-full max-w-5xl px-4">
+                <h1 className="text-4xl md:text-6xl text-center font-bold mb-8 tracking-wide text-white drop-shadow-lg font-moderniz">
                     CIPUTRA COLOR RUN
                 </h1>
 
                 <section className="bg-white/95 backdrop-blur-md rounded-lg p-8 md:p-10 shadow-lg text-gray-800" data-aos="zoom-in" data-aos-delay="200">
                     <h2 className="text-2xl font-bold text-center mb-1 text-gray-800 font-moderniz">REGISTRATION FORM</h2>
-                    <p className="text-center text-sm text-gray-600 mb-6 font-mustica">Enter the details to get going.</p>
+                    <p className="text-center text-sm text-gray-600 mb-6 font-mustica">Enter the details to get going</p>
+
+                    {/* MOVED: Registration Type radios now on top for easier access */}
+                    <div className="space-y-3 mb-6">
+                        <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-3">Registration Type *</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {/* Individual */}
+                            <label className={`relative flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${type === "individual" ? 'border-blue-500 bg-blue-50 shadow-lg scale-105' : 'border-gray-300 bg-white hover:border-blue-300 hover:bg-blue-50/50'}`}>
+                                <input type="radio" name="regType" value="individual" checked={type === "individual"} onChange={() => { setType("individual"); setRegistrationType("individual"); }} className="sr-only" />
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${type === "individual" ? 'border-blue-500 bg-blue-500' : 'border-gray-400 bg-white'}`}>
+                                        {type === "individual" && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                    </div>
+                                    <span className={`text-sm font-semibold text-center ${type === "individual" ? 'text-blue-700' : 'text-gray-700'}`}>Individual</span>
+                                </div>
+                            </label>
+
+                            {/* Community */}
+                            <label className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all ${hasFamilyBundle ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60' : type === "community" ? 'border-emerald-500 bg-emerald-50 shadow-lg scale-105 cursor-pointer' : 'border-gray-300 bg-white hover:border-emerald-300 hover:bg-emerald-50/50 cursor-pointer'}`}>
+                                <input type="radio" name="regType" value="community" checked={type === "community"} onChange={() => { setType("community"); setRegistrationType("community"); }} disabled={hasFamilyBundle} className="sr-only" />
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${type === "community" ? 'border-emerald-500 bg-emerald-500' : hasFamilyBundle ? 'border-gray-300 bg-gray-100' : 'border-gray-400 bg-white'}`}>
+                                        {type === "community" && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                    </div>
+                                    <span className={`text-sm font-semibold text-center ${type === "community" ? 'text-emerald-700' : hasFamilyBundle ? 'text-gray-400' : 'text-gray-700'}`}>
+                                        Community
+                                        <span className="block text-xs font-normal">(Min. 10)</span>
+                                    </span>
+                                    {hasFamilyBundle && <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-2 py-1 rounded-full">⚠</span>}
+                                </div>
+                            </label>
+
+                            {/* Family */}
+                            <label className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all ${hasCommunityRegistration ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60' : type === "family" ? 'border-purple-500 bg-purple-50 shadow-lg scale-105 cursor-pointer' : 'border-gray-300 bg-white hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'}`}>
+                                <input type="radio" name="regType" value="family" checked={type === "family"} onChange={() => { setType("family"); setRegistrationType("family"); }} disabled={hasCommunityRegistration} className="sr-only" />
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${type === "family" ? 'border-purple-500 bg-purple-500' : hasCommunityRegistration ? 'border-gray-300 bg-gray-100' : 'border-gray-400 bg-white'}`}>
+                                        {type === "family" && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                    </div>
+                                    <span className={`text-sm font-semibold text-center ${type === "family" ? 'text-purple-700' : hasCommunityRegistration ? 'text-gray-400' : 'text-gray-700'}`}>
+                                        Family Bundle
+                                        <span className="block text-xs font-normal">(4 people)</span>
+                                    </span>
+                                    {hasCommunityRegistration && <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-2 py-1 rounded-full">⚠</span>}
+                                </div>
+                            </label>
+                        </div>
+                    </div>
 
                     {/* Personal details */}
                     <div className="space-y-4">
@@ -457,10 +650,29 @@ export default function RegistrationPage() {
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
                                 className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors text-base"
-                                placeholder="Enter your full name as per KTP/Passport"
+                                placeholder="Enter your full name as per Valid ID"
                                 required
                             />
                         </div>
+
+                        {/* Community/Group Name - Only show for community type */}
+                        {type === "community" && (
+                            <div className="grid gap-3">
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                                    Community/Group Name *
+                                </label>
+                                <input
+                                    value={groupName}
+                                    onChange={(e) => setGroupName(e.target.value)}
+                                    className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-emerald-500 focus:outline-none transition-colors text-base"
+                                    placeholder="Enter your community or group name"
+                                    required
+                                />
+                                <p className="text-xs text-gray-500">
+                                    This name will be used for all participants in your community registration
+                                </p>
+                            </div>
+                        )}
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="grid gap-3">
@@ -472,6 +684,8 @@ export default function RegistrationPage() {
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors text-base"
                                     placeholder="your.email@example.com"
                                     required
+                                    pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                                    title="Enter a valid email address (e.g. name@example.com)"
                                 />
                             </div>
 
@@ -484,6 +698,9 @@ export default function RegistrationPage() {
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors text-base"
                                     placeholder="+62 812 3456 7890"
                                     required
+                                    inputMode="tel"
+                                    pattern="^\+?\d{9,15}$"
+                                    title="Enter a valid phone number, include country code (e.g. +628123...)"
                                 />
                             </div>
                         </div>
@@ -584,7 +801,7 @@ export default function RegistrationPage() {
                                     }}
                                     required
                                 />
-                                <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG (Max 5MB)</p>
+                                <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG (Max 10MB, uploaded to cloud storage)</p>
                             </div>
                         </div>
 
@@ -605,142 +822,6 @@ export default function RegistrationPage() {
                         )}
 
                         {/* Registration Type - IMPROVED RADIO BUTTONS */}
-                        <div className="space-y-3 mt-6">
-                            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-3">Registration Type *</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                {/* Individual Radio */}
-                                <label 
-                                    className={`relative flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                        type === "individual"
-                                            ? 'border-blue-500 bg-blue-50 shadow-lg scale-105'
-                                            : 'border-gray-300 bg-white hover:border-blue-300 hover:bg-blue-50/50'
-                                    }`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="regType"
-                                        value="individual"
-                                        checked={type === "individual"}
-                                        onChange={() => { setType("individual"); setRegistrationType("individual"); }}
-                                        className="sr-only"
-                                    />
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                            type === "individual"
-                                                ? 'border-blue-500 bg-blue-500'
-                                                : 'border-gray-400 bg-white'
-                                        }`}>
-                                            {type === "individual" && (
-                                                <div className="w-2 h-2 rounded-full bg-white"></div>
-                                            )}
-                                        </div>
-                                        <span className={`text-sm font-semibold text-center ${
-                                            type === "individual" ? 'text-blue-700' : 'text-gray-700'
-                                        }`}>
-                                            Individual
-                                        </span>
-                                    </div>
-                                </label>
-
-                                {/* Community Radio */}
-                                <label 
-                                    className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                                        hasFamilyBundle
-                                            ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                                            : type === "community"
-                                                ? 'border-emerald-500 bg-emerald-50 shadow-lg scale-105 cursor-pointer'
-                                                : 'border-gray-300 bg-white hover:border-emerald-300 hover:bg-emerald-50/50 cursor-pointer'
-                                    }`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="regType"
-                                        value="community"
-                                        checked={type === "community"}
-                                        onChange={() => { setType("community"); setRegistrationType("community"); }}
-                                        disabled={hasFamilyBundle}
-                                        className="sr-only"
-                                    />
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                            type === "community"
-                                                ? 'border-emerald-500 bg-emerald-500'
-                                                : hasFamilyBundle
-                                                    ? 'border-gray-300 bg-gray-100'
-                                                    : 'border-gray-400 bg-white'
-                                        }`}>
-                                            {type === "community" && (
-                                                <div className="w-2 h-2 rounded-full bg-white"></div>
-                                            )}
-                                        </div>
-                                        <span className={`text-sm font-semibold text-center ${
-                                            type === "community" 
-                                                ? 'text-emerald-700' 
-                                                : hasFamilyBundle 
-                                                    ? 'text-gray-400' 
-                                                    : 'text-gray-700'
-                                        }`}>
-                                            Community
-                                            <span className="block text-xs font-normal">(Min 10)</span>
-                                        </span>
-                                        {hasFamilyBundle && (
-                                            <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-2 py-1 rounded-full">
-                                                ⚠
-                                            </span>
-                                        )}
-                                    </div>
-                                </label>
-
-                                {/* Family Radio */}
-                                <label 
-                                    className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                                        hasCommunityRegistration
-                                            ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                                            : type === "family"
-                                                ? 'border-purple-500 bg-purple-50 shadow-lg scale-105 cursor-pointer'
-                                                : 'border-gray-300 bg-white hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'
-                                    }`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="regType"
-                                        value="family"
-                                        checked={type === "family"}
-                                        onChange={() => { setType("family"); setRegistrationType("family"); }}
-                                        disabled={hasCommunityRegistration}
-                                        className="sr-only"
-                                    />
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                            type === "family"
-                                                ? 'border-purple-500 bg-purple-500'
-                                                : hasCommunityRegistration
-                                                    ? 'border-gray-300 bg-gray-100'
-                                                    : 'border-gray-400 bg-white'
-                                        }`}>
-                                            {type === "family" && (
-                                                <div className="w-2 h-2 rounded-full bg-white"></div>
-                                            )}
-                                        </div>
-                                        <span className={`text-sm font-semibold text-center ${
-                                            type === "family" 
-                                                ? 'text-purple-700' 
-                                                : hasCommunityRegistration 
-                                                    ? 'text-gray-400' 
-                                                    : 'text-gray-700'
-                                        }`}>
-                                            Family Bundle
-                                            <span className="block text-xs font-normal">(4 people)</span>
-                                        </span>
-                                        {hasCommunityRegistration && (
-                                            <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-2 py-1 rounded-full">
-                                                ⚠
-                                            </span>
-                                        )}
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Family Bundle Layout */}
@@ -783,12 +864,12 @@ export default function RegistrationPage() {
                                                 <div key={size} className="flex flex-col items-center">
                                                     <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
                                                     <input
-                                                        type="number"
-                                                        min={0}
-                                                        value={jerseys[size]}
-                                                        onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                        className="w-full px-3 py-2 border-b-2 border-gray-200 bg-transparent text-center text-gray-800 placeholder-gray-400 focus:border-purple-500 focus:outline-none transition-colors text-base"
-                                                        placeholder="0"
+                                                      type="number"
+                                                      min={0}
+                                                      value={jerseys[size]}
+                                                      onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                      className="jersey-input shift-right"
+                                                      placeholder="0"
                                                     />
                                                 </div>
                                             ))}
@@ -862,7 +943,7 @@ export default function RegistrationPage() {
                             {getTotalCommunityParticipants() > 0 && (
                                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
                                     <p className="text-sm font-medium text-emerald-800 mb-2">
-                                        Total Community Participants: {getTotalCommunityParticipants()}
+                                        Total Community Participants in Cart: {getTotalCommunityParticipants()}
                                     </p>
                                     <p className="text-xs text-emerald-600">
                                         {getTotalCommunityParticipants() >= 10 
@@ -911,21 +992,43 @@ export default function RegistrationPage() {
                                         </p>
                                     </div>
 
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-3">
-                                            Jersey Size Distribution *
-                                        </label>
+                                    {/* LIVE TIER INFO */}
+                                    {tierInfo && Number(participants || 0) > 0 && (
+                                        <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-lg">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-semibold text-gray-700">Current Tier:</span>
+                                                    <span className="px-3 py-1 bg-purple-500 text-white text-xs font-bold rounded-full">
+                                                        {tierInfo.tier}
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs text-gray-600">
+                                                    Total: {tierInfo.totalWithCurrent} participants ({tierInfo.totalInCart} in cart + {Number(participants || 0)} current)
+                                                </div>
+                                                {tierInfo.nextTier && tierInfo.participantsToNext > 0 && (
+                                                    <div className="pt-2 border-t border-purple-200">
+                                                        <p className="text-xs text-purple-700">
+                                                            🎯 Add <strong>{tierInfo.participantsToNext}</strong> more to unlock <strong>{tierInfo.nextTier}</strong> pricing!
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="grid gap-3">
+                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Jersey Size Distribution *</label>
                                         <div className="grid grid-cols-3 gap-3">
                                             {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
                                                 <div key={size} className="flex flex-col items-center">
                                                     <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
                                                     <input
-                                                        type="number"
-                                                        min={0}
-                                                        value={jerseys[size]}
-                                                        onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                        className="w-full px-3 py-2 border-b-2 border-gray-200 bg-transparent text-center text-gray-800 placeholder-gray-400 focus:border-emerald-500 focus:outline-none transition-colors text-base"
-                                                        placeholder="0"
+                                                      type="number"
+                                                      min={0}
+                                                      value={jerseys[size]}
+                                                      onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                      className="jersey-input shift-right accent-[#e687a4]"
+                                                      placeholder="0"
                                                     />
                                                 </div>
                                             ))}
@@ -988,10 +1091,25 @@ export default function RegistrationPage() {
                                     <div className="pt-4">
                                         <button
                                             onClick={handleAddToCart}
-                                            className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95"
+                                            disabled={
+                                                !participants || 
+                                                (getTotalCommunityParticipants() + Number(participants || 0)) < 10 ||
+                                                Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0) !== Number(participants || 0)
+                                            }
+                                            className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                                         >
                                             ADD CATEGORY TO CART
                                         </button>
+                                        {Number(participants || 0) > 0 && Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0) !== Number(participants || 0) && (
+                                            <p className="text-center text-xs text-red-600 mt-2">
+                                                ⚠️ Jersey count must match participant count to add to cart
+                                            </p>
+                                        )}
+                                        {(getTotalCommunityParticipants() + Number(participants || 0)) < 10 && (
+                                            <p className="text-center text-xs text-gray-500 mt-2">
+                                                Need {10 - (getTotalCommunityParticipants() + Number(participants || 0))} more total participants (minimum 10)
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1131,7 +1249,7 @@ export default function RegistrationPage() {
                                     type="checkbox"
                                     checked={agreedToTerms}
                                     onChange={(e) => setAgreedToTerms(e.target.checked)}
-                                    className="mt-1 w-5 h-5 accent-emerald-500 cursor-pointer"
+                                    className="mt-1 w-5 h-5 accent-[#e687a4] cursor-pointer"
                                 />
                                 <span className="text-sm text-gray-700">
                                     I have read and agree to the Terms & Conditions and confirm that all information provided is accurate.
@@ -1163,6 +1281,15 @@ export default function RegistrationPage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Tutorial Modal - New Addition */}
+            {showTutorial && (
+                <TutorialModal
+                    isOpen={showTutorial}
+                    steps={tutorialSteps}
+                    onClose={() => setShowTutorial(false)}
+                />
             )}
         </main>
     );
