@@ -740,7 +740,7 @@ export default function ClaimPacksPage() {
              {selectedRegistration.user?.idCardPhoto && (
                <div className="bg-gray-50 rounded-lg p-4">
                  <h3 className="font-semibold text-gray-800 mb-3">
-                   {selectedRegistration.user.nationality === 'WNI' ? 'KTP Photo' : 'Passport Photo'}
+                   {selectedRegistration.user.nationality === 'WNI' ? 'KTP/ID Card Photo' : 'Passport Photo'}
                  </h3>
                  <a
                    href={selectedRegistration.user.idCardPhoto}

@@ -541,7 +541,7 @@ export default function LODashboard() {
                 <div className="bg-[#18181b] rounded-xl p-6 border border-[#73e9dd]/20">
                   <h3 className="text-lg font-semibold text-[#91dcac] mb-4 flex items-center gap-2">
                     <IdCard size={20} />
-                    {selectedPayment.user.nationality === 'WNI' ? 'KTP Photo' : 'Passport Photo'}
+                    {selectedPayment.user.nationality === 'WNI' ? 'KTP/ID Card Photo' : 'Passport Photo'}
                   </h3>
                   <a
                     href={selectedPayment.user.idCardPhoto}

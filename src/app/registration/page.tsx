@@ -882,7 +882,7 @@ export default function RegistrationPage() {
                                     value={medicalHistory}
                                     onChange={(e) => setMedicalHistory(e.target.value)}
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors resize-none text-base"
-                                    placeholder="Enter any relevant medical conditions or write 'None'"
+                                    placeholder="Please list any medical conditions we should be aware of, or write &quot;None&quot; if not applicable"
                                     rows={3}
                                     required
                                 />

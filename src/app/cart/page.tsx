@@ -151,12 +151,12 @@ export default function CartPage() {
         backgroundRepeat: "no-repeat",
       }}
     >
-      <div className="mx-auto w-full max-w-4xl px-4">
-        <h1 className="text-4xl md:text-6xl text-center font-bold mb-8 tracking-wide text-white drop-shadow-lg">
+      <div className="mx-auto w-full max-w-4xl px-4 flex flex-col items-center justify-center">
+        <h1 className="text-4xl md:text-6xl text-center font-bold mb-8 tracking-wide rounded-3xl px-12 py-6" style={{ backgroundImage: 'linear-gradient(to right, #5eead4, #E467A6FF)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } as React.CSSProperties}>
           YOUR CART
         </h1>
 
-        <section className="bg-white/95 backdrop-blur-md rounded-lg p-8 md:p-10 shadow-lg text-gray-800">
+        <section className="bg-white/95 backdrop-blur-md rounded-lg p-8 md:p-10 shadow-lg text-gray-800 w-full">
           {items.length === 0 ? (
             <div className="text-center py-12">
               <ShoppingBag className="w-20 h-20 mx-auto text-gray-300 mb-4" />
