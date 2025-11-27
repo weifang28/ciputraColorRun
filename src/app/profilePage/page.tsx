@@ -40,6 +40,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchases, setPurchases] = useState<PurchaseData[]>([]);
+  const [activeTab, setActiveTab] = useState<'profile' | 'purchases'>('profile');
 
   // --- GET User Data on Mount ---
   useEffect(() => {
@@ -238,15 +239,15 @@ export default function App() {
       <div className="relative z-10 min-h-screen pt-20">
         {/* Header */}
         <header className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#FFF1C5]/20 via-white/10 to-[#FFDFC0]/20"></div>
+          <div className="absolute inset-0 bg-linear-to-r from-[#FFF1C5]/20 via-white/10 to-[#FFDFC0]/20"></div>
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#91DCAC] to-[#91DCAC] flex items-center justify-center shadow-2xl ring-4 ring-white/50">
+                  <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-[#91DCAC] to-[#91DCAC] flex items-center justify-center shadow-2xl ring-4 ring-white/50">
                     <Sparkles className="w-7 h-7 text-white" />
                   </div>
-                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-br from-[#FFF1C5] to-[#FFDFC0] border-2 border-white animate-pulse"></div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-linear-to-br from-[#FFF1C5] to-[#FFDFC0] border-2 border-white animate-pulse"></div>
                 </div>
                 <div>
                   <span className="text-[#682950] tracking-wider">Ciputra Color Run 2026</span>
@@ -255,39 +256,71 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-[#682950] mb-3">My Profile</h1>
-              <div className="h-1.5 w-32 bg-gradient-to-r from-[#91DCAC] via-[#91DCAC] to-[#91DCAC] rounded-full shadow-lg"></div>
+              <div className="h-1.5 w-32 bg-linear-to-r from-[#91DCAC] via-[#91DCAC] to-[#91DCAC] rounded-full shadow-lg"></div>
             </div>
           </div>
         </header>
 
+        {/* Tab Navigation */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`px-8 py-3 rounded-full font-semibold text-base transition-all duration-300 ${
+                activeTab === 'profile'
+                  ? 'bg-[#91DCAC] text-white shadow-lg scale-105'
+                  : 'bg-white/70 text-[#682950] hover:bg-white/90 shadow-md hover:shadow-lg'
+              }`}
+            >
+              Profile Information
+            </button>
+            <button
+              onClick={() => setActiveTab('purchases')}
+              className={`px-8 py-3 rounded-full font-semibold text-base transition-all duration-300 ${
+                activeTab === 'purchases'
+                  ? 'bg-[#91DCAC] text-white shadow-lg scale-105'
+                  : 'bg-white/70 text-[#682950] hover:bg-white/90 shadow-md hover:shadow-lg'
+              }`}
+            >
+              My Purchases
+            </button>
+          </div>
+        </div>
+
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
             {userData ? (
                 <>
-                  <div className="mb-12">
-                    <UserInfoCard
-                      userName={userData.name}
-                      email={userData.email}
-                      phone={userData.phone}
-                      onUpdate={handleUpdateUser}
-                    />
-                  </div>
-
-                  <div>
-                    <div className="mb-8">
-                      <h2 className="text-[#682950] mb-3">My Purchases</h2>
-                      <div className="h-1.5 w-28 bg-[#92DDAE] rounded-full shadow-lg"></div>
+                  {/* Profile Tab Content */}
+                  {activeTab === 'profile' && (
+                    <div className="mb-12">
+                      <UserInfoCard
+                        userName={userData.name}
+                        email={userData.email}
+                        phone={userData.phone}
+                        onUpdate={handleUpdateUser}
+                      />
                     </div>
+                  )}
 
-                    <div className="space-y-6">
-                      {purchases.length === 0 ? (
-                        <div className="text-center text-gray-600">No purchases found.</div>
-                      ) : (
-                        purchases.map((p, idx) => (
-                          <PurchaseCard key={idx} purchase={p as any} qrCodeData={(p as any).qrCodeData ?? null} />
-                        ))
-                      )}
+                  {/* Purchases Tab Content */}
+                  {activeTab === 'purchases' && (
+                    <div>
+                      <div className="mb-8">
+                        <h2 className="text-[#682950] mb-3">My Purchases</h2>
+                        <div className="h-1.5 w-28 bg-[#92DDAE] rounded-full shadow-lg"></div>
+                      </div>
+
+                      <div className="space-y-6">
+                        {purchases.length === 0 ? (
+                          <div className="text-center text-gray-600">No purchases found.</div>
+                        ) : (
+                          purchases.map((p, idx) => (
+                            <PurchaseCard key={idx} purchase={p as any} qrCodeData={(p as any).qrCodeData ?? null} />
+                          ))
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </>
             ) : null}
         </main>
@@ -306,7 +339,7 @@ export default function App() {
               </div> */}
               
               {/* Decorative line */}
-              <div className="h-1 w-64 mx-auto bg-gradient-to-r from-transparent via-[#D9D9D9]/50 to-transparent rounded-full"></div>
+              <div className="h-1 w-64 mx-auto bg-linear-to-r from-transparent via-[#D9D9D9]/50 to-transparent rounded-full"></div>
             </div>
           </div>
 
