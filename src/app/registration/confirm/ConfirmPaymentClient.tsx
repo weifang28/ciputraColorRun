@@ -80,6 +80,33 @@ export default function ConfirmPaymentClient() {
 
     }, [fromCart, items, router]);
 
+    async function compressImage(file: File, maxWidth = 1600, quality = 0.8): Promise<File> {
+        // If already small, return original
+        if (file.size <= 1_200_000) return file;
+
+        const imgBitmap = await createImageBitmap(file);
+        const ratio = Math.min(1, maxWidth / imgBitmap.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(imgBitmap.width * ratio);
+        canvas.height = Math.round(imgBitmap.height * ratio);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return file;
+        ctx.drawImage(imgBitmap, 0, 0, canvas.width, canvas.height);
+
+        return await new Promise<File>((resolve) => {
+            canvas.toBlob(
+                (blob) => {
+                    if (!blob) return resolve(file);
+                    // keep original name but ensure correct type
+                    const compressed = new File([blob], file.name, { type: blob.type });
+                    resolve(compressed);
+                },
+                "image/jpeg",
+                quality
+            );
+        });
+    }
+
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         if (!proofFile) {
@@ -91,11 +118,26 @@ export default function ConfirmPaymentClient() {
         setIsSubmitting(true);
 
         try {
+            // compress if large - tuned to avoid huge payloads on serverless platforms
+            let uploadFile = proofFile;
+            try {
+                uploadFile = await compressImage(proofFile, 1600, 0.78);
+            } catch (compressErr) {
+                console.warn("[compressImage] failed, using original file:", compressErr);
+            }
+
+            // Optional: quick safeguard to reject extremely large files (after compress)
+            const MAX_UPLOAD_BYTES = 4_500_000; // adjust to host limit (e.g. Vercel ~4.5MB)
+            if (uploadFile.size > MAX_UPLOAD_BYTES) {
+                setError("Image is too large after compression. Try a smaller image or reduce quality.");
+                setIsSubmitting(false);
+                return;
+            }
+
             const formData = new FormData();
-            formData.append("proof", proofFile);
-            // include sender name
+            formData.append("proof", uploadFile);
             if (proofSenderName && proofSenderName.trim() !== "") {
-              formData.append("proofSenderName", proofSenderName.trim());
+                formData.append("proofSenderName", proofSenderName.trim());
             }
             formData.append("amount", String(totalPrice));
             formData.append("fullName", fullName);
@@ -108,17 +150,12 @@ export default function ConfirmPaymentClient() {
             formData.append("emergencyPhone", emergencyPhone);
             formData.append("medicalHistory", medicalHistory);
             formData.append("registrationType", items[0]?.type || "individual");
-            // Add group name for community registrations
             if (groupName && groupName.trim() !== "") {
                 formData.append("groupName", groupName.trim());
             }
-
-            // Upload ID card photo if available
             if (userDetails?.idCardPhoto) {
                 formData.append("idCardPhoto", userDetails.idCardPhoto);
             }
-
-            // Add cart items
             formData.append("items", JSON.stringify(items));
 
             const res = await fetch("/api/payments", {
@@ -127,27 +164,27 @@ export default function ConfirmPaymentClient() {
             });
 
             if (!res.ok) {
-                const errorData = await res.json();
+                // try to parse server JSON error for better UX
+                const errorData = await res.json().catch(() => ({}));
                 throw new Error(errorData.error || "Upload failed");
             }
 
-            clearCart();    
+            clearCart();
             setSubmitted(true);
             setShowPopup(true);
 
-            // Fire-and-forget: notify user by email that registration/proof was submitted and is pending verification.
+            // fire-and-forget notification
             (async () => {
-              try {
-                await fetch("/api/notify/submission", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ email, name: fullName }),
-                });
-              } catch (e) {
-                console.warn("[notify/submission] failed:", e);
-              }
+                try {
+                    await fetch("/api/notify/submission", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email, name: fullName }),
+                    });
+                } catch (e) {
+                    console.warn("[notify/submission] failed:", e);
+                }
             })();
-            
         } catch (err: any) {
             setError(err.message || "Upload failed");
         } finally {
