@@ -72,11 +72,11 @@ export function UserInfoCard({ userName, email, phone, onUpdate }: UserInfoCardP
 
         {/* Edit Button - green gradient */}
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
+          {/* <DialogTrigger asChild>
             <Button className="w-full bg-gradient-to-r from-[#91DCAC] via-[#91DCAC] to-[#91DCAC] hover:from-[#91DCAC]/90 hover:via-[#91DCAC]/90 hover:to-[#91DCAC]/90 text-white border-0 shadow-xl rounded-2xl h-12 transition-all hover:shadow-2xl hover:scale-[1.02]">
               Edit Profile
             </Button>
-          </DialogTrigger>
+          </DialogTrigger> */}
           <DialogContent className="bg-white/95 backdrop-blur-2xl border-white/90 shadow-2xl">
             <DialogHeader>
               <DialogTitle className="text-[#682950]">Edit Profile</DialogTitle>

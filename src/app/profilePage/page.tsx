@@ -237,8 +237,7 @@ export default function App() {
       <FloatingElements />
       
       <div className="relative z-10 min-h-screen pt-20">
-        {/* Header */}
-        <header className="relative overflow-hidden">
+        {/* <header className="relative overflow-hidden">
           <div className="absolute inset-0 bg-linear-to-r from-[#FFF1C5]/20 via-white/10 to-[#FFDFC0]/20"></div>
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex items-center justify-between mb-8">
@@ -259,7 +258,7 @@ export default function App() {
               <div className="h-1.5 w-32 bg-linear-to-r from-[#91DCAC] via-[#91DCAC] to-[#91DCAC] rounded-full shadow-lg"></div>
             </div>
           </div>
-        </header>
+        </header> */}
 
         {/* Tab Navigation */}
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">

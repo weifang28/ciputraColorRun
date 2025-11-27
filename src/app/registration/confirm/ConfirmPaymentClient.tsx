@@ -127,7 +127,7 @@ export default function ConfirmPaymentClient() {
             }
 
             // Optional: quick safeguard to reject extremely large files (after compress)
-            const MAX_UPLOAD_BYTES = 4_500_000; // adjust to host limit (e.g. Vercel ~4.5MB)
+            const MAX_UPLOAD_BYTES = 5_000_000; // 5 MB hard limit per picture
             if (uploadFile.size > MAX_UPLOAD_BYTES) {
                 setError("Image is too large after compression. Try a smaller image or reduce quality.");
                 setIsSubmitting(false);
@@ -346,13 +346,30 @@ export default function ConfirmPaymentClient() {
                                 className="hidden"
                                 onChange={(e) => {
                                     const file = e.target.files?.[0];
-                                    if (file) {
-                                        setProofFile(file);
-                                        setFileName(file.name);
+                                    if (!file) return;
+
+                                    const MAX_FILE_BYTES = 5_000_000; // 5 MB limit
+                                    if (file.size > MAX_FILE_BYTES) {
+                                        setProofFile(null);
+                                        setFileName(null);
+                                        setError("Selected file exceeds 5 MB. Please choose a smaller image.");
+                                        return;
                                     }
+
+                                    // clear any previous error and accept file
+                                    setError(null);
+                                    setProofFile(file);
+                                    setFileName(file.name);
                                 }}
-                                required
+                                 required
                             />
+
+                           {/* Show upload errors inline */}
+                           {error && (
+                               <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                                   {error}
+                               </div>
+                           )}
 
                            {/* Tutorial modal for upload help */}
                            {showUploadTutorial && (
@@ -363,12 +380,6 @@ export default function ConfirmPaymentClient() {
                              />
                            )}
                         </div>
-
-                        {/* {error && (
-                            <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                                {error}
-                            </div>
-                        )} */}
 
                         <div className="flex gap-3">
                             <button
