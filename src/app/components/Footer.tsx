@@ -51,7 +51,7 @@ export default function Footer() {
                     </div>
 
                     {/* Column 2: Stay Updated */}
-                    <div className="space-y-4 flex flex-col items-center md:items-start" data-aos="fade-up">
+                    <div className="space-y-4 flex flex-col items-start" data-aos="fade-up">
                         <h3 className="text-white font-bold text-lg mb-4">Stay Updated</h3>
                         <div className="flex items-center gap-3">
                             <Instagram className="w-5 h-5 text-pink-400" />
@@ -71,7 +71,7 @@ export default function Footer() {
                     </div>
 
                     {/* Column 3: Organized By */}
-                    <div className="flex items-center justify-center md:justify-end" data-aos="fade-left">
+                    <div className="flex items-center justify-start md:justify-end" data-aos="fade-left">
                         <div className="relative w-28 h-28 sm:w-32 sm:h-32">
                             <Image 
                                 src="/images/logoWajib.png" 

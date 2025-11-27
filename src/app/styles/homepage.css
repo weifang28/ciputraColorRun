@@ -771,7 +771,7 @@
 .register-wrap:hover .home_register_button.register-btn,
 .register-wrap:focus-within .home_register_button.register-btn {
   transform: translateY(-6px) scale(1.03);
-  box-shadow: 0 18px 36px rgba(42, 52, 63, 0.18);
+  box-shadow: 0 18px 36px rgba(0, 52, 63, 0.18);
 }
 
 /* decorative flower assets */
@@ -1191,16 +1191,154 @@
   }
 
   /* Remove hover tint on rows for mobile — keep content colors consistent */
-  .pricing-table tbody tr:hover td {
-    background: transparent !important;
-    transition: none;
-  }
+
 
   /* safety: make sure no other rules force stacked-card UI */
   .pricing-table, .pricing-table * {
     box-sizing: border-box;
     max-width: none !important;
     overflow-wrap: normal !important;
+  }
+}
+
+/* Mobile: force desktop-like colors for pricing table and disable hover tint */
+@media (max-width: 720px) {
+  /* ensure variables are available */
+  :root {
+    --pricing-odd: rgba(31,98,81,0.02);
+  }
+
+  .pricing-section .pricing-table tbody tr,
+  .pricing-section .pricing-table tbody td {
+    background: transparent !important;
+    transition: none !important;
+  }
+
+  /* keep the alternating subtle row background (same as desktop) */
+  .pricing-section .pricing-table tbody tr:nth-child(even) td {
+    background: var(--pricing-odd) !important;
+  }
+
+  /* explicit per-column static colors to match desktop view (5K scheme) */
+  .pricing-section .pricing-table tbody td.col-item {
+    background-color: rgba(145,220,172,0.12) !important; /* pale green */
+    color: #682950 !important;
+    font-weight: 700 !important;
+  }
+
+  .pricing-section .pricing-table tbody td.col-main {
+    background-color: rgba(255,255,255,0.98) !important; /* near-white */
+    color: #0f5132 !important;
+    font-weight: 800 !important;
+  }
+
+  .pricing-section .pricing-table tbody td.col-tier {
+    background-color: rgba(255,255,255,0.98) !important; /* keep tiers light */
+    color: #602d4e !important;
+    font-weight: 600 !important;
+  }
+
+  .pricing-section .pricing-table tbody td.col-note {
+    background-color: transparent !important;
+    color: #52605f !important;
+    font-weight: 500 !important;
+  }
+
+  /* remove all hover effect on mobile rows/cells */
+  .pricing-section .pricing-table tbody tr:hover td,
+  .pricing-section .pricing-table tbody tr:active td {
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: none !important;
+  }
+
+  /* ensure sticky-first-column shadow behavior doesn't change colors */
+  .pricing-table-wrap.scrolled .pricing-table tbody td.col-item,
+  .pricing-table-wrap.scrolled .pricing-table thead th.col-item {
+    box-shadow: 6px 0 18px rgba(16,24,40,0.06);
+    background: rgba(145,220,172,0.12) !important;
+  }
+}
+
+/* ===== Pricing: force desktop colors everywhere and remove hover tints ===== */
+/* Highest-specificity scoped rules to avoid affecting other tables */
+.pricing-section .pricing-table,
+.pricing-section .pricing-table tbody,
+.pricing-section .pricing-table tbody tr,
+.pricing-section .pricing-table tbody td,
+.pricing-section .pricing-table thead th {
+  transition: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Explicit static header style (desktop & mobile) */
+.pricing-section .pricing-table thead th {
+  background: linear-gradient(90deg, rgba(213,232,215,0.18) 0%, rgba(218,164,167,0.18) 100%) !important;
+  color: #28543b !important;
+}
+
+/* Enforce desktop palette: left column = pale green, main price = near-white, tiers = light */
+.pricing-section .pricing-table tbody td.col-item {
+  background-color: rgba(145,220,172,0.12) !important; /* pale green */
+  color: #682950 !important;
+  font-weight: 700 !important;
+}
+
+.pricing-section .pricing-table tbody td.col-main {
+  background-color: rgba(255,255,255,0.98) !important; /* near-white */
+  color: #0f5132 !important;
+  font-weight: 800 !important;
+}
+
+.pricing-section .pricing-table tbody td.col-tier {
+  background-color: rgba(255,255,255,0.98) !important;
+  color: #602d4e !important;
+  font-weight: 600 !important;
+}
+
+.pricing-section .pricing-table tbody td.col-note {
+  background-color: transparent !important;
+  color: #52605f !important;
+  font-weight: 500 !important;
+}
+
+/* Keep subtle zebra rows like desktop */
+.pricing-section .pricing-table tbody tr:nth-child(even) td {
+  background: var(--pricing-odd, rgba(31,98,81,0.02)) !important;
+}
+
+/* Remove any hover/active tint entirely */
+.pricing-section .pricing-table tbody tr:hover,
+.pricing-section .pricing-table tbody tr:active,
+.pricing-section .pricing-table tbody tr:hover td,
+.pricing-section .pricing-table tbody tr:active td {
+  background: none !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+/* Mobile: ensure same static colors when table becomes scrollable */
+@media (max-width: 720px) {
+  .pricing-section .pricing-table tbody td.col-item,
+  .pricing-section .pricing-table tbody td.col-main,
+  .pricing-section .pricing-table tbody td.col-tier,
+  .pricing-section .pricing-table tbody td.col-note,
+  .pricing-section .pricing-table thead th {
+    /* reapply to higher-specificity mobile rules */
+    background-clip: padding-box !important;
+  }
+
+  .pricing-section .pricing-table tbody tr:hover,
+  .pricing-section .pricing-table tbody tr:active {
+    background: none !important;
+  }
+
+  /* ensure sticky-first-column scrolled state keeps same pale green */
+  .pricing-table-wrap.scrolled .pricing-table tbody td.col-item,
+  .pricing-table-wrap.scrolled .pricing-table thead th.col-item {
+    background: rgba(145,220,172,0.12) !important;
+    box-shadow: 6px 0 18px rgba(16,24,40,0.06) !important;
   }
 }
 
@@ -1319,6 +1457,30 @@
 
   .benefit-title { font-size: 1rem; }
   .benefit-description { font-size: 0.9rem; }
+
+  /* --- Ensure the last "Other Benefits" card matches the other cards on small screens --- */
+  .benefits-grid .benefit-card:last-child {
+    flex-direction: row !important;
+    align-items: center !important;
+    text-align: left !important;
+    padding: 0.9rem !important;
+    gap: 0.9rem !important;
+    min-height: 84px !important;
+  }
+  .benefits-grid .benefit-card:last-child .benefit-icon-wrap {
+    margin-right: 0.9rem !important;
+    margin-bottom: 0 !important;
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .benefits-grid .benefit-card:last-child .benefit-title,
+  .benefits-grid .benefit-card:last-child .benefit-description {
+    text-align: left !important;
+  }
 }
 
 /* ===== Pricing & Benefits visual tweaks =====
@@ -1393,33 +1555,100 @@
   margin-bottom: 0.6rem;
 }
 
-/* Keep proportion on medium screens */
-@media (max-width: 900px) {
-  .benefits-grid .benefit-card:last-child {
-    grid-column: 1 / -1;
-    min-height: 180px;
-  }
-}
-
-/* On very small screens, keep stacked single-column layout (do not force spanning) */
-@media (max-width: 520px) {
+/* Tablet: keep 3 columns on mid-sized screens (phones/tablets in landscape) */
+@media (min-width: 721px) and (max-width: 1024px) {
   .benefits-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 1rem;
   }
+
   .benefits-grid .benefit-card:last-child {
     grid-column: auto;
-    min-height: 84px; /* match smaller card height */
-    padding: 0.9rem;
+    min-height: 150px;
+  }
+
+  /* Tablet: icon left / content right so "Other Benefits" matches other cards */
+  .benefits-grid .benefit-card {
     flex-direction: row;
     align-items: center;
     text-align: left;
+    padding: 1rem;
+    gap: 1rem;
+    min-height: 120px;
+  }
+
+  .benefits-grid .benefit-card .benefit-icon-wrap {
+    margin-right: 1rem;
+    margin-bottom: 0;
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .benefits-grid .benefit-card .benefit-title,
+  .benefits-grid .benefit-card .benefit-description {
+    text-align: left;
+  }
+
+  /* keep the last card consistent with the others on tablet */
+  .benefits-grid .benefit-card:last-child {
+    grid-column: auto;
+    flex-direction: row;
+    align-items: center;
   }
 }
 
-/* Minor polish: slightly larger title inside the spanning card */
-.benefits-grid .benefit-card:last-child .benefit-title {
-  font-size: 1.12rem;
-  font-weight: 900;
+/* Small screens: stack / single column behavior (unchanged) */
+@media (max-width: 520px) {
+  .benefits-grid {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .benefit-card {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    gap: 0.9rem;
+    padding: 0.9rem;
+    min-height: 84px;
+  }
+
+  .benefit-icon-wrap { width: 56px; height: 56px; border-radius: 12px; }
+  .benefit-icon-wrap img,
+  .benefit-icon-wrap svg,
+  .benefit-image { width: 36px; height: 36px; }
+
+  .benefit-title { font-size: 1rem; }
+  .benefit-description { font-size: 0.9rem; }
+
+  /* --- Ensure the last "Other Benefits" card matches the other cards on small screens --- */
+  .benefits-grid .benefit-card:last-child {
+    flex-direction: row !important;
+    align-items: center !important;
+    text-align: left !important;
+    padding: 0.9rem !important;
+    gap: 0.9rem !important;
+    min-height: 84px !important;
+  }
+  .benefits-grid .benefit-card:last-child .benefit-icon-wrap {
+    margin-right: 0.9rem !important;
+    margin-bottom: 0 !important;
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .benefits-grid .benefit-card:last-child .benefit-title,
+  .benefits-grid .benefit-card:last-child .benefit-description {
+    text-align: left !important;
+  }
 }
 
 /* ===== Timeline section fixes =====
@@ -1793,69 +2022,95 @@ label[for="idCardPhoto"]:focus-within {
 
 /* Desktop: two-column timeline with subtle vertical line and markers */
 @media (min-width: 900px) {
+  /* Horizontal timeline: list becomes a centered flex row */
   .timeline-section .timeline-list.minimal {
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    column-gap: 2rem;
-    row-gap: 1rem;
-    align-items: start;
-    max-width: 820px;
+    display: flex !important;
+    flex-direction: row;
+    gap: 3.5rem;
+    align-items: center;
+    justify-content: center;
+    max-width: 1100px;
     margin: 0 auto;
-    /* vertical divider */
-
-    /* Slight horizontal nudge to the right for better visual alignment */
-    transform: translateX(60px); /* tweak this value (px) to move more/less */
-    will-change: transform;
+    padding: 2rem 1rem;
     position: relative;
+    /* ensure items sit above the line */
+    z-index: 2;
   }
 
-  /* thin vertical line between date and title */
+  /* long horizontal line running through the timeline (below markers) */
   .timeline-section .timeline-list.minimal::before {
     content: "";
+
+
     position: absolute;
-    /* account for the same horizontal nudge so the divider stays aligned */
-    left: calc(220px + 8px + 40px);
-    top: 6px;
-    bottom: 6px;
-    width: 1px;
-    background: rgba(31,98,81,0.06);
-    border-radius: 1px;
+    left: 5%;
+    right: 5%;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, rgba(31,98,81,0.12), rgba(222,159,169,0.06));
+    z-index: 1;
+    pointer-events: none;
   }
 
-  /* ensure li children flow into the grid columns */
+  /* each timeline item is a stacked column: date (top) -> marker (on line) -> title (bottom) */
   .timeline-section .timeline-item.minimal {
-    display: contents; /* allows the children (.timeline-date/.timeline-title) to occupy grid cells */
-  }
-
-  .timeline-section .timeline-date {
-    grid-column: 1;
-    text-align: right;
-    padding-right: 12px;
-    margin-bottom: 0;
-    align-self: start;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 150px;
     position: relative;
+    background: transparent;
+    gap: 0.6rem;
+    z-index: 2; /* keep above the ::before line */
   }
 
+  /* date above the line (slightly raised) */
+  .timeline-section .timeline-date {
+    order: 0;
+    margin: 0;
+    padding: 0;
+    transform: translateY(-8px);
+    font-weight: 700;
+    color: #682950;
+  }
+
+  /* title below the line (slightly lowered) */
   .timeline-section .timeline-title {
-    grid-column: 2;
-    text-align: left;
-    align-self: start;
-    padding-left: 0;
+    order: 2;
+    margin: 0;
+    padding: 0;
+    transform: translateY(8px);
+    font-weight: 800;
+    color: #1F6251;
   }
 
-  /* round marker sitting on the divider aligned with each date row */
-  .timeline-section .timeline-date::after {
+  /* round marker: attach to the .timeline-item so it aligns exactly to the central line */
+  .timeline-section .timeline-item.minimal::after {
     content: "";
     position: absolute;
-    right: -8px;
-    top: 6px;
-    transform: translateY(0);
-    width: 10px;
-    height: 10px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: linear-gradient(90deg, #F581A4 0%, #FFD700 100%);
+    border: 2px solid rgba(255,255,255,0.95);
     box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-    border: 2px solid rgba(255,255,255,0.85);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    pointer-events: none;
+  }
+  
+  /* ensure the old vertical-divider rules are overridden */
+  .timeline-section .timeline-list.minimal,
+  .timeline-section .timeline-list.minimal::before,
+  .timeline-section .timeline-item.minimal,
+  .timeline-section .timeline-date,
+  .timeline-section .timeline-title {
+    transition: none !important;
   }
 }
 
@@ -1875,4 +2130,48 @@ label[for="idCardPhoto"]:focus-within {
 @media (max-width: 520px) {
   .timeline-section .timeline-list.minimal { padding: 0 0.5rem; max-width: 420px; gap: 0.65rem; }
   .timeline-section .timeline-title { font-size: 1rem; }
+}
+
+/* Make category column use the hover color permanently and disable hover changes */
+.pricing-section .pricing-table tbody td.col-item,
+.pricing-table tbody td.col-item {
+  /* Use the hover tint as the permanent background */
+  background: var(--pricing-hover, rgba(31,98,81,0.045)) !important;
+  /* keep text/weight as before */
+  color: #682950 !important;
+  font-weight: 700 !important;
+  transition: none !important; /* remove any hover transition for this column */
+  box-shadow: none !important;
+}
+
+/* Prevent any hover/active rules from changing the category cell's appearance */
+.pricing-section .pricing-table tbody tr:hover td.col-item,
+.pricing-section .pricing-table tbody tr:active td.col-item,
+.pricing-table tbody tr:hover td.col-item,
+.pricing-table tbody tr:active td.col-item {
+  background: var(--pricing-hover, rgba(31,98,81,0.045)) !important;
+  color: #682950 !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+/* Ensure scrolled/sticky state preserves the same color */
+.pricing-table-wrap.scrolled .pricing-table tbody td.col-item,
+.pricing-table-wrap.scrolled .pricing-table thead th.col-item {
+  background: var(--pricing-hover, rgba(31,98,81,0.045)) !important;
+  box-shadow: 6px 0 18px rgba(16,24,40,0.06) !important; /* keep separator shadow */
+}
+
+/* Safety: mobile-specific override (higher specificity for small viewports) */
+@media (max-width: 720px) {
+  .pricing-section .pricing-table tbody td.col-item,
+  .pricing-table tbody td.col-item {
+    background: var(--pricing-hover, rgba(31,98,81,0.045)) !important;
+    transition: none !important;
+  }
+
+  .pricing-section .pricing-table tbody tr:hover td.col-item,
+  .pricing-section .pricing-table tbody tr:active td.col-item {
+    background: var(--pricing-hover, rgba(31,98,81,0.045)) !important;
+  }
 }
