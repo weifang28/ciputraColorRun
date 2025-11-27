@@ -452,12 +452,12 @@ export default function ConfirmPaymentClient() {
             {showPopup && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 max-w-sm w-full text-center shadow-xl animate-fadeIn">
-                <h3 className="text-xl text-[#602d4e] font-bold mb-2">Pembayaran Berhasil!</h3>
+                <h3 className="text-xl text-[#602d4e] font-bold mb-2">Payment Successful!</h3>
                 <p className="text-[#602d4e]/80 mb-4">
-                    Terima kasih! Silakan gabung ke grup WhatsApp untuk info penting acara. Kode akses akan diberikan ketika pembayaran telah di cek kembali.
+                    Thank you! Please join the WhatsApp group for important event information. Access codes will be provided once the payment has been verified.
                 </p>
                 <p className="text-[#602d4e]/80 mb-4">
-                    Kami juga telah mengirimkan email konfirmasi ke <strong>{email}</strong>. Mohon cek inbox (dan spam) untuk konfirmasi selanjutnya.
+                    We have also sent a confirmation email to <strong>{email}</strong>. Please check your inbox (and spam) for further confirmation .
                 </p>
     
                 <a
@@ -465,7 +465,7 @@ export default function ConfirmPaymentClient() {
                     target="_blank"
                     className="block w-full bg-green-500 text-white py-3 rounded-full font-semibold hover:bg-green-600 transition"
                 >
-                    Join Grup WhatsApp
+                    Join WhatsApp Group
                 </a>
             </div>
         </div>

@@ -545,7 +545,8 @@ export default function Home() {
 			{/* Claim Racepack & Venue Section */}
 			<section className="claim-venue-section py-10">
 				<div className="max-w-6xl mx-auto px-4 sm:px-6">
-					<div className="grid md:grid-cols-2 gap-8 items-stretch">
+					<div className="space-y-8">
+						{/* Race Pack Claim card — full-width block */}
 						<div className="claim-card" data-aos="fade-up">
 							<div className="claim-card-header">
 								<h3 className="font-moderniz text-xl text-[#1F6251] mt-1">
@@ -570,7 +571,7 @@ export default function Home() {
 							<strong className="mt-4 text-sm text-[#52605f]">
 								Representative Collection
 							</strong>
-							<ul className="claim-list mt-4">
+							<ul className="claim-list">
 								<li>
 									<strong>Individuals:</strong> If someone is collecting for you, they must bring a power of attorney letter.
 								</li>
@@ -580,10 +581,11 @@ export default function Home() {
 							</ul>
 						</div>
 
+						{/* Start / Finish card — full-width block */}
 						<div className="venue-card" data-aos="fade-up" data-aos-delay="80">
 							<div className="venue-card-header">
 								<h3 className="font-moderniz text-xl text-[#1F6251]">
-									Start / Finish
+									Start and Finish
 								</h3>
 							</div>
                             <p className="font-mustica text-[#52605f] mt-2">
@@ -621,15 +623,7 @@ export default function Home() {
 							<p className="mt-4 text-sm text-[#52605f]">
 								Assembly point and route will be announced later via registered e-mail and event’s homepage. Additionally follow our Instagram <a className = "underline font-bold" href = "https://instagram.com/ciputrarun.uc">@ciputrarun.uc</a> as well for additional information.
 							</p>
-							<div className="mt-4">
-								{/* <Link
-									href="/registration"
-									className="inline-block btn-register-ghost"
-								>
-									Need help? Contact us
-								</Link> */}
-							</div>
-                        </div>
+						</div>
 					</div>
 				</div>
 			</section>
