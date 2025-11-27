@@ -395,12 +395,12 @@
 .countdown-timer-container {
   width: 100%;
   padding: 3rem 1rem;
-  background: linear-gradient(
+  /* background: linear-gradient(
     135deg,
     rgba(141, 214, 166, 0.3) 0%,
     rgba(203, 220, 209, 0.2) 50%,
     rgba(239, 146, 155, 0.3) 100%
-  );
+  ); */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1334,7 +1334,7 @@
 /* Benefits grid: use 4 columns on wide screens (was 3 + last card spanning) */
 .benefits-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.25rem;
   align-items: stretch;
 }
@@ -1699,4 +1699,142 @@ label[for="idCardPhoto"]:focus-within {
   .pricing-table-wrap.scrolled .pricing-table thead th.col-item {
     box-shadow: 6px 0 18px rgba(16,24,40,0.06);
   }
+}
+
+/* ===== Improved timeline: compact two-column on desktop, clean stacked list on mobile ===== */
+.timeline-section .timeline-scroll-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0 1rem;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+/* Base: single-column centered list for small screens (accessible, semantic) */
+.timeline-section .timeline-list.minimal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+  position: relative;
+}
+
+/* each timeline item: stacked date above title by default (mobile-first) */
+.timeline-section .timeline-item.minimal {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0.35rem 0.5rem;
+  background: transparent;
+  color: inherit;
+}
+
+/* date + title styles for readability */
+.timeline-section .timeline-date {
+  font-weight: 700;
+  color: #682950;
+  font-size: 1rem;
+  margin-bottom: 0.18rem;
+}
+
+.timeline-section .timeline-title {
+  font-weight: 800;
+  color: #1F6251;
+  font-size: 1.15rem;
+  line-height: 1.12;
+}
+
+/* Desktop: two-column timeline with subtle vertical line and markers */
+@media (min-width: 900px) {
+  .timeline-section .timeline-list.minimal {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    column-gap: 2rem;
+    row-gap: 1rem;
+    align-items: start;
+    max-width: 820px;
+    margin: 0 auto;
+    /* vertical divider */
+
+    /* Slight horizontal nudge to the right for better visual alignment */
+    transform: translateX(60px); /* tweak this value (px) to move more/less */
+    will-change: transform;
+    position: relative;
+  }
+
+  /* thin vertical line between date and title */
+  .timeline-section .timeline-list.minimal::before {
+    content: "";
+    position: absolute;
+    /* account for the same horizontal nudge so the divider stays aligned */
+    left: calc(220px + 8px + 40px);
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: rgba(31,98,81,0.06);
+    border-radius: 1px;
+  }
+
+  /* ensure li children flow into the grid columns */
+  .timeline-section .timeline-item.minimal {
+    display: contents; /* allows the children (.timeline-date/.timeline-title) to occupy grid cells */
+  }
+
+  .timeline-section .timeline-date {
+    grid-column: 1;
+    text-align: right;
+    padding-right: 12px;
+    margin-bottom: 0;
+    align-self: start;
+    position: relative;
+  }
+
+  .timeline-section .timeline-title {
+    grid-column: 2;
+    text-align: left;
+    align-self: start;
+    padding-left: 0;
+  }
+
+  /* round marker sitting on the divider aligned with each date row */
+  .timeline-section .timeline-date::after {
+    content: "";
+    position: absolute;
+    right: -8px;
+    top: 6px;
+    transform: translateY(0);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #F581A4 0%, #FFD700 100%);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+    border: 2px solid rgba(255,255,255,0.85);
+  }
+}
+
+/* Mobile-friendly adjustments remain (stacked centered list) */
+@media (max-width: 900px) {
+  .timeline-section .timeline-list.minimal {
+    padding: 0 0.5rem;
+    max-width: 620px;
+    gap: 0.9rem;
+  }
+
+  .timeline-section .timeline-date { font-size: 0.92rem; }
+  .timeline-section .timeline-title { font-size: 1.05rem; }
+}
+
+/* very small screens */
+@media (max-width: 520px) {
+  .timeline-section .timeline-list.minimal { padding: 0 0.5rem; max-width: 420px; gap: 0.65rem; }
+  .timeline-section .timeline-title { font-size: 1rem; }
 }

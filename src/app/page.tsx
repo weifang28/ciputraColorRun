@@ -444,7 +444,7 @@ export default function Home() {
 						</div>
 
 						{/* Powder Color War Card */}
-						<div
+						{/* <div
 							className="benefit-card"
 							data-aos="zoom-in"
 							data-aos-delay="300"
@@ -477,7 +477,7 @@ export default function Home() {
 							<p className="benefit-description">
 								Immerse yourself in the euphoria of our signature Color War using safe, non-toxic powder. (Note: This part is fully optional if you prefer to stay clean!)
 							</p>
-						</div>
+						</div> */}
 
 						{/* Additional Benefits Card */}
 						<div
@@ -529,32 +529,23 @@ export default function Home() {
 
 					{/* Minimal semantic list timeline */}
 					<div className="timeline-scroll-wrap" data-aos="fade-up" data-aos-delay="200">
-						<ul className="timeline-list minimal" aria-label="Event timeline">
-							<li className="timeline-item minimal">
-								<div className="timeline-date">1 Dec 2025 — 28 Mar 2026</div>
-								<div>
-									<div className="timeline-title">Open registration</div>
-									<p className="timeline-text">Registration opens; early-bird pricing available.</p>
-								</div>
-							</li>
+                        <ul className="timeline-list minimal" aria-label="Event timeline">
+                            <li className="timeline-item minimal">
+                                <div className="timeline-date">1 Dec 2025 — 28 Mar 2026</div>
+                                <div className="timeline-title">Open registration</div>
+                            </li>
 
-							<li className="timeline-item minimal">
-								<div className="timeline-date">9 — 11 Apr 2026</div>
-								<div>
-									<div className="timeline-title">Race pack collection</div>
-									<p className="timeline-text">Pick up race packs at designated locations.</p>
-								</div>
-							</li>
+                            <li className="timeline-item minimal">
+                                <div className="timeline-date">9 — 11 Apr 2026</div>
+                                <div className="timeline-title">Race pack collection</div>
+                            </li>
 
-							<li className="timeline-item minimal">
-								<div className="timeline-date">12 Apr 2026</div>
-								<div>
-									<div className="timeline-title">Race day</div>
-									<p className="timeline-text">Event day — be at the assembly point on time.</p>
-								</div>
-							</li>
-						</ul>
-					</div>
+                            <li className="timeline-item minimal">
+                                <div className="timeline-date">12 Apr 2026</div>
+                                <div className="timeline-title">Race day</div>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </section>
 

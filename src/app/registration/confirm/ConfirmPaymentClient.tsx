@@ -134,6 +134,19 @@ export default function ConfirmPaymentClient() {
             clearCart();    
             setSubmitted(true);
             setShowPopup(true);
+
+            // Fire-and-forget: notify user by email that registration/proof was submitted and is pending verification.
+            (async () => {
+              try {
+                await fetch("/api/notify/submission", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email, name: fullName }),
+                });
+              } catch (e) {
+                console.warn("[notify/submission] failed:", e);
+              }
+            })();
             
         } catch (err: any) {
             setError(err.message || "Upload failed");

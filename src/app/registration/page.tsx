@@ -30,6 +30,9 @@ interface Category {
 export default function RegistrationPage() {
     const router = useRouter();
     const { addItem, items, setUserDetails } = useCart();
+    const [currentUser, setCurrentUser] = useState<any | null>(null);
+    const [existingIdCardPhotoUrl, setExistingIdCardPhotoUrl] = useState<string | null>(null);
+
     const [type, setType] = useState<"individual" | "community" | "family">("individual");
     
     const [loading, setLoading] = useState(true);
@@ -94,6 +97,41 @@ export default function RegistrationPage() {
         if (typeof window !== 'undefined' && (window as any).AOS) {
             (window as any).AOS.refresh();
         }
+
+        // Try to load current logged-in user profile to prefill form
+        (async () => {
+            try {
+                const resUser = await fetch("/api/user");
+                if (resUser.ok) {
+                    const body = await resUser.json().catch(() => ({}));
+                    const user = body?.user;
+                    if (user) {
+                        setCurrentUser(user);
+                        // Prefill form fields from user record (do not override while typing later)
+                        setFullName(user.name || "");
+                        setEmail(user.email || "");
+                        setPhone(user.phone || "");
+                        setEmergencyPhone(user.emergencyPhone || "");
+                        setBirthDate(user.birthDate ? new Date(user.birthDate).toISOString().slice(0,10) : "");
+                        setGender(user.gender || "male");
+                        setCurrentAddress(user.currentAddress || "");
+                        setNationality(user.nationality || "WNI");
+                        setMedicalHistory(user.medicalHistory || "");
+                        if (user.idCardPhoto) {
+                            setExistingIdCardPhotoUrl(user.idCardPhoto);
+                            // show filename if available
+                            try {
+                                const parts = String(user.idCardPhoto).split("/");
+                                setIdCardPhotoName(parts[parts.length - 1] || "Uploaded ID");
+                            } catch { /* ignore */ }
+                        }
+                    }
+                }
+            } catch (err) {
+                // silent fail — not logged in or endpoint unavailable
+                // console.debug("No current user", err);
+            }
+        })();
 
         (async () => {
             try {
@@ -250,7 +288,9 @@ export default function RegistrationPage() {
     }
 
     function validatePersonalDetails(): boolean {
-        if (!fullName || !email || !phone || !birthDate || !currentAddress || !idCardPhoto) {
+        // Accept either a newly uploaded idCardPhoto file OR an existing stored ID photo URL for logged-in users
+        const hasIdProof = Boolean(idCardPhoto) || Boolean(existingIdCardPhotoUrl);
+        if (!fullName || !email || !phone || !birthDate || !currentAddress || !hasIdProof) {
             showToast("Please fill all required fields (Name, Email, Phone, Birth Date, Address, and ID Card/Passport Photo)", "error");
             return false;
         }
@@ -307,7 +347,7 @@ export default function RegistrationPage() {
     return true;
     }
 
-    async function savePersonalDetailsToSession() {
+    function savePersonalDetailsToSession() {
         try {
             sessionStorage.setItem("reg_fullName", fullName);
             sessionStorage.setItem("reg_email", email);
@@ -321,9 +361,15 @@ export default function RegistrationPage() {
             sessionStorage.setItem("reg_registrationType", registrationType);
             sessionStorage.setItem("reg_groupName", groupName);
 
+            // store the filename for convenience (either newly uploaded file name or existing saved file name)
             if (idCardPhoto) {
-                sessionStorage.setItem("reg_idCardPhotoName", idCardPhoto.name);
-            }
+                 sessionStorage.setItem("reg_idCardPhotoName", idCardPhoto.name);
+            } else if (existingIdCardPhotoUrl) {
+                try {
+                    const parts = String(existingIdCardPhotoUrl).split("/");
+                    sessionStorage.setItem("reg_idCardPhotoName", parts[parts.length - 1] || "Uploaded ID");
+                } catch { /* ignore */ }
+             }
         } catch (e) {
             console.error("Failed to save to sessionStorage:", e);
         }
@@ -477,6 +523,8 @@ export default function RegistrationPage() {
 
         savePersonalDetailsToSession();
 
+        // set user details in cart/context; if there is no newly uploaded File for idCardPhoto,
+        // leave it undefined so server-side stored ID photo for logged-in user will be used.
         setUserDetails({
             fullName,
             email,
