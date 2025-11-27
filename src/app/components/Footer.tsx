@@ -83,10 +83,11 @@ export default function Footer() {
                     </div>
                 </div>
 
-            {/* Copyright */}
-            <div className="bg-gray-900 py-3">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-gray-300 text-xs sm:text-sm">
-                    &copy; {new Date().getFullYear()} Ciputra Color Run. All rights reserved.
+                {/* Bottom Border & Copyright */}
+                <div className="border-t border-white/10 pt-6">
+                    <p className="text-center text-white/60 text-sm">
+                        &copy; {new Date().getFullYear()} Ciputra Color Run. All rights reserved.
+                    </p>
                 </div>
             </div>
         </footer>
