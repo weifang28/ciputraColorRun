@@ -265,16 +265,9 @@ export default function Home() {
 					/>
 				</div>
 
-				<h2
-					className="pricing-title text-2xl md:text-3xl font-moderniz font-bold text-center mb-6"
-					data-aos="fade-up"
-					data-aos-delay="180"
-					data-aos-duration="800"
-				>
-					<span className="pricing-title-gradient" data-aos="fade-up" data-aos-delay="220" data-aos-duration="900">
+				<h3 className="text-3xl md:text-4xl font-moderniz font-extrabold text-center mb-10 benefit-section-title">
 						TICKET PRICES
-					</span>
-				</h2>
+					</h3>
 
 				<div className="pricing-table-wrap ">
 					<table
@@ -286,7 +279,7 @@ export default function Home() {
 						data-aos-duration="900"
 					>
 						<thead>
-							<tr>
+							<tr className="text-center justify-center items-center">
 								<th scope="col" className="col-item">
 									Category
 								</th>
@@ -308,7 +301,7 @@ export default function Home() {
 							</tr>
 						</thead>
 						<tbody>
-							<tr>
+							<tr className="text-center justify-center items-center">
 								<td className="col-item" data-label="Kategori">
 									10K
 								</td>
@@ -328,7 +321,7 @@ export default function Home() {
 									Early bird: Rp 220.000
 								</td>
 							</tr>
-							<tr>
+							<tr className="text-center justify-center items-center">
 								<td className="col-item" data-label="Kategori">
 									5K
 								</td>
@@ -348,7 +341,7 @@ export default function Home() {
 									Early bird: Rp 180.000
 								</td>
 							</tr>
-							<tr>
+							<tr className="text-center justify-center items-center">
 								<td className="col-item" data-label="Kategori">
 									3K
 								</td>
