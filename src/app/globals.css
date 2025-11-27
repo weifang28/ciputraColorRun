@@ -201,29 +201,34 @@ html, body {
   }
 }
 
-/* Nav glassmorphism helper -> simplified translucent navbar (no heavy blur) */
+/* Nav glassmorphism helper -> stronger translucent gradient + subtle green hue */
 .nav-glass {
-  /* translucent gradient background (green → pink) with subtle blur */
+  /* more vibrant translucent gradient (green -> peach) so gradient is visibly noticeable */
   background: linear-gradient(
     90deg,
-    rgba(161, 213, 173, 0.18) 0%,
-    rgba(222, 159, 169, 0.18) 100%
+    rgba(161, 213, 173, 0.38) 0%,
+    rgba(222, 159, 169, 0.38) 100%
   );
-  /* fallback for older browsers */
-  background-color: rgba(0, 0, 0, 0.28);
-  -webkit-backdrop-filter: blur(6px) saturate(1.05);
-  backdrop-filter: blur(6px) saturate(1.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 
-  /* neutral depth + soft green tint */
+  /* stronger fallback background color for better contrast */
+  background-color: rgba(0, 0, 0, 0.36);
+
+  /* slightly stronger blur + saturation so the gradient pops against content */
+  -webkit-backdrop-filter: blur(8px) saturate(1.08);
+  backdrop-filter: blur(8px) saturate(1.08);
+
+  /* slightly more visible border */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  /* deepen neutral shadow and increase green tint for warmth */
   box-shadow:
-    0 6px 18px rgba(2, 6, 23, 0.12),
-    0 8px 24px rgba(161, 213, 173, 0.06);
+    0 6px 20px rgba(2, 6, 23, 0.14),
+    0 10px 30px rgba(161, 213, 173, 0.09);
 }
 
 /* Optional: tighten inner wrapper if other places rely on .max-w-7xl spacing */
 .nav-glass > .max-w-7xl {
-  padding-top: 0.25rem;   /* align with py-2 change in component */
+  padding-top: 0.25rem;   /* align with NavBar component py-2 */
   padding-bottom: 0.25rem;
 }
 
@@ -305,4 +310,35 @@ html, body {
 .pricing-table th:nth-child(5),
 .pricing-table td:nth-child(5) {
   width: 15%;
+}
+
+/* Navbar hide on scroll */
+.nav-glass {
+  transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease, box-shadow 260ms ease;
+  transform: translateY(0);
+  will-change: transform, opacity;
+}
+
+/* Hidden state: slide up and fade out */
+.nav-hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+/* Don't animate for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .nav-glass,
+  .nav-hidden {
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
+
+/* Optional: small visible hint when user scrolls (keeps nav accessible) */
+.nav-glass:not(.nav-hidden) {
+  /* keep the vibrant gradient / shadow you already set */
 }
