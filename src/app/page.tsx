@@ -266,7 +266,7 @@ export default function Home() {
 				</div>
 
 				<h2 className="pricing-title text-2xl md:text-3xl font-moderniz font-bold text-center mb-6">
-					<span className="pricing-title-gradient">TICKET PRICES</span>
+					<span className="pricing-title-gradient">TICKET PRICE</span>
 				</h2>
 
 				<div className="pricing-table-wrap">
