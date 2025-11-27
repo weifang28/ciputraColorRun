@@ -285,93 +285,93 @@ export default function Home() {
 						data-aos-delay="300"
 						data-aos-duration="900"
 					>
-                        <thead>
-                            <tr>
-                                <th scope="col" className="col-item">
-                                    Category
-                                </th>
-                                <th scope="col" className="col-main">
-                                    Normal Price
-                                </th>
-                                <th scope="col" className="col-tier">
-                                    Community 10-29
-                                </th>
-                                <th scope="col" className="col-tier">
-                                    Community 30-59
-                                </th>
-                                <th scope="col" className="col-tier">
-                                    Community ≥60
-                                </th>
-                                <th scope="col" className="col-note">
-                                    Early bird / Bundle
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td className="col-item" data-label="Kategori">
-                                    10K
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Harga Dasar">
-                                    Rp 250.000
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 10-29">
-                                    Rp 235.000
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 30-59">
-                                    Rp 225.000
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas ≥60">
-                                    Rp 215.000
-                                </td>
-                                <td className="col-note font-mustica font-bold text-white" data-label="Promo">
-                                    Early bird: Rp 220.000
-                                </td>
-                            </tr>
-                            <tr>
-                                <td className="col-item" data-label="Kategori">
-                                    5K
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Harga Dasar">
-                                    Rp 200.000
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 10-29">
-                                    Rp 190.000
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 30-59">
-                                    Rp 180.000
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas ≥60">
-                                    Rp 170.000
-                                </td>
-                                <td className="col-note font-mustica font-bold text-white" data-label="Promo">
-                                    Early bird: Rp 180.000
-                                </td>
-                            </tr>
-                            <tr>
-                                <td className="col-item" data-label="Kategori">
-                                    3K
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Harga Dasar">
-                                    Rp 150.000
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 10-29">
-                                    Rp 140.000
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas 30-59">
-                                    Rp 135.000
-                                </td>
-                                <td className="col-tier font-mustica font-bold text-white" data-label="Komunitas ≥60">
-                                    Rp 135.000
-                                </td>
-                                <td className="col-note font-mustica font-bold text-white" data-label="Promo">
-                                    Early bird: Rp 130.000
-                                    <br />
-                                    Bundling family (4 people): Rp 145.000 / person
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+						<thead>
+							<tr>
+								<th scope="col" className="col-item">
+									Category
+								</th>
+								<th scope="col" className="col-main">
+									Normal Price
+								</th>
+								<th scope="col" className="col-tier">
+									Community 10-29
+								</th>
+								<th scope="col" className="col-tier">
+									Community 30-59
+								</th>
+								<th scope="col" className="col-tier">
+									Community ≥60
+								</th>
+								<th scope="col" className="col-note">
+									Early bird / Bundle
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td className="col-item" data-label="Kategori">
+									10K
+								</td>
+								<td className="col-main font-mustica" data-label="Harga Dasar">
+									Rp 250.000
+								</td>
+								<td className="col-tier" data-label="Komunitas 10-29">
+									Rp 235.000
+								</td>
+								<td className="col-tier" data-label="Komunitas 30-59">
+									Rp 225.000
+								</td>
+								<td className="col-tier" data-label="Komunitas ≥60">
+									Rp 215.000
+								</td>
+								<td className="col-note" data-label="Promo">
+									Early bird: Rp 220.000
+								</td>
+							</tr>
+							<tr>
+								<td className="col-item" data-label="Kategori">
+									5K
+								</td>
+								<td className="col-main font-mustica" data-label="Harga Dasar">
+									Rp 200.000
+								</td>
+								<td className="col-tier" data-label="Komunitas 10-29">
+									Rp 190.000
+								</td>
+								<td className="col-tier" data-label="Komunitas 30-59">
+									Rp 180.000
+								</td>
+								<td className="col-tier" data-label="Komunitas ≥60">
+									Rp 170.000
+								</td>
+								<td className="col-note" data-label="Promo">
+									Early bird: Rp 180.000
+								</td>
+							</tr>
+							<tr>
+								<td className="col-item" data-label="Kategori">
+									3K
+								</td>
+								<td className="col-main font-mustica" data-label="Harga Dasar">
+									Rp 150.000
+								</td>
+								<td className="col-tier" data-label="Komunitas 10-29">
+									Rp 140.000
+								</td>
+								<td className="col-tier" data-label="Komunitas 30-59">
+									Rp 135.000
+								</td>
+								<td className="col-tier" data-label="Komunitas ≥60">
+									Rp 135.000
+								</td>
+								<td className="col-note" data-label="Promo">
+									Early bird: Rp 130.000
+									<br />
+									Bundling family (4 people): Rp 145.000 / person
+								</td>
+							</tr>
+						</tbody>
+					</table>
 				</div>
 
 				{/* Benefits Section */}
@@ -473,7 +473,7 @@ export default function Home() {
 									/>
 								</svg>
 							</div>
-							<h4 className="benefit-title">Powder Color War</h4>
+							<h4 className="benefit-title">Color War Powder</h4>
 							<p className="benefit-description">
 								Immerse yourself in the euphoria of our signature Color War using safe, non-toxic powder. (Note: This part is fully optional if you prefer to stay clean!)
 							</p>
