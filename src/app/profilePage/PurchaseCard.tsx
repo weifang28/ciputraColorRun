@@ -4,7 +4,7 @@
 import * as React from "react";
 import { Card } from './components/ui/card';
 import { QrCode, Users, ShoppingBag, DollarSign } from 'lucide-react';
-import { toDataURL } from 'qrcode'; // generate QR image data URL instead of qrcode.react
+import QRCode from 'qrcode'; // QR code generation
 
 interface JerseySize {
   size: string;
@@ -57,7 +57,7 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
             ? qrCodeData
             : `${(typeof window !== "undefined" && window.location?.origin) || (process.env.NEXT_PUBLIC_APP_URL || "")}/claim/${qrCodeData}`;
 
-        const dataUrl = await toDataURL(payload, {
+        const dataUrl = await QRCode.toDataURL(payload, {
           margin: 1,
           color: {
             dark: '#682950',
