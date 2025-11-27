@@ -203,12 +203,28 @@ html, body {
 
 /* Nav glassmorphism helper -> simplified translucent navbar (no heavy blur) */
 .nav-glass {
-  /* slightly translucent dark bar (similar to bg-black/30) */
+  /* translucent gradient background (green → pink) with subtle blur */
+  background: linear-gradient(
+    90deg,
+    rgba(161, 213, 173, 0.18) 0%,
+    rgba(222, 159, 169, 0.18) 100%
+  );
+  /* fallback for older browsers */
   background-color: rgba(0, 0, 0, 0.28);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+  -webkit-backdrop-filter: blur(6px) saturate(1.05);
+  backdrop-filter: blur(6px) saturate(1.05);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.12);
+
+  /* neutral depth + soft green tint */
+  box-shadow:
+    0 6px 18px rgba(2, 6, 23, 0.12),
+    0 8px 24px rgba(161, 213, 173, 0.06);
+}
+
+/* Optional: tighten inner wrapper if other places rely on .max-w-7xl spacing */
+.nav-glass > .max-w-7xl {
+  padding-top: 0.25rem;   /* align with py-2 change in component */
+  padding-bottom: 0.25rem;
 }
 
 /* Dark mode variant: slightly stronger translucency */
@@ -290,4 +306,3 @@ html, body {
 .pricing-table td:nth-child(5) {
   width: 15%;
 }
-  

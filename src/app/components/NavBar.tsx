@@ -106,7 +106,7 @@ export default function NavBar() {
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 nav-glass border-b font-moderniz">
-            <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="max-w-7xl mx-auto px-4 py-2">
                 <div className="flex items-center justify-between">
                     <Link href="/" className="flex items-center">
                         <Image
@@ -140,7 +140,7 @@ export default function NavBar() {
                                 className="relative text-white hover:text-white/80 transition-colors mr-2"
                                 aria-label="Shopping Cart"
                             >
-                                <ShoppingCart size={32} strokeWidth={2.5} />
+                                <ShoppingCart size={26} strokeWidth={2.2} />
                                 {totalItems > 0 && (
                                     <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                                         {totalItems}
@@ -159,7 +159,7 @@ export default function NavBar() {
                                         className="flex items-center text-white hover:text-white/80 transition-colors gap-2"
                                         aria-label="User Profile"
                                     >
-                                        <User size={28} strokeWidth={2.5} />
+                                        <User size={26} strokeWidth={2.2} />
                                         <span className="hidden sm:inline font-medium">{userName ?? "Profile"}</span>
                                     </button>
                                     <button
@@ -185,7 +185,7 @@ export default function NavBar() {
                         className="md:hidden text-white p-2"
                         aria-label="Toggle menu"
                     >
-                        {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+                        {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
                     </button>
 
                     {/* Mobile Menu */}
