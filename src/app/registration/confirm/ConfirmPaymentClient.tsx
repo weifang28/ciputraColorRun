@@ -5,6 +5,7 @@ import { useCart } from "../../context/CartContext";
 import { useState, useEffect } from "react";
 import PaymentSuccessModal from "../../components/PaymentSuccessModal";
 import TutorialModal from "../../components/TutorialModal";
+import { showToast } from "../../../lib/toast";
 
 export default function ConfirmPaymentClient() {
     const [showPopup, setShowPopup] = useState(false);
@@ -81,36 +82,56 @@ export default function ConfirmPaymentClient() {
     }, [fromCart, items, router]);
 
     async function compressImage(file: File, maxWidth = 1600, quality = 0.8): Promise<File> {
+        // Feature-detect APIs used by compression; if missing, return original file
+        if (typeof createImageBitmap !== "function" || !HTMLCanvasElement.prototype.toBlob) {
+            return file;
+        }
+
         // If already small, return original
         if (file.size <= 1_200_000) return file;
 
-        const imgBitmap = await createImageBitmap(file);
-        const ratio = Math.min(1, maxWidth / imgBitmap.width);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(imgBitmap.width * ratio);
-        canvas.height = Math.round(imgBitmap.height * ratio);
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return file;
-        ctx.drawImage(imgBitmap, 0, 0, canvas.width, canvas.height);
+        try {
+            const imgBitmap = await createImageBitmap(file);
+            const ratio = Math.min(1, maxWidth / imgBitmap.width);
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(imgBitmap.width * ratio);
+            canvas.height = Math.round(imgBitmap.height * ratio);
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return file;
+            ctx.drawImage(imgBitmap, 0, 0, canvas.width, canvas.height);
 
-        return await new Promise<File>((resolve) => {
-            canvas.toBlob(
-                (blob) => {
-                    if (!blob) return resolve(file);
-                    // keep original name but ensure correct type
-                    const compressed = new File([blob], file.name, { type: blob.type });
-                    resolve(compressed);
-                },
-                "image/jpeg",
-                quality
-            );
-        });
+            return await new Promise<File>((resolve) => {
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) return resolve(file);
+                        // keep original name but ensure correct type
+                        const compressed = new File([blob], file.name, { type: blob.type });
+                        resolve(compressed);
+                    },
+                    "image/jpeg",
+                    quality
+                );
+            });
+        } catch (err) {
+            console.warn("[compressImage] failed, returning original file:", err);
+            return file;
+        }
     }
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
+
         if (!proofFile) {
-            setError("Please upload payment proof");
+            const msg = "Please upload payment proof";
+            setError(msg);
+            showToast(msg, "error"); // show toast
+            return;
+        }
+
+        if (!navigator.onLine) {
+            const msg = "No network connection. Please try again when online.";
+            setError(msg);
+            showToast(msg, "error"); // show toast
             return;
         }
 
@@ -118,18 +139,21 @@ export default function ConfirmPaymentClient() {
         setIsSubmitting(true);
 
         try {
-            // compress if large - tuned to avoid huge payloads on serverless platforms
+            // compress if possible; if compression fails we still continue with original
             let uploadFile = proofFile;
             try {
                 uploadFile = await compressImage(proofFile, 1600, 0.78);
             } catch (compressErr) {
                 console.warn("[compressImage] failed, using original file:", compressErr);
+                uploadFile = proofFile;
             }
 
-            // Optional: quick safeguard to reject extremely large files (after compress)
-            const MAX_UPLOAD_BYTES = 5_000_000; // 5 MB hard limit per picture
+            // Enforce 5 MB limit (server expects <= 5MB)
+            const MAX_UPLOAD_BYTES = 5_000_000;
             if (uploadFile.size > MAX_UPLOAD_BYTES) {
-                setError("Image is too large after compression. Try a smaller image or reduce quality.");
+                const msg = `Selected image is too large (${(uploadFile.size / 1024 / 1024).toFixed(1)} MB). Please use an image under 5 MB.`;
+                setError(msg);
+                showToast(msg, "error"); // show toast
                 setIsSubmitting(false);
                 return;
             }
@@ -158,21 +182,35 @@ export default function ConfirmPaymentClient() {
             }
             formData.append("items", JSON.stringify(items));
 
+            // Important: include credentials so session cookies are sent on mobile (fixes auth-related silent failures)
             const res = await fetch("/api/payments", {
                 method: "POST",
                 body: formData,
+                credentials: "include",
             });
 
-            if (!res.ok) {
-                // try to parse server JSON error for better UX
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.error || "Upload failed");
+            // Try to parse JSON safely
+            let body: any = null;
+            const contentType = res.headers.get("content-type") || "";
+            if (contentType.includes("application/json")) {
+                body = await res.json().catch(() => ({}));
+            } else {
+                body = { message: await res.text().catch(() => res.statusText) };
             }
 
+            if (!res.ok) {
+                const serverMsg = body?.error || body?.message || res.statusText;
+                const msg = serverMsg || `Upload failed (status ${res.status})`;
+                showToast(String(msg), "error"); // show toast for server errors
+                throw new Error(msg);
+            }
+
+            // success
             clearCart();
             setSubmitted(true);
             setShowPopup(true);
 
+            showToast("Payment submitted — awaiting verification.", "success");
             // fire-and-forget notification
             (async () => {
                 try {
@@ -180,13 +218,17 @@ export default function ConfirmPaymentClient() {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ email, name: fullName }),
+                        credentials: "include",
                     });
                 } catch (e) {
                     console.warn("[notify/submission] failed:", e);
                 }
             })();
         } catch (err: any) {
-            setError(err.message || "Upload failed");
+            console.error("[ConfirmPayment] submit error:", err);
+            const msg = err?.message || "Upload failed. Please try again.";
+            setError(msg);
+            showToast(String(msg), "error"); // surface toast for unexpected errors
         } finally {
             setIsSubmitting(false);
         }
@@ -352,7 +394,9 @@ export default function ConfirmPaymentClient() {
                                     if (file.size > MAX_FILE_BYTES) {
                                         setProofFile(null);
                                         setFileName(null);
-                                        setError("Selected file exceeds 5 MB. Please choose a smaller image.");
+                                        const msg = "Selected file exceeds 5 MB. Please choose a smaller image.";
+                                        setError(msg);
+                                        showToast(msg, "error"); // show toast
                                         return;
                                     }
 
@@ -361,7 +405,7 @@ export default function ConfirmPaymentClient() {
                                     setProofFile(file);
                                     setFileName(file.name);
                                 }}
-                                 required
+                                required
                             />
 
                            {/* Show upload errors inline */}
