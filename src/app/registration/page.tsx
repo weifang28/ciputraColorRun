@@ -137,11 +137,22 @@ export default function RegistrationPage() {
 
         (async () => {
             try {
-                const res = await fetch("/api/categories");
+                // Add cache buster to force fresh data
+                const timestamp = Date.now();
+                const res = await fetch(`/api/categories?t=${timestamp}`);
                 if (!res.ok) throw new Error("Failed to load categories");
                 const data = await res.json();
                 setCategories(data);
                 if (data.length > 0) setCategoryId(data[0].id);
+                
+                // Log early bird info for debugging
+                console.log('[Registration] Loaded categories with early bird:', 
+                    data.map((c: any) => ({ 
+                        name: c.name, 
+                        capacity: c.earlyBirdCapacity, 
+                        remaining: c.earlyBirdRemaining 
+                    }))
+                );
             } catch (err) {
                 console.error("Failed to load categories:", err);
                 showToast("Failed to load categories. Please refresh the page.", "error");
