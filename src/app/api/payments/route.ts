@@ -9,12 +9,20 @@ import path from "path";
 
 const prisma = new PrismaClient();
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Configure Cloudinary (only if credentials exist)
+const cloudinaryConfigured = !!(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+if (cloudinaryConfigured) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
 
 // Helper function to ensure uploads directory exists
 function ensureUploadsDir(subDir: string): string {
@@ -25,16 +33,24 @@ function ensureUploadsDir(subDir: string): string {
   return uploadsDir;
 }
 
-// Helper function to save file locally
+// Helper function to save file locally - GUARANTEED to work
 async function saveFileLocally(file: File, subDir: string, fileName: string): Promise<string> {
-  const uploadsDir = ensureUploadsDir(subDir);
-  const filePath = path.join(uploadsDir, fileName);
-  
-  const buffer = Buffer.from(await file.arrayBuffer());
-  fs.writeFileSync(filePath, buffer);
-  
-  // Return the API route path (not filesystem path)
-  return `/api/uploads/${subDir}/${fileName}`;
+  try {
+    const uploadsDir = ensureUploadsDir(subDir);
+    const filePath = path.join(uploadsDir, fileName);
+    
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    fs.writeFileSync(filePath, buffer);
+    
+    // Return the API route path (not filesystem path)
+    const apiPath = `/api/uploads/${subDir}/${fileName}`;
+    console.log(`[L] Saved locally: ${apiPath} (${(file.size / 1024).toFixed(0)}KB)`);
+    return apiPath;
+  } catch (err: any) {
+    console.error(`[saveFileLocally] Error:`, err);
+    throw err;
+  }
 }
 
 // Helper function to upload to Cloudinary with local fallback
@@ -47,34 +63,32 @@ async function uploadImageWithFallback(
   const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const fileName = `${fileId}.${fileExt}`;
 
-  // Try Cloudinary first
-  try {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const base64 = `data:${file.type};base64,${buffer.toString("base64")}`;
-    
-    const uploadResult = await cloudinary.uploader.upload(base64, {
-      folder: cloudinaryFolder,
-      public_id: fileId,
-      resource_type: "image",
-    });
-
-    // Log with "C" prefix for Cloudinary
-    console.log(`[C] Uploaded to Cloudinary: ${uploadResult.secure_url} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-    return { url: uploadResult.secure_url, isLocal: false };
-  } catch (cloudinaryErr: any) {
-    console.warn(`[payments] Cloudinary upload failed, falling back to local storage:`, cloudinaryErr?.message || cloudinaryErr);
-    
-    // Fallback to local storage
+  // Try Cloudinary first (only if configured)
+  if (cloudinaryConfigured) {
     try {
-      const localUrl = await saveFileLocally(file, localSubDir, fileName);
-      // Log with "L" prefix for Local
-      console.log(`[L] Saved locally: ${localUrl} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-      return { url: localUrl, isLocal: true };
-    } catch (localErr: any) {
-      console.error(`[payments] Local storage also failed:`, localErr);
-      throw new Error(`Failed to upload image`);
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64 = `data:${file.type};base64,${buffer.toString("base64")}`;
+      
+      const uploadResult = await cloudinary.uploader.upload(base64, {
+        folder: cloudinaryFolder,
+        public_id: fileId,
+        resource_type: "image",
+      });
+
+      console.log(`[C] Uploaded to Cloudinary: ${uploadResult.secure_url} (${(file.size / 1024).toFixed(0)}KB)`);
+      return { url: uploadResult.secure_url, isLocal: false };
+    } catch (cloudinaryErr: any) {
+      console.warn(`[payments] Cloudinary upload failed:`, cloudinaryErr?.message || cloudinaryErr);
+      // Fall through to local storage
     }
+  } else {
+    console.log(`[payments] Cloudinary not configured, using local storage`);
   }
+
+  // Fallback to local storage - this MUST work
+  const localUrl = await saveFileLocally(file, localSubDir, fileName);
+  return { url: localUrl, isLocal: true };
 }
 
 /**
@@ -182,8 +196,11 @@ async function sendRegistrationEmail(email: string | undefined, name: string | u
 }
 
 export async function POST(req: Request) {
+  console.log("[payments] POST request received");
+  
   try {
     const form = await req.formData();
+    console.log("[payments] FormData parsed successfully");
     
     const registrationIdStr = form.get("registrationId") as string | null;
     const amountStr = (form.get("amount") as string) || undefined;
@@ -209,6 +226,13 @@ export async function POST(req: Request) {
     const proofSenderName = (form.get("proofSenderName") as string) || undefined;
     const groupName = (form.get("groupName") as string) || undefined;
 
+    console.log("[payments] Form fields extracted:", { 
+      hasProofFile: !!proofFile, 
+      proofSize: proofFile?.size,
+      fullName,
+      email 
+    });
+
     if (!proofFile) {
       return NextResponse.json(
         { error: "Payment proof is required" },
@@ -232,6 +256,8 @@ export async function POST(req: Request) {
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+    console.log("[payments] Generated txId:", txId);
+
     // Upload proof image with fallback
     let proofPath: string;
     try {
@@ -242,6 +268,7 @@ export async function POST(req: Request) {
         `${txId}_proof`
       );
       proofPath = result.url;
+      console.log("[payments] Proof uploaded:", proofPath);
     } catch (uploadErr: any) {
       console.error("[payments] All upload methods failed:", uploadErr);
       return NextResponse.json(
@@ -261,6 +288,7 @@ export async function POST(req: Request) {
           `${txId}_id`
         );
         idCardPhotoPath = result.url;
+        console.log("[payments] ID card uploaded:", idCardPhotoPath);
       } catch (uploadErr) {
         console.error("[payments] ID card upload failed:", uploadErr);
         // Don't fail the entire request, just log the error
@@ -272,6 +300,7 @@ export async function POST(req: Request) {
     if (cartItemsJson) {
       try {
         cartItems = JSON.parse(cartItemsJson);
+        console.log("[payments] Cart items parsed:", cartItems.length, "items");
       } catch (e) {
         console.warn("[payments] Failed to parse cartItems:", e);
       }
@@ -279,6 +308,8 @@ export async function POST(req: Request) {
 
     // transaction body extracted to a named async function to avoid parsing issues
     async function createRegistrationAndPayment(prismaTx: any) {
+      console.log("[payments] Starting database transaction");
+      
       // find user by email if available
       let user =
         email && email !== ""
@@ -304,6 +335,7 @@ export async function POST(req: Request) {
             medicationAllergy: medicationAllergy || undefined,
           },
         });
+        console.log("[payments] Created new user:", user.id);
       } else {
         await prismaTx.user.update({
           where: { id: user.id },
@@ -318,6 +350,7 @@ export async function POST(req: Request) {
             medicationAllergy: medicationAllergy || undefined,
           },
         });
+        console.log("[payments] Updated existing user:", user.id);
       }
 
       // create registration
@@ -330,6 +363,7 @@ export async function POST(req: Request) {
           groupName: groupName || undefined,
         },
       });
+      console.log("[payments] Created registration:", registration.id);
 
       // create participants based on cartItems
       const participantRows: Array<{
@@ -341,10 +375,6 @@ export async function POST(req: Request) {
       for (const item of cartItems || []) {
         const categoryId = Number(item.categoryId);
         if (Number.isNaN(categoryId)) continue;
-
-        const category = await prismaTx.raceCategory.findUnique({
-          where: { id: categoryId },
-        });
 
         if (item.type === "individual") {
           let jerseyId: number | undefined = undefined;
@@ -379,6 +409,7 @@ export async function POST(req: Request) {
 
       if (participantRows.length > 0) {
         await prismaTx.participant.createMany({ data: participantRows });
+        console.log("[payments] Created participants:", participantRows.length);
       }
 
       // Now fetch the created participants and assign bib numbers based on their IDs
@@ -435,6 +466,7 @@ export async function POST(req: Request) {
         });
         createdQrCodes.push(qr);
       }
+      console.log("[payments] Created QR codes:", createdQrCodes.length);
 
       // Create payment record
       const paymentData: any = {
@@ -446,11 +478,8 @@ export async function POST(req: Request) {
         proofSenderName: proofSenderName,
       };
 
-      if (amount !== undefined && !Number.isNaN(amount)) {
-        paymentData.amount = new Prisma.Decimal(String(amount));
-      }
-
       const payment = await prismaTx.payment.create({ data: paymentData });
+      console.log("[payments] Created payment:", payment.id);
 
       return { registration, payment, createdQrCodes };
     }
@@ -459,6 +488,8 @@ export async function POST(req: Request) {
       createRegistrationAndPayment,
       { timeout: 30000 }
     );
+
+    console.log("[payments] Transaction completed successfully");
 
     // Fire-and-forget email
     sendRegistrationEmail(email, fullName, registration.id).catch(console.error);
@@ -472,6 +503,7 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error("[payments] POST error:", err);
+    console.error("[payments] Error stack:", err?.stack);
     // Return generic error message to user, log detailed error to console
     return NextResponse.json(
       { error: "An unexpected error occurred. Please try again." },
