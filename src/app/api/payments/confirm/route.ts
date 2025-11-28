@@ -59,6 +59,7 @@ export async function POST(request: Request) {
          <p>Use this code in the mobile app or profile page to manage your registration.</p>`
       : `<p>Your registration has been confirmed. No access code available.</p>`;
 
+    // SMTP configuration
     const host = process.env.EMAIL_HOST;
     const port = Number(process.env.EMAIL_PORT);
     const secure = (process.env.EMAIL_SECURE) === 'true';
@@ -162,7 +163,7 @@ export async function POST(request: Request) {
       return reg;
     });
 
-    // fetch QR records for this registration and create image buffers & attachments
+    // 4) Fetch QR codes for this registration
     const qrRecords = await prisma.qrCode.findMany({
       where: { registrationId },
       include: { category: true },
@@ -172,12 +173,19 @@ export async function POST(request: Request) {
     // Build attachments (inline) and HTML parts for each QR
     const attachments: any[] = [];
     const qrHtmlParts: string[] = [];
+    
     for (const q of qrRecords) {
       const label = q.category?.name ? `<p style="margin:6px 0 8px;font-weight:600">${q.category?.name}</p>` : "";
       const rawToken = String(q.qrCodeData || "");
-      // Build absolute claim URL (server-side). Use NEXT_PUBLIC_APP_URL / APP_URL fallback.
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+      
+      // FIX: Build absolute claim URL using request host instead of env variables
+      const host = request.headers.get('host') || 'ciputrarun.com';
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      const appUrl = `${protocol}://${host}`;
+      
       const payload = rawToken.startsWith('http') ? rawToken : `${appUrl}/claim/${encodeURIComponent(rawToken)}`;
+      
+      console.log(`[confirm] Generated QR URL: ${payload}`); // Debug log
 
       // generate PNG buffer server-side
       let pngBuffer: Buffer;
@@ -206,6 +214,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // Build complete email HTML
     const mailHtml = `
       <div style="font-family: Inter, Arial, sans-serif; color:#111827; line-height:1.5; max-width:680px;">
         <h1 style="color:#0f172a;">Your Registration is Verified!</h1>

@@ -92,26 +92,25 @@ export default function ConfirmPaymentClient() {
     }
 
     // Upload file in chunks
-    async function uploadFileInChunks(file: File): Promise<string> {
-        const CHUNK_SIZE = 200 * 1024; // 200KB chunks (well under nginx limit)
+    async function uploadFileInChunks(file: File, subDir: string = "proofs"): Promise<string> {
+        const CHUNK_SIZE = 200 * 1024; // 200KB chunks
         const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
         const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-        const newFileName = `${uploadId}_proof.${fileExt}`;
+        const prefix = subDir === "id-cards" ? "id" : "proof";
+        const newFileName = `${uploadId}_${prefix}.${fileExt}`;
         
-        console.log(`[uploadFileInChunks] Uploading ${file.name} in ${totalChunks} chunks`);
+        console.log(`[uploadFileInChunks] Uploading ${file.name} to ${subDir} in ${totalChunks} chunks`);
         
         for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
             const start = chunkIndex * CHUNK_SIZE;
             const end = Math.min(start + CHUNK_SIZE, file.size);
             const chunk = file.slice(start, end);
             
-            // Convert chunk to base64
             const chunkBase64 = await new Promise<string>((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => {
                     const result = reader.result as string;
-                    // Remove data URL prefix
                     const base64 = result.split(',')[1];
                     resolve(base64);
                 };
@@ -119,7 +118,7 @@ export default function ConfirmPaymentClient() {
                 reader.readAsDataURL(chunk);
             });
             
-            setUploadStatus(`Uploading... ${Math.round((chunkIndex + 1) / totalChunks * 100)}%`);
+            setUploadStatus(`Uploading ${subDir}... ${Math.round((chunkIndex + 1) / totalChunks * 100)}%`);
             
             const res = await fetch('/api/payments/upload-chunk', {
                 method: 'POST',
@@ -130,6 +129,7 @@ export default function ConfirmPaymentClient() {
                     chunkIndex,
                     totalChunks,
                     uploadId,
+                    subDir, // Pass the subdirectory
                 }),
             });
             
@@ -139,7 +139,6 @@ export default function ConfirmPaymentClient() {
             
             const result = await res.json();
             
-            // Last chunk returns the file URL
             if (chunkIndex === totalChunks - 1 && result.fileUrl) {
                 return result.fileUrl;
             }
@@ -194,9 +193,14 @@ export default function ConfirmPaymentClient() {
 
         try {
             let proofUrl: string;
+            let idCardUrl: string | undefined;
+            
+            // Check if we can use FormData (small files)
+            const canUseFormData = proofFile.size < 500_000 && 
+                (!userDetails?.idCardPhoto || !(userDetails.idCardPhoto instanceof File) || userDetails.idCardPhoto.size < 500_000);
             
             // Try FormData first (fastest for small files)
-            if (proofFile.size < 500_000) { // Under 500KB, try direct upload
+            if (canUseFormData) {
                 console.log("[handleConfirmedSubmit] Trying direct FormData upload...");
                 
                 const formData = new FormData();
@@ -215,7 +219,9 @@ export default function ConfirmPaymentClient() {
                 formData.append("medicationAllergy", medicationAllergy || "");
                 formData.append("registrationType", items[0]?.type || "individual");
                 if (groupName?.trim()) formData.append("groupName", groupName.trim());
-                if (userDetails?.idCardPhoto) formData.append("idCardPhoto", userDetails.idCardPhoto);
+                if (userDetails?.idCardPhoto instanceof File) {
+                    formData.append("idCardPhoto", userDetails.idCardPhoto);
+                }
                 formData.append("items", JSON.stringify(items));
 
                 const res = await fetch("/api/payments", {
@@ -225,14 +231,11 @@ export default function ConfirmPaymentClient() {
                 });
 
                 if (res.ok) {
-                    const body = await res.json();
-                    // Success via FormData
                     clearCart();
                     setSubmitted(true);
                     setShowPopup(true);
                     showToast("Payment submitted — awaiting verification.", "success");
                     
-                    // Fire-and-forget notification
                     fetch("/api/notify/submission", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -248,19 +251,27 @@ export default function ConfirmPaymentClient() {
             
             // For large files or if FormData failed, use chunked upload
             console.log("[handleConfirmedSubmit] Using chunked upload...");
-            setUploadStatus("Uploading in chunks...");
+            setUploadStatus("Uploading payment proof...");
             
-            proofUrl = await uploadFileInChunks(proofFile);
+            proofUrl = await uploadFileInChunks(proofFile, "proofs");
             console.log("[handleConfirmedSubmit] Proof uploaded:", proofUrl);
             
-            // Now send metadata with proof URL
+            // Upload ID card if exists
+            if (userDetails?.idCardPhoto instanceof File) {
+                setUploadStatus("Uploading ID card...");
+                idCardUrl = await uploadFileInChunks(userDetails.idCardPhoto, "id-cards");
+                console.log("[handleConfirmedSubmit] ID card uploaded:", idCardUrl);
+            }
+            
+            // Now send metadata with file URLs
             setUploadStatus("Saving registration...");
             
             const res = await fetch("/api/payments/base64", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    proofUrl, // Send URL instead of base64
+                    proofUrl,
+                    idCardUrl, // ADD THIS
                     items,
                     amount: totalPrice,
                     fullName,
@@ -289,13 +300,11 @@ export default function ConfirmPaymentClient() {
                 throw new Error("Upload failed");
             }
 
-            // Success!
             clearCart();
             setSubmitted(true);
             setShowPopup(true);
             showToast("Payment submitted — awaiting verification.", "success");
 
-            // Fire-and-forget notification
             fetch("/api/notify/submission", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

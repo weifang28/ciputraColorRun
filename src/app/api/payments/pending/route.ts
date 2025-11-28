@@ -4,41 +4,27 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
-  const auth = await authenticateAdmin(request);
-  if (!auth.authenticated) {
-    return unauthorizedResponse(auth.error);
-  }
-
   try {
     const registrations = await prisma.registration.findMany({
-      where: { paymentStatus: "pending" },
+      where: {
+        paymentStatus: 'pending',
+      },
       include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            phone: true,
-            birthDate: true,
-            gender: true,
-            currentAddress: true,
-            nationality: true,
-            emergencyPhone: true,
-            medicalHistory: true,
-            idCardPhoto: true, // Make sure this is included
-          },
-        },
+        user: true,
+        payments: true,
         participants: {
           include: {
             category: true,
             jersey: true,
           },
         },
-        payments: true,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
 
-    const payments = registrations.map((reg) => {
+    const payments = registrations.map(reg => {
       const categoryCounts: Record<string, number> = {};
       const jerseySizes: Record<string, number> = {};
       
@@ -52,21 +38,22 @@ export async function GET(request: Request) {
 
       return {
         registrationId: reg.id,
-        userName: reg.user.name || "—",
+        userName: reg.user.name,
         email: reg.user.email,
         phone: reg.user.phone,
         registrationType: reg.registrationType,
-        groupName: reg.groupName || undefined,
+        groupName: reg.groupName || 'N/A',
         totalAmount: reg.totalAmount,
         createdAt: reg.createdAt,
         paymentStatus: reg.paymentStatus,
         participantCount: reg.participants.length,
-        categoryCounts,
-        jerseySizes,
-        payments: reg.payments.map((p) => ({
+        categoryCounts: Object.keys(categoryCounts).length > 0 ? categoryCounts : undefined,
+        jerseySizes: Object.keys(jerseySizes).length > 0 ? jerseySizes : undefined,
+        payments: reg.payments.map(p => ({
           id: p.id,
           amount: p.amount,
           proofOfPayment: p.proofOfPayment,
+          proofSenderName: (p as any).proofSenderName,
           status: p.status,
         })),
         user: {
@@ -76,7 +63,7 @@ export async function GET(request: Request) {
           nationality: reg.user.nationality,
           emergencyPhone: reg.user.emergencyPhone,
           medicalHistory: reg.user.medicalHistory,
-          idCardPhoto: reg.user.idCardPhoto, // MAKE SURE THIS IS HERE
+          idCardPhoto: reg.user.idCardPhoto,
         },
       };
     });
