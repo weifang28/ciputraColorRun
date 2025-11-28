@@ -9,7 +9,7 @@ datasource db {
 
 model User {
   id              Int            @id @default(autoincrement())
-  name            String
+  name            String?
   email           String         @unique
   phone           String
   accessCode      String         @unique
@@ -17,8 +17,9 @@ model User {
   password        String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-
-  // New fields
+  registrations   Registration[]
+  
+  // Personal details
   birthDate       DateTime?
   gender          String?
   currentAddress  String?
@@ -27,7 +28,6 @@ model User {
   emergencyPhone  String?
   medicalHistory  String?
   medicationAllergy String?
-  registrations   Registration[]
 }
 
 model RaceCategory {

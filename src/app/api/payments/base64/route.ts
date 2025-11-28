@@ -1,4 +1,5 @@
-// src/app/api/payments/route.ts
+// src/app/api/payments/base64/route.ts
+// This endpoint accepts JSON with base64-encoded images to bypass nginx body size limits
 
 import { NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
@@ -7,7 +8,6 @@ import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
 
-// Use singleton pattern for Prisma to avoid connection issues
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -18,7 +18,6 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-// Configure Cloudinary (only if credentials exist)
 const cloudinaryConfigured = !!(
   process.env.CLOUDINARY_CLOUD_NAME &&
   process.env.CLOUDINARY_API_KEY &&
@@ -33,7 +32,6 @@ if (cloudinaryConfigured) {
   });
 }
 
-// Helper function to ensure uploads directory exists
 function ensureUploadsDir(subDir: string): string {
   const uploadsDir = path.join(process.cwd(), "uploads", subDir);
   if (!fs.existsSync(uploadsDir)) {
@@ -42,59 +40,47 @@ function ensureUploadsDir(subDir: string): string {
   return uploadsDir;
 }
 
-// Helper function to save file locally
-async function saveFileLocally(file: File, subDir: string, fileName: string): Promise<string> {
-  try {
-    const uploadsDir = ensureUploadsDir(subDir);
-    const filePath = path.join(uploadsDir, fileName);
-    
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    fs.writeFileSync(filePath, buffer);
-    
-    const apiPath = `/api/uploads/${subDir}/${fileName}`;
-    console.log(`[L] Saved locally: ${apiPath} (${(file.size / 1024).toFixed(0)}KB)`);
-    return apiPath;
-  } catch (err: any) {
-    console.error(`[saveFileLocally] Error:`, err?.message || err);
-    throw new Error(`Failed to save file locally: ${err?.message || 'Unknown error'}`);
-  }
+function saveBase64Locally(base64Data: string, subDir: string, fileName: string): string {
+  const uploadsDir = ensureUploadsDir(subDir);
+  const filePath = path.join(uploadsDir, fileName);
+  
+  // Remove data URL prefix if present
+  const base64Clean = base64Data.replace(/^data:image\/\w+;base64,/, "");
+  const buffer = Buffer.from(base64Clean, "base64");
+  
+  fs.writeFileSync(filePath, buffer);
+  
+  const apiPath = `/api/uploads/${subDir}/${fileName}`;
+  console.log(`[L] Saved locally: ${apiPath} (${(buffer.length / 1024).toFixed(0)}KB)`);
+  return apiPath;
 }
 
-// Helper function to upload to Cloudinary with local fallback
-async function uploadImageWithFallback(
-  file: File,
+async function uploadBase64WithFallback(
+  base64Data: string,
   cloudinaryFolder: string,
   localSubDir: string,
-  fileId: string
+  fileId: string,
+  fileExt: string = "jpg"
 ): Promise<{ url: string; isLocal: boolean }> {
-  const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const fileName = `${fileId}.${fileExt}`;
 
-  // Try Cloudinary first (only if configured)
+  // Try Cloudinary first
   if (cloudinaryConfigured) {
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64 = `data:${file.type};base64,${buffer.toString("base64")}`;
-      
-      const uploadResult = await cloudinary.uploader.upload(base64, {
+      const uploadResult = await cloudinary.uploader.upload(base64Data, {
         folder: cloudinaryFolder,
         public_id: fileId,
         resource_type: "image",
       });
-
-      console.log(`[C] Uploaded to Cloudinary: ${uploadResult.secure_url} (${(file.size / 1024).toFixed(0)}KB)`);
+      console.log(`[C] Uploaded to Cloudinary: ${uploadResult.secure_url}`);
       return { url: uploadResult.secure_url, isLocal: false };
-    } catch (cloudinaryErr: any) {
-      console.warn(`[payments] Cloudinary upload failed:`, cloudinaryErr?.message || cloudinaryErr);
+    } catch (err: any) {
+      console.warn(`[base64] Cloudinary failed, falling back to local:`, err?.message);
     }
-  } else {
-    console.log(`[payments] Cloudinary not configured, using local storage`);
   }
 
-  // Fallback to local storage
-  const localUrl = await saveFileLocally(file, localSubDir, fileName);
+  // Fallback to local storage - THIS WILL ALWAYS WORK
+  const localUrl = saveBase64Locally(base64Data, localSubDir, fileName);
   return { url: localUrl, isLocal: true };
 }
 
@@ -129,29 +115,23 @@ async function generateAccessCode(fullName: string): Promise<string> {
 function generateBibNumber(categoryName: string | undefined, participantId: number): string {
   const catLower = (categoryName || "").toLowerCase().replace(/\s+/g, "");
   let prefix = "0";
-  
   if (catLower.includes("3k") || catLower === "3km") prefix = "3";
   else if (catLower.includes("5k") || catLower === "5km") prefix = "5";
   else if (catLower.includes("10k") || catLower === "10km") prefix = "10";
-  
   return `${prefix}${String(participantId).padStart(4, "0")}`;
 }
 
 async function sendRegistrationEmail(email: string | undefined, name: string | undefined, registrationId: number) {
   if (!email) return;
-  
   try {
     const user = process.env.EMAIL_USER;
     const pass = process.env.EMAIL_PASS;
-    if (!user || !pass) {
-      console.warn("[sendRegistrationEmail] SMTP not configured");
-      return;
-    }
+    if (!user || !pass) return;
 
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: Number(process.env.EMAIL_PORT),
-      secure: (process.env.EMAIL_SECURE) === "true",
+      secure: process.env.EMAIL_SECURE === "true",
       auth: { user, pass },
     });
 
@@ -172,123 +152,101 @@ async function sendRegistrationEmail(email: string | undefined, name: string | u
         </div>
       `,
     });
-    console.log(`[sendRegistrationEmail] Sent to ${email}`);
   } catch (err) {
     console.error("[sendRegistrationEmail] Failed:", err);
   }
 }
 
 export async function POST(req: Request) {
-  console.log("[payments] POST request received");
-  
-  let proofPath: string | undefined;
-  let idCardPhotoPath: string | undefined;
-  
+  console.log("[payments/base64] POST request received");
+
   try {
-    // Step 1: Parse form data
-    console.log("[payments] Step 1: Parsing form data...");
-    const form = await req.formData();
+    const body = await req.json();
     
-    const proofFile = form.get("proof") as File | null;
-    const idCardPhotoFile = form.get("idCardPhoto") as File | null;
-    const cartItemsJson = (form.get("items") as string) || (form.get("cartItems") as string) || undefined;
-    const amountStr = (form.get("amount") as string) || undefined;
-    
-    const fullName = (form.get("fullName") as string) || undefined;
-    const email = (form.get("email") as string) || undefined;
-    const phone = (form.get("phone") as string) || undefined;
-    const birthDate = (form.get("birthDate") as string) || undefined;
-    const gender = (form.get("gender") as string) || undefined;
-    const currentAddress = (form.get("currentAddress") as string) || undefined;
-    const nationality = (form.get("nationality") as string) || undefined;
-    const emergencyPhone = (form.get("emergencyPhone") as string) || undefined;
-    const medicalHistory = (form.get("medicalHistory") as string) || undefined;
-    const medicationAllergy = (form.get("medicationAllergy") as string) || undefined;
-    const registrationType = (form.get("registrationType") as string) || "individual";
-    const proofSenderName = (form.get("proofSenderName") as string) || undefined;
-    const groupName = (form.get("groupName") as string) || undefined;
+    const {
+      proofBase64,
+      proofFileName,
+      idCardBase64,
+      idCardFileName,
+      items,
+      amount,
+      fullName,
+      email,
+      phone,
+      birthDate,
+      gender,
+      currentAddress,
+      nationality,
+      emergencyPhone,
+      medicalHistory,
+      medicationAllergy,
+      registrationType,
+      proofSenderName,
+      groupName,
+    } = body;
 
-    console.log("[payments] Form parsed:", { 
-      hasProof: !!proofFile, 
-      proofSize: proofFile?.size,
-      fullName, 
-      email 
-    });
-
-    if (!proofFile) {
+    if (!proofBase64) {
       return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
     }
 
-    const amount = amountStr ? Number(amountStr) : undefined;
     const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const proofExt = proofFileName?.split(".").pop()?.toLowerCase() || "jpg";
 
-    // Step 2: Upload proof image (BEFORE transaction to reduce transaction time)
-    console.log("[payments] Step 2: Uploading proof image...");
-    try {
-      const result = await uploadImageWithFallback(
-        proofFile,
-        "ciputra-color-run/proofs",
-        "proofs",
-        `${txId}_proof`
-      );
-      proofPath = result.url;
-      console.log("[payments] Proof uploaded:", proofPath);
-    } catch (uploadErr: any) {
-      console.error("[payments] Proof upload failed:", uploadErr);
-      return NextResponse.json(
-        { error: "Failed to upload payment proof. Please try again." },
-        { status: 500 }
-      );
-    }
+    // Upload proof - will fallback to local if Cloudinary fails
+    console.log("[payments/base64] Uploading proof...");
+    const proofResult = await uploadBase64WithFallback(
+      proofBase64,
+      "ciputra-color-run/proofs",
+      "proofs",
+      `${txId}_proof`,
+      proofExt
+    );
+    const proofPath = proofResult.url;
+    console.log("[payments/base64] Proof saved:", proofPath, proofResult.isLocal ? "(local)" : "(cloudinary)");
 
-    // Step 3: Upload ID card if provided (BEFORE transaction)
-    if (idCardPhotoFile) {
-      console.log("[payments] Step 3: Uploading ID card...");
+    // Upload ID card if provided
+    let idCardPhotoPath: string | undefined;
+    if (idCardBase64) {
+      console.log("[payments/base64] Uploading ID card...");
+      const idExt = idCardFileName?.split(".").pop()?.toLowerCase() || "jpg";
       try {
-        const result = await uploadImageWithFallback(
-          idCardPhotoFile,
+        const idResult = await uploadBase64WithFallback(
+          idCardBase64,
           "ciputra-color-run/id-cards",
           "id-cards",
-          `${txId}_id`
+          `${txId}_id`,
+          idExt
         );
-        idCardPhotoPath = result.url;
-        console.log("[payments] ID card uploaded:", idCardPhotoPath);
-      } catch (uploadErr) {
-        console.warn("[payments] ID card upload failed (non-fatal):", uploadErr);
+        idCardPhotoPath = idResult.url;
+        console.log("[payments/base64] ID card saved:", idCardPhotoPath);
+      } catch (err) {
+        console.warn("[payments/base64] ID card upload failed (non-fatal):", err);
       }
     }
 
-    // Step 4: Parse cart items (BEFORE transaction)
-    console.log("[payments] Step 4: Parsing cart items...");
+    // Parse cart items
     let cartItems: any[] = [];
-    if (cartItemsJson) {
+    if (items) {
       try {
-        cartItems = JSON.parse(cartItemsJson);
-        console.log("[payments] Cart items:", cartItems.length);
+        cartItems = typeof items === "string" ? JSON.parse(items) : items;
       } catch (e) {
-        console.warn("[payments] Failed to parse cartItems:", e);
+        console.warn("[payments/base64] Failed to parse items:", e);
       }
     }
 
-    // Step 5: Pre-fetch jersey options BEFORE transaction to reduce transaction time
-    console.log("[payments] Step 5: Pre-fetching jersey options...");
+    // Pre-fetch jersey options
     const jerseyOptions = await prisma.jerseyOption.findMany();
-    const jerseyMap = new Map(jerseyOptions.map(j => [j.size, j.id]));
+    const jerseyMap = new Map(jerseyOptions.map((j) => [j.size, j.id]));
     const defaultJerseyId = jerseyOptions[0]?.id ?? 1;
 
-    // Step 6: Generate access code BEFORE transaction
-    console.log("[payments] Step 6: Generating access code...");
+    // Generate access code
     const accessCode = await generateAccessCode(fullName || "user");
 
-    // Step 7: Database transaction - OPTIMIZED for Prisma Accelerate's 15s limit
-    // Remove timeout option as Accelerate enforces its own limit
-    console.log("[payments] Step 7: Starting database transaction...");
-    
+    // Database transaction
+    console.log("[payments/base64] Starting transaction...");
     const result = await prisma.$transaction(async (tx) => {
-      // Find or create user
       let user = email ? await tx.user.findUnique({ where: { email } }) : null;
 
-      // Build user data object - only include medicationAllergy if schema supports it
       const userData: any = {
         birthDate: birthDate ? new Date(birthDate) : undefined,
         gender: gender || undefined,
@@ -298,7 +256,6 @@ export async function POST(req: Request) {
         medicalHistory: medicalHistory || undefined,
       };
 
-      // Only add medicationAllergy if it's defined (schema might not have it yet)
       if (medicationAllergy !== undefined) {
         userData.medicationAllergy = medicationAllergy;
       }
@@ -307,7 +264,7 @@ export async function POST(req: Request) {
         user = await tx.user.create({
           data: {
             name: fullName,
-            email: email || `temp_${txId}@temp.com`, // Fallback email
+            email: email || `temp_${txId}@temp.com`,
             phone: phone || "",
             accessCode,
             role: "user",
@@ -315,7 +272,6 @@ export async function POST(req: Request) {
             ...userData,
           },
         });
-        console.log("[payments] Created user:", user.id);
       } else {
         await tx.user.update({
           where: { id: user.id },
@@ -324,22 +280,18 @@ export async function POST(req: Request) {
             ...userData,
           },
         });
-        console.log("[payments] Updated user:", user.id);
       }
 
-      // Create registration
       const registration = await tx.registration.create({
         data: {
           userId: user.id,
-          registrationType,
+          registrationType: registrationType || "individual",
           paymentStatus: "pending",
           totalAmount: new Prisma.Decimal(String(amount ?? 0)),
           groupName: groupName || undefined,
         },
       });
-      console.log("[payments] Created registration:", registration.id);
 
-      // Build participant rows using pre-fetched jersey data
       const participantRows: Array<{ registrationId: number; categoryId: number; jerseyId: number }> = [];
 
       for (const item of cartItems) {
@@ -362,40 +314,33 @@ export async function POST(req: Request) {
         }
       }
 
-      // Batch create participants
       if (participantRows.length > 0) {
         await tx.participant.createMany({ data: participantRows });
-        console.log("[payments] Created participants:", participantRows.length);
       }
 
-      // Create payment record
       const payment = await tx.payment.create({
         data: {
           registrationId: registration.id,
           transactionId: txId,
-          proofOfPayment: proofPath!,
+          proofOfPayment: proofPath,
           status: "pending",
           amount: new Prisma.Decimal(String(amount ?? 0)),
           proofSenderName: proofSenderName,
         },
       });
-      console.log("[payments] Created payment:", payment.id);
 
       return { registration, payment, userId: user.id };
     });
 
-    console.log("[payments] Transaction completed successfully");
+    console.log("[payments/base64] Transaction completed");
 
-    // Step 8: Post-transaction operations (bib numbers, QR codes) - OUTSIDE transaction
-    console.log("[payments] Step 8: Assigning bib numbers and creating QR codes...");
-    
+    // Post-transaction: bib numbers and QR codes
     const createdParticipants = await prisma.participant.findMany({
       where: { registrationId: result.registration.id },
       include: { category: true },
-      orderBy: { id: 'asc' },
+      orderBy: { id: "asc" },
     });
 
-    // Update bib numbers (can be done outside transaction)
     for (const participant of createdParticipants) {
       const bibNumber = generateBibNumber(participant.category?.name, participant.id);
       await prisma.participant.update({
@@ -404,7 +349,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Create QR codes (can be done outside transaction)
     const grouped = createdParticipants.reduce((acc: Record<number, number>, r) => {
       const cid = r.categoryId ?? 0;
       acc[cid] = (acc[cid] || 0) + 1;
@@ -425,9 +369,7 @@ export async function POST(req: Request) {
       });
       createdQrCodes.push(qr);
     }
-    console.log("[payments] Created QR codes:", createdQrCodes.length);
 
-    // Fire-and-forget email
     sendRegistrationEmail(email, fullName, result.registration.id).catch(console.error);
 
     return NextResponse.json({
@@ -437,39 +379,22 @@ export async function POST(req: Request) {
       transactionId: txId,
       qrCodes: createdQrCodes,
     });
-
   } catch (err: any) {
-    console.error("[payments] POST error:", err?.message || err);
-    console.error("[payments] Error stack:", err?.stack);
-    console.error("[payments] Error code:", err?.code);
-    
-    // Check for specific Prisma errors
-    if (err?.code === 'P2002') {
-      return NextResponse.json(
-        { error: "A registration with this email already exists." },
-        { status: 409 }
-      );
-    }
-    
-    if (err?.code === 'P2024' || err?.code === 'P6005' || err?.message?.includes('timed out') || err?.message?.includes('15000ms')) {
-      return NextResponse.json(
-        { error: "Server is busy. Please try again in a moment." },
-        { status: 503 }
-      );
+    console.error("[payments/base64] Error:", err?.message || err);
+    console.error("[payments/base64] Stack:", err?.stack);
+
+    if (err?.code === "P2002") {
+      return NextResponse.json({ error: "A registration with this email already exists." }, { status: 409 });
     }
 
-    // Handle unknown field errors (like medicationAllergy not existing)
-    if (err?.message?.includes('Unknown argument')) {
-      console.error("[payments] Schema mismatch - run prisma migrate");
-      return NextResponse.json(
-        { error: "Server configuration error. Please contact support." },
-        { status: 500 }
-      );
+    if (err?.code === "P6005" || err?.message?.includes("15000ms")) {
+      return NextResponse.json({ error: "Server is busy. Please try again." }, { status: 503 });
     }
 
-    return NextResponse.json(
-      { error: "An unexpected error occurred. Please try again." },
-      { status: 500 }
-    );
+    if (err?.message?.includes("Unknown argument")) {
+      return NextResponse.json({ error: "Server configuration error." }, { status: 500 });
+    }
+
+    return NextResponse.json({ error: "An unexpected error occurred. Please try again." }, { status: 500 });
   }
 }

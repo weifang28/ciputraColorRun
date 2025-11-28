@@ -3,7 +3,6 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useCart } from "../../context/CartContext";
 import { useState, useEffect } from "react";
-import PaymentSuccessModal from "../../components/PaymentSuccessModal";
 import TutorialModal from "../../components/TutorialModal";
 import { showToast } from "../../../lib/toast";
 
@@ -35,7 +34,7 @@ export default function ConfirmPaymentClient() {
     const [proofFile, setProofFile] = useState<File | null>(null);
     const [fileName, setFileName] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [compressionStatus, setCompressionStatus] = useState<string>("");
+    const [uploadStatus, setUploadStatus] = useState<string>("");
 
     const uploadTutorialSteps = [
       {
@@ -82,119 +81,33 @@ export default function ConfirmPaymentClient() {
         }
     }, [fromCart, items, router, submitted]);
 
-    async function compressImage(file: File, maxWidth = 1600, quality = 0.8): Promise<File> {
-        // Feature-detect APIs used by compression; if missing, return original file
-        if (typeof createImageBitmap !== "function" || !HTMLCanvasElement.prototype.toBlob) {
-            return file;
-        }
-
-        // If already small, return original
-        if (file.size <= 900_000) return file;
-
-        try {
-            const imgBitmap = await createImageBitmap(file);
-            const ratio = Math.min(1, maxWidth / imgBitmap.width);
-            const canvas = document.createElement("canvas");
-            canvas.width = Math.round(imgBitmap.width * ratio);
-            canvas.height = Math.round(imgBitmap.height * ratio);
-            const ctx = canvas.getContext("2d");
-            if (!ctx) return file;
-            
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(imgBitmap, 0, 0, canvas.width, canvas.height);
-
-            return await new Promise<File>((resolve) => {
-                canvas.toBlob(
-                    (blob) => {
-                        if (!blob) return resolve(file);
-                        const compressed = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: "image/jpeg" });
-                        resolve(compressed);
-                    },
-                    "image/jpeg",
-                    quality
-                );
-            });
-        } catch (err) {
-            console.warn("[compressImage] failed, returning original file:", err);
-            return file;
-        }
+    // Convert File to base64
+    async function fileToBase64(file: File): Promise<string> {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
     }
 
-    // UPDATED: More aggressive compression to stay under nginx default 1MB limit
-    async function ensureUnderLimit(file: File, maxBytes: number): Promise<File | null> {
-        if (file.size <= maxBytes) return file;
-        
-        // Very aggressive settings to ensure we stay under limit
-        const widths = [1200, 1000, 800, 600, 500, 400, 300];
-        const qualities = [0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.15];
-        
-        for (const w of widths) {
-            for (const q of qualities) {
-                try {
-                    setCompressionStatus(`Optimizing image (${w}px, ${Math.round(q * 100)}% quality)...`);
-                    const candidate = await compressImage(file, w, q);
-                    if (candidate.size <= maxBytes) {
-                        console.log(`[ensureUnderLimit] Compressed from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(candidate.size / 1024 / 1024).toFixed(2)}MB`);
-                        setCompressionStatus("");
-                        return candidate;
-                    }
-                    if (candidate === file) break;
-                } catch (e) {
-                    // ignore and keep trying
-                }
-            }
-        }
-        setCompressionStatus("");
-        return null;
-    }
-
-    // UPDATED: More aggressive compression target (900KB to stay safely under 1MB nginx default)
+    // Handle file selection - no compression, just accept the file
     async function handleProofSelect(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Max file size we'll accept for processing
-        const ABSOLUTE_HARD_LIMIT = 20_000_000; // 20MB
-        if (file.size > ABSOLUTE_HARD_LIMIT) {
+        // Max 20MB
+        if (file.size > 20_000_000) {
             setProofFile(null);
             setFileName(null);
             showToast("File too large. Maximum size is 20MB.", "error");
             return;
         }
 
-        // Target size: 900KB to stay safely under nginx 1MB default
-        // This ensures it works even without nginx config changes
-        const SAFE_TARGET = 900_000; // 900KB
-        
-        setCompressionStatus("Processing image...");
-        
-        let processed: File | null = file;
-        
-        // Always try to compress if over target
-        if (file.size > SAFE_TARGET) {
-            processed = await ensureUnderLimit(file, SAFE_TARGET);
-            
-            if (!processed) {
-                // If we couldn't compress enough, show error
-                setProofFile(null);
-                setFileName(null);
-                setCompressionStatus("");
-                showToast("Unable to compress image enough. Please use a smaller or lower-resolution image.", "error");
-                return;
-            }
-        }
-        
-        setCompressionStatus("");
-
-        setProofFile(processed);
-        const sizeInfo = processed !== file 
-            ? ` (optimized: ${(processed.size / 1024).toFixed(0)}KB)` 
-            : ` (${(file.size / 1024).toFixed(0)}KB)`;
-        setFileName(file.name + sizeInfo);
+        setProofFile(file);
+        setFileName(`${file.name} (${(file.size / 1024).toFixed(0)}KB)`);
     }
 
-    // Handle form submission - show confirmation modal first
     async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
 
@@ -206,7 +119,7 @@ export default function ConfirmPaymentClient() {
         setShowConfirmModal(true);
     }
 
-    // Actual submission after user confirms
+    // Try FormData first, if 413 error, fallback to base64 JSON endpoint
     async function handleConfirmedSubmit() {
         if (!proofFile) {
             showToast("Please upload a payment proof image.", "error");
@@ -220,27 +133,15 @@ export default function ConfirmPaymentClient() {
 
         setIsSubmitting(true);
         setShowConfirmModal(false);
+        setUploadStatus("Uploading payment proof...");
 
         try {
-            // Final safety check - ensure file is under 900KB
-            let uploadFile = proofFile;
-            const UPLOAD_LIMIT = 900_000; // 900KB
+            // First, try the regular FormData endpoint
+            console.log("[handleConfirmedSubmit] Trying FormData upload...");
             
-            if (uploadFile.size > UPLOAD_LIMIT) {
-                console.log(`[handleConfirmedSubmit] File too large (${(uploadFile.size / 1024).toFixed(0)}KB), compressing...`);
-                const compressed = await ensureUnderLimit(uploadFile, UPLOAD_LIMIT);
-                if (compressed) {
-                    uploadFile = compressed;
-                } else {
-                    showToast("Unable to compress image enough. Please use a smaller image.", "error");
-                    setIsSubmitting(false);
-                    return;
-                }
-            }
-
             const formData = new FormData();
-            formData.append("proof", uploadFile);
-            if (proofSenderName && proofSenderName.trim() !== "") {
+            formData.append("proof", proofFile);
+            if (proofSenderName?.trim()) {
                 formData.append("proofSenderName", proofSenderName.trim());
             }
             formData.append("amount", String(totalPrice));
@@ -255,7 +156,7 @@ export default function ConfirmPaymentClient() {
             formData.append("medicalHistory", medicalHistory);
             formData.append("medicationAllergy", medicationAllergy || "");
             formData.append("registrationType", items[0]?.type || "individual");
-            if (groupName && groupName.trim() !== "") {
+            if (groupName?.trim()) {
                 formData.append("groupName", groupName.trim());
             }
             if (userDetails?.idCardPhoto) {
@@ -263,15 +164,56 @@ export default function ConfirmPaymentClient() {
             }
             formData.append("items", JSON.stringify(items));
 
-            console.log(`[handleConfirmedSubmit] Uploading file: ${(uploadFile.size / 1024).toFixed(0)}KB`);
-
-            const res = await fetch("/api/payments", {
+            let res = await fetch("/api/payments", {
                 method: "POST",
                 body: formData,
                 credentials: "include",
             });
 
-            // Try to parse JSON safely
+            // If we get 413 (nginx blocking), use the base64 fallback
+            if (res.status === 413) {
+                console.log("[handleConfirmedSubmit] Got 413, using base64 fallback...");
+                setUploadStatus("Retrying with alternative method...");
+                
+                // Convert files to base64
+                const proofBase64 = await fileToBase64(proofFile);
+                
+                let idCardBase64: string | undefined;
+                if (userDetails?.idCardPhoto instanceof File) {
+                    idCardBase64 = await fileToBase64(userDetails.idCardPhoto);
+                }
+
+                const jsonBody = {
+                    proofBase64,
+                    proofFileName: proofFile.name,
+                    idCardBase64,
+                    idCardFileName: userDetails?.idCardPhoto instanceof File ? userDetails.idCardPhoto.name : undefined,
+                    items: items,
+                    amount: totalPrice,
+                    fullName,
+                    email,
+                    phone,
+                    birthDate,
+                    gender,
+                    currentAddress,
+                    nationality,
+                    emergencyPhone,
+                    medicalHistory,
+                    medicationAllergy: medicationAllergy || "",
+                    registrationType: items[0]?.type || "individual",
+                    proofSenderName: proofSenderName?.trim() || undefined,
+                    groupName: groupName?.trim() || undefined,
+                };
+
+                res = await fetch("/api/payments/base64", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(jsonBody),
+                    credentials: "include",
+                });
+            }
+
+            // Parse response
             let body: any = null;
             const contentType = res.headers.get("content-type") || "";
             if (contentType.includes("application/json")) {
@@ -281,51 +223,32 @@ export default function ConfirmPaymentClient() {
             }
 
             if (!res.ok) {
-                // Log detailed error to console only
                 console.error("[handleConfirmedSubmit] Server error:", res.status, body);
                 
-                // Check if it's a 413 error (nginx blocking)
-                if (res.status === 413) {
-                    showToast("Image file is still too large. Please try a smaller image.", "error");
-                } else {
-                    const userFacingErrors = ["File too large", "Payment proof is required"];
-                    const errorMsg = body?.error || "";
-                    const isUserFacingError = userFacingErrors.some(e => errorMsg.includes(e));
-                    
-                    showToast(
-                        isUserFacingError ? errorMsg : "An unexpected error occurred. Please try again.",
-                        "error"
-                    );
-                }
+                const errorMsg = body?.error || "An unexpected error occurred. Please try again.";
+                showToast(errorMsg, "error");
                 throw new Error("Upload failed");
             }
 
-            // success
+            // Success!
             clearCart();
             setSubmitted(true);
             setShowPopup(true);
-
             showToast("Payment submitted — awaiting verification.", "success");
-            
+
             // Fire-and-forget notification
-            (async () => {
-                try {
-                    await fetch("/api/notify/submission", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ email, name: fullName }),
-                        credentials: "include",
-                    });
-                } catch (e) {
-                    console.warn("[notify/submission] failed:", e);
-                }
-            })();
+            fetch("/api/notify/submission", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, name: fullName }),
+                credentials: "include",
+            }).catch(() => {});
+
         } catch (err: any) {
-            // Log detailed error to console
             console.error("[ConfirmPayment] submit error:", err);
-            // Generic error already shown above, no need to show again
         } finally {
             setIsSubmitting(false);
+            setUploadStatus("");
         }
     }
 
@@ -435,7 +358,7 @@ export default function ConfirmPaymentClient() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-2">Sender's Name (as shown on transfer) <strong className="text-red-500">*</strong></label>
+                            <label className="block text-sm font-medium mb-2">Sender&apos;s Name (as shown on transfer) <strong className="text-red-500">*</strong></label>
                             <input
                                 type="text"
                                 value={proofSenderName}
@@ -457,7 +380,7 @@ export default function ConfirmPaymentClient() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                 </svg>
                                 <span className="text-sm text-gray-600">
-                                    {compressionStatus || fileName || "Click to upload payment proof (PNG, JPG, JPEG)"}
+                                    {uploadStatus || fileName || "Click to upload payment proof (PNG, JPG, JPEG)"}
                                 </span>
                             </label>
                             <input
@@ -468,7 +391,7 @@ export default function ConfirmPaymentClient() {
                                 onChange={handleProofSelect}
                                 required
                             />
-                            <p className="text-xs text-gray-500 mt-1">Images will be automatically optimized for upload.</p>
+                            <p className="text-xs text-gray-500 mt-1">Max 20MB. Large files will be uploaded via alternative method.</p>
 
                            {showUploadTutorial && (
                              <TutorialModal
@@ -489,15 +412,15 @@ export default function ConfirmPaymentClient() {
                             </button>
                             <button
                                 type="submit"
-                                disabled={isSubmitting || !!compressionStatus}
+                                disabled={isSubmitting}
                                 className={`flex-1 px-6 py-3 rounded-full font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-emerald-300 ${
-                                    isSubmitting || compressionStatus
+                                    isSubmitting
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-md'
                                 }`}
                                 style={{ letterSpacing: '0.2px' }}
                             >
-                                {isSubmitting ? "Uploading..." : "Submit Payment"}
+                                {isSubmitting ? (uploadStatus || "Uploading...") : "Submit Payment"}
                             </button>
                         </div>
                     </form>
