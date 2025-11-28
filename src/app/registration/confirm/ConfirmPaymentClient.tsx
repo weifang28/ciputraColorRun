@@ -587,21 +587,7 @@ export default function ConfirmPaymentClient() {
                     <div className="bg-white rounded-xl p-6 max-w-sm w-full text-center shadow-xl animate-fadeIn">
                         <h3 className="text-xl text-[#602d4e] font-bold mb-2">Payment Successful!</h3>
                         <p className="text-[#602d4e]/80 mb-4">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}    );        </main>            )}                </div>                    </div>                        </button>                            Close                        >                            className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors"                            onClick={() => setShowPopup(false)}                        <button                        </p>                            Your payment has been submitted successfully. Our team will verify your payment shortly.                            Thank you! Please join the WhatsApp group for important event information. Access codes will be provided once the payment has been verified.
+                            Thank you! Please join the WhatsApp group for important event information. Access codes will be provided once the payment has been verified.
                         </p>
                         <p className="text-[#602d4e]/80 mb-4">
                             We have also sent a confirmation email to <strong>{email}</strong>. Please check your inbox (and spam) for further confirmation.
