@@ -203,10 +203,7 @@ export async function POST(req: Request) {
       // NEW: Create early bird claims
       if (earlyBirdClaims.length > 0) {
         await tx.earlyBirdClaim.createMany({
-          data: earlyBirdClaims.map(claim => ({
-            ...claim,
-            registrationId: registration.id,
-          })),
+          data: earlyBirdClaims
         });
         console.log("[payments/base64] Created early bird claims:", earlyBirdClaims.length);
       }
