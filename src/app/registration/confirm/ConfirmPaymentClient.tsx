@@ -121,12 +121,13 @@ export default function ConfirmPaymentClient() {
         }
     }
 
-    // Try multiple size/quality combos to guarantee file under target bytes
+    // UPDATED: More aggressive compression to stay under nginx default 1MB limit
     async function ensureUnderLimit(file: File, maxBytes: number): Promise<File | null> {
         if (file.size <= maxBytes) return file;
         
-        const widths = [1400, 1200, 1000, 800, 600, 400];
-        const qualities = [0.75, 0.65, 0.55, 0.45, 0.35, 0.25];
+        // Very aggressive settings to ensure we stay under limit
+        const widths = [1200, 1000, 800, 600, 500, 400, 300];
+        const qualities = [0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.15];
         
         for (const w of widths) {
             for (const q of qualities) {
@@ -148,12 +149,13 @@ export default function ConfirmPaymentClient() {
         return null;
     }
 
-    // Safely handle selection: compress/resample immediately and store processed file
+    // UPDATED: More aggressive compression target (900KB to stay safely under 1MB nginx default)
     async function handleProofSelect(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const ABSOLUTE_HARD_LIMIT = 20_000_000;
+        // Max file size we'll accept for processing
+        const ABSOLUTE_HARD_LIMIT = 20_000_000; // 20MB
         if (file.size > ABSOLUTE_HARD_LIMIT) {
             setProofFile(null);
             setFileName(null);
@@ -161,34 +163,34 @@ export default function ConfirmPaymentClient() {
             return;
         }
 
-        const CLOUDINARY_TARGET = 4_000_000;
+        // Target size: 900KB to stay safely under nginx 1MB default
+        // This ensures it works even without nginx config changes
+        const SAFE_TARGET = 900_000; // 900KB
         
         setCompressionStatus("Processing image...");
         
         let processed: File | null = file;
         
-        if (file.size > CLOUDINARY_TARGET) {
-            processed = await ensureUnderLimit(file, CLOUDINARY_TARGET);
+        // Always try to compress if over target
+        if (file.size > SAFE_TARGET) {
+            processed = await ensureUnderLimit(file, SAFE_TARGET);
             
-            if (!processed && file.size <= ABSOLUTE_HARD_LIMIT) {
-                processed = file;
-                console.log(`[handleProofSelect] Using original file (${(file.size / 1024 / 1024).toFixed(2)}MB) - will use local fallback if needed`);
+            if (!processed) {
+                // If we couldn't compress enough, show error
+                setProofFile(null);
+                setFileName(null);
+                setCompressionStatus("");
+                showToast("Unable to compress image enough. Please use a smaller or lower-resolution image.", "error");
+                return;
             }
         }
         
         setCompressionStatus("");
 
-        if (!processed) {
-            setProofFile(null);
-            setFileName(null);
-            showToast("Unable to process image. Please try a smaller file.", "error");
-            return;
-        }
-
         setProofFile(processed);
         const sizeInfo = processed !== file 
-            ? ` (optimized: ${(processed.size / 1024 / 1024).toFixed(1)}MB)` 
-            : ` (${(file.size / 1024 / 1024).toFixed(1)}MB)`;
+            ? ` (optimized: ${(processed.size / 1024).toFixed(0)}KB)` 
+            : ` (${(file.size / 1024).toFixed(0)}KB)`;
         setFileName(file.name + sizeInfo);
     }
 
@@ -220,8 +222,24 @@ export default function ConfirmPaymentClient() {
         setShowConfirmModal(false);
 
         try {
+            // Final safety check - ensure file is under 900KB
+            let uploadFile = proofFile;
+            const UPLOAD_LIMIT = 900_000; // 900KB
+            
+            if (uploadFile.size > UPLOAD_LIMIT) {
+                console.log(`[handleConfirmedSubmit] File too large (${(uploadFile.size / 1024).toFixed(0)}KB), compressing...`);
+                const compressed = await ensureUnderLimit(uploadFile, UPLOAD_LIMIT);
+                if (compressed) {
+                    uploadFile = compressed;
+                } else {
+                    showToast("Unable to compress image enough. Please use a smaller image.", "error");
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
             const formData = new FormData();
-            formData.append("proof", proofFile);
+            formData.append("proof", uploadFile);
             if (proofSenderName && proofSenderName.trim() !== "") {
                 formData.append("proofSenderName", proofSenderName.trim());
             }
@@ -245,7 +263,7 @@ export default function ConfirmPaymentClient() {
             }
             formData.append("items", JSON.stringify(items));
 
-            console.log(`[handleConfirmedSubmit] Uploading file: ${(proofFile.size / 1024 / 1024).toFixed(2)}MB`);
+            console.log(`[handleConfirmedSubmit] Uploading file: ${(uploadFile.size / 1024).toFixed(0)}KB`);
 
             const res = await fetch("/api/payments", {
                 method: "POST",
@@ -266,15 +284,19 @@ export default function ConfirmPaymentClient() {
                 // Log detailed error to console only
                 console.error("[handleConfirmedSubmit] Server error:", res.status, body);
                 
-                // Show generic error to user (except for specific user-facing errors)
-                const userFacingErrors = ["File too large", "Payment proof is required"];
-                const errorMsg = body?.error || "";
-                const isUserFacingError = userFacingErrors.some(e => errorMsg.includes(e));
-                
-                showToast(
-                    isUserFacingError ? errorMsg : "An unexpected error occurred. Please try again.",
-                    "error"
-                );
+                // Check if it's a 413 error (nginx blocking)
+                if (res.status === 413) {
+                    showToast("Image file is still too large. Please try a smaller image.", "error");
+                } else {
+                    const userFacingErrors = ["File too large", "Payment proof is required"];
+                    const errorMsg = body?.error || "";
+                    const isUserFacingError = userFacingErrors.some(e => errorMsg.includes(e));
+                    
+                    showToast(
+                        isUserFacingError ? errorMsg : "An unexpected error occurred. Please try again.",
+                        "error"
+                    );
+                }
                 throw new Error("Upload failed");
             }
 
@@ -446,7 +468,7 @@ export default function ConfirmPaymentClient() {
                                 onChange={handleProofSelect}
                                 required
                             />
-                            <p className="text-xs text-gray-500 mt-1">Max file size: 50MB. Large images will be automatically optimized.</p>
+                            <p className="text-xs text-gray-500 mt-1">Images will be automatically optimized for upload.</p>
 
                            {showUploadTutorial && (
                              <TutorialModal
