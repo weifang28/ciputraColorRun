@@ -3,13 +3,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const DEFAULT_IMAGES = [
-  "/Homepage/about/about1.jpg",
-  "/Homepage/about/about2.jpg",
-  "/Homepage/about/about3.jpg",
-  "/Homepage/about/about4.jpg",
-  "/Homepage/about/about5.jpg",
-  "/Homepage/about/about6.jpg",
-  "/Homepage/about/about7.jpg",
+  "/homepage/about/about1JPG.jpg",
+  "/homepage/about/about2JPG.jpg",
+  "/homepage/about/about3JPG.jpg",
+  "/homepage/about/about4JPG.jpg",
+  "/hHomepage/about/about5JPG.jpg",
+  "/homepage/about/about6JPG.jpg",
+  "/homepage/about/about7JPG.jpg",
 ];
 
 export default function AboutCarousel({
@@ -128,7 +128,7 @@ export default function AboutCarousel({
         data-aos-anchor-placement="center-center"
       >
         <img
-          src="/Homepage/Divider.svg"
+          src="/homepage/Divider.svg"
           alt="divider"
           className="about-divider-img"
           loading="eager"
