@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { getPaymentProofUrl } from '../../../lib/imageUrl';
 
 export default function AdminConfirmedPage() {
   const [regs, setRegs] = useState<any[] | null>(null);
@@ -32,11 +33,11 @@ export default function AdminConfirmedPage() {
   if (!regs || regs.length === 0) return <div className="p-6">No confirmed registrations found.</div>;
 
   return (
-    <main className="p-6">
+    <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Confirmed Registrations</h1>
       <div className="space-y-4">
         {regs.map((r) => (
-          <div key={r.id} className="border rounded p-4">
+          <div key={r.id} className="border p-4 mb-4 rounded">
             <div className="flex justify-between items-start">
               <div>
                 <div className="font-semibold">{r.user?.name || "—"}</div>
@@ -46,12 +47,31 @@ export default function AdminConfirmedPage() {
               <div className="text-right">
                 <div className="text-sm">Registered: {new Date(r.createdAt).toLocaleString()}</div>
                 <div className="mt-2">
-                  {/* use the server-side proxy so both S3 urls and /tmp files work */}
+                  {/* UPDATED: use the server-side proxy so both Cloudinary and local files work */}
                   {r.payments && r.payments[0] ? (
                     <>
-                      <a href={`/api/payments/proof/${r.payments[0].id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline mr-2">View proof</a>
-                      <a href={`/api/payments/proof/${r.payments[0].id}`} target="_blank" rel="noreferrer" className="inline-block">
-                        <img src={`/api/payments/proof/${r.payments[0].id}`} alt="proof" className="w-20 h-14 object-cover rounded-md border" />
+                      <a 
+                        href={getPaymentProofUrl(r.payments[0].id)} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="text-xs text-blue-600 underline mr-2"
+                      >
+                        View proof
+                      </a>
+                      <a 
+                        href={getPaymentProofUrl(r.payments[0].id)} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="inline-block"
+                      >
+                        <img 
+                          src={getPaymentProofUrl(r.payments[0].id)} 
+                          alt="proof" 
+                          className="w-20 h-14 object-cover rounded-md border"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
                       </a>
                     </>
                   ) : null}
@@ -80,6 +100,6 @@ export default function AdminConfirmedPage() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

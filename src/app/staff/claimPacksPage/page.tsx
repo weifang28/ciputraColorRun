@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Package, User, Calendar, MapPin, Search, Eye, X } from 'lucide-react';
 import { showToast } from '../../../lib/toast';
+import { getImageUrl, getPaymentProofUrl } from '../../../lib/imageUrl';
 
 interface ClaimDetail {
   id: number;
@@ -583,8 +584,8 @@ export default function ClaimPacksPage() {
 
       {/* Registration Detail Modal (new) */}
       {showRegModal && selectedRegistration && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
               <div className="flex items-center justify-between">
@@ -600,7 +601,7 @@ export default function ClaimPacksPage() {
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Personal Information */}
               <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-4 border-2 border-emerald-200">
                 <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
@@ -716,48 +717,56 @@ export default function ClaimPacksPage() {
                 </div>
               </div>
 
-              {/* Payment Proof (if available) */}
+              {/* Payment Proof (if available) - UPDATED */}
               {selectedRegistration.payments?.[0]?.proofOfPayment && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-800 mb-3">Payment Proof</h3>
                   <a
-                    href={`/api/payments/proof/${selectedRegistration.payments[0].id}`}
+                    href={getPaymentProofUrl(selectedRegistration.payments[0].id)}
                     target="_blank"
                     rel="noreferrer"
                     className="block"
                   >
                     <img
-                      src={`/api/payments/proof/${selectedRegistration.payments[0].id}`}
+                      src={getPaymentProofUrl(selectedRegistration.payments[0].id)}
                       alt="Payment proof"
                       className="w-full max-w-md mx-auto rounded-lg border-2 border-gray-300 hover:border-emerald-500 transition-all cursor-pointer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23f3f4f6' width='400' height='300'/%3E%3Ctext fill='%236b7280' font-family='sans-serif' font-size='16' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3EProof not available%3C/text%3E%3C/svg%3E";
+                      }}
                     />
                   </a>
                   <p className="text-xs text-gray-500 text-center mt-2">Click to view full size</p>
                 </div>
               )}
 
-             {/* ID Card/Passport Photo */}
-             {selectedRegistration.user?.idCardPhoto && (
-               <div className="bg-gray-50 rounded-lg p-4">
-                 <h3 className="font-semibold text-gray-800 mb-3">
-                   {selectedRegistration.user.nationality === 'WNI' ? 'KTP/ID Card Photo' : 'Passport Photo'}
-                 </h3>
-                 <a
-                   href={selectedRegistration.user.idCardPhoto}
-                   target="_blank"
-                   rel="noreferrer"
-                   className="block"
-                 >
-                   <img
-                     src={selectedRegistration.user.idCardPhoto}
-                     alt={selectedRegistration.user.nationality === 'WNI' ? 'KTP' : 'Passport'}
-                     className="w-full max-w-md mx-auto rounded-lg border-2 border-gray-300 hover:border-emerald-500 transition-all cursor-pointer"
-                   />
-                 </a>
-                 <p className="text-xs text-gray-500 text-center mt-2">Click to view full size</p>
-               </div>
-             )}
+              {/* ID Card/Passport Photo - UPDATED */}
+              {selectedRegistration.user?.idCardPhoto && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-800 mb-3">
+                    {selectedRegistration.user.nationality === 'WNI' ? 'KTP/ID Card Photo' : 'Passport Photo'}
+                  </h3>
+                  <a
+                    href={getImageUrl(selectedRegistration.user.idCardPhoto) || '#'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block"
+                  >
+                    <img
+                      src={getImageUrl(selectedRegistration.user.idCardPhoto) || ''}
+                      alt={selectedRegistration.user.nationality === 'WNI' ? 'KTP' : 'Passport'}
+                      className="w-full max-w-md mx-auto rounded-lg border-2 border-gray-300 hover:border-emerald-500 transition-all cursor-pointer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23f3f4f6' width='400' height='300'/%3E%3Ctext fill='%236b7280' font-family='sans-serif' font-size='16' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3EID not available%3C/text%3E%3C/svg%3E";
+                      }}
+                    />
+                  </a>
+                  <p className="text-xs text-gray-500 text-center mt-2">Click to view full size</p>
+                </div>
+              )}
             </div>
+
+            {/* Modal Footer */}
             <div className="p-6 border-t border-gray-200 bg-gray-50">
               <button
                 onClick={() => setShowRegModal(false)}
@@ -768,7 +777,7 @@ export default function ClaimPacksPage() {
             </div>
           </div>
         </div>
-    )}
+      )}
     </main>
   );
 }

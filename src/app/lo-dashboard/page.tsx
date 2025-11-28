@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, Calendar, MapPin, AlertCircle, LogOut, FileText, IdCard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getImageUrl, getPaymentProofUrl } from '../../lib/imageUrl';
 
 const TABS = [
   { key: 'pending', label: 'Pending', status: 'pending', color: 'yellow' },
@@ -339,114 +340,115 @@ export default function LODashboard() {
               />
             </div>
 
-            {/* Payments Grid */}
-            <div className="grid gap-4">
+            {/* Payment Cards */}
+            <div className="space-y-4">
               {filteredPayments.length > 0 ? (
-                filteredPayments.map(payment => (
+                filteredPayments.map((payment) => (
                   <div
                     key={payment.registrationId}
-                    className="bg-[#232326] rounded-xl border border-[#73e9dd]/20 hover:border-[#73e9dd]/50 transition-all hover:shadow-xl hover:shadow-[#73e9dd]/10 overflow-hidden"
+                    className="bg-[#232326] rounded-xl p-6 border border-[#73e9dd]/20 hover:border-[#73e9dd]/50 transition-all"
                   >
-                    <div className="p-6">
-                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl font-bold text-[#ffdfc0]">{payment.userName}</h3>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(payment.paymentStatus)}`}>
-                              {payment.paymentStatus}
-                            </span>
-                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#73e9dd]/20 text-[#73e9dd] border border-[#73e9dd]/50 capitalize">
-                              {payment.registrationType}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-4 text-sm text-[#ffdfc0]/60">
-                            <span className="flex items-center gap-1">
-                              <Mail size={14} /> {payment.email}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Phone size={14} /> {payment.phone}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar size={14} /> {new Date(payment.createdAt).toLocaleDateString('id-ID')}
-                            </span>
-                          </div>
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-xl font-bold text-[#ffdfc0]">{payment.userName}</h3>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(payment.paymentStatus)}`}>
+                            {payment.paymentStatus}
+                          </span>
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#73e9dd]/20 text-[#73e9dd] border border-[#73e9dd]/50 capitalize">
+                            {payment.registrationType}
+                          </span>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <div className="text-2xl font-bold text-[#91dcac]">
-                            Rp {Number(payment.totalAmount).toLocaleString('id-ID')}
-                          </div>
-                          <div className="text-sm text-[#ffdfc0]/60">
-                            {payment.participantCount} participant{payment.participantCount > 1 ? 's' : ''}
-                          </div>
+                        <div className="flex flex-wrap gap-4 text-sm text-[#ffdfc0]/60">
+                          <span className="flex items-center gap-1">
+                            <Mail size={14} /> {payment.email}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Phone size={14} /> {payment.phone}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar size={14} /> {new Date(payment.createdAt).toLocaleDateString('id-ID')}
+                          </span>
                         </div>
                       </div>
-
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {payment.payments?.[0] && (
-                          <a
-                            href={`/api/payments/proof/${payment.payments[0].id}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex-shrink-0"
-                          >
-                            <img
-                              src={`/api/payments/proof/${payment.payments[0].id}`}
-                              alt="Payment proof"
-                              className="w-24 h-24 object-cover rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all"
-                            />
-                          </a>
-                        )}
-                        {payment.categoryCounts && Object.entries(payment.categoryCounts).length > 0 && (
-                          <div className="flex-1 bg-[#18181b] rounded-lg p-3">
-                            <div className="text-xs text-[#73e9dd] mb-2 font-semibold">Categories:</div>
-                            <div className="flex flex-wrap gap-2">
-                              {Object.entries(payment.categoryCounts).map(([cat, count]) => (
-                                <span key={cat} className="px-2 py-1 bg-[#73e9dd]/10 text-[#73e9dd] rounded text-xs">
-                                  {cat}: {String(count)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {payment.jerseySizes && Object.entries(payment.jerseySizes).length > 0 && (
-                          <div className="flex-1 bg-[#18181b] rounded-lg p-3">
-                            <div className="text-xs text-[#73e9dd] mb-2 font-semibold">Jersey Sizes:</div>
-                            <div className="flex flex-wrap gap-2">
-                              {Object.entries(payment.jerseySizes).map(([size, count]) => (
-                                <span key={size} className="px-2 py-1 bg-[#91dcac]/10 text-[#91dcac] rounded text-xs">
-                                  {size}: {String(count)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="text-2xl font-bold text-[#91dcac]">
+                          Rp {Number(payment.totalAmount).toLocaleString('id-ID')}
+                        </div>
+                        <div className="text-sm text-[#ffdfc0]/60">
+                          {payment.participantCount} participant{payment.participantCount > 1 ? 's' : ''}
+                        </div>
                       </div>
+                    </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => openDetails(payment)}
-                          className="flex items-center gap-2 px-4 py-2 bg-[#73e9dd]/20 border border-[#73e9dd]/50 text-[#73e9dd] rounded-lg hover:bg-[#73e9dd]/30 transition-colors"
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {payment.payments?.[0] && (
+                        <a
+                          href={getPaymentProofUrl(payment.payments[0].id)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-shrink-0"
                         >
-                          <FileText size={16} />
-                          View Details
-                        </button>
-                        {activeTab === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleAccept(payment.registrationId)}
-                              className="px-4 py-2 bg-green-500/20 border border-green-500/50 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors font-semibold"
-                            >
-                              Accept
-                            </button>
-                            <button
-                              onClick={() => handleDecline(payment.registrationId)}
-                              className="px-4 py-2 bg-red-500/20 border border-red-500/50 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors font-semibold"
-                            >
-                              Decline
-                            </button>
-                          </>
-                        )}
-                      </div>
+                          <img
+                            src={getPaymentProofUrl(payment.payments[0].id)}
+                            alt="Payment proof"
+                            className="w-24 h-24 object-cover rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </a>
+                      )}
+                      {payment.categoryCounts && Object.entries(payment.categoryCounts).length > 0 && (
+                        <div className="flex-1 bg-[#18181b] rounded-lg p-3">
+                          <div className="text-xs text-[#73e9dd] mb-2 font-semibold">Categories:</div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(payment.categoryCounts).map(([cat, count]) => (
+                              <span key={cat} className="px-2 py-1 bg-[#73e9dd]/10 text-[#73e9dd] rounded text-xs">
+                                {cat}: {String(count)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {payment.jerseySizes && Object.entries(payment.jerseySizes).length > 0 && (
+                        <div className="flex-1 bg-[#18181b] rounded-lg p-3">
+                          <div className="text-xs text-[#73e9dd] mb-2 font-semibold">Jersey Sizes:</div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(payment.jerseySizes).map(([size, count]) => (
+                              <span key={size} className="px-2 py-1 bg-[#91dcac]/10 text-[#91dcac] rounded text-xs">
+                                {size}: {String(count)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => openDetails(payment)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#73e9dd]/20 border border-[#73e9dd]/50 text-[#73e9dd] rounded-lg hover:bg-[#73e9dd]/30 transition-colors"
+                      >
+                        <FileText size={16} />
+                        View Details
+                      </button>
+                      {activeTab === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => handleAccept(payment.registrationId)}
+                            className="px-4 py-2 bg-green-500/20 border border-green-500/50 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors font-semibold"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleDecline(payment.registrationId)}
+                            className="px-4 py-2 bg-red-500/20 border border-red-500/50 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors font-semibold"
+                          >
+                            Decline
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))
@@ -536,7 +538,7 @@ export default function LODashboard() {
                 </div>
               </div>
 
-              {/* ID Card/Passport Photo */}
+              {/* ID Card/Passport Photo - UPDATED */}
               {selectedPayment.user?.idCardPhoto && (
                 <div className="bg-[#18181b] rounded-xl p-6 border border-[#73e9dd]/20">
                   <h3 className="text-lg font-semibold text-[#91dcac] mb-4 flex items-center gap-2">
@@ -544,15 +546,18 @@ export default function LODashboard() {
                     {selectedPayment.user.nationality === 'WNI' ? 'KTP/ID Card Photo' : 'Passport Photo'}
                   </h3>
                   <a
-                    href={selectedPayment.user.idCardPhoto}
+                    href={getImageUrl(selectedPayment.user.idCardPhoto) || '#'}
                     target="_blank"
                     rel="noreferrer"
                     className="block"
                   >
                     <img
-                      src={selectedPayment.user.idCardPhoto}
+                      src={getImageUrl(selectedPayment.user.idCardPhoto) || ''}
                       alt="ID Card"
                       className="w-full max-w-2xl mx-auto rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all cursor-pointer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23374151' width='400' height='300'/%3E%3Ctext fill='%239CA3AF' font-family='sans-serif' font-size='16' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3EImage not available%3C/text%3E%3C/svg%3E";
+                      }}
                     />
                   </a>
                   <p className="text-xs text-[#ffdfc0]/60 text-center mt-2">Click to view full size</p>
@@ -610,20 +615,23 @@ export default function LODashboard() {
                 )}
               </div>
 
-              {/* Payment Proof */}
+              {/* Payment Proof - UPDATED */}
               {selectedPayment.payments?.[0] && (
                 <div className="bg-[#18181b] rounded-xl p-6 border border-[#73e9dd]/20">
                   <h3 className="text-lg font-semibold text-[#91dcac] mb-4">Payment Proof</h3>
                   <a
-                    href={`/api/payments/proof/${selectedPayment.payments[0].id}`}
+                    href={getPaymentProofUrl(selectedPayment.payments[0].id)}
                     target="_blank"
                     rel="noreferrer"
                     className="block"
                   >
                     <img
-                      src={`/api/payments/proof/${selectedPayment.payments[0].id}`}
+                      src={getPaymentProofUrl(selectedPayment.payments[0].id)}
                       alt="Payment proof"
                       className="w-full max-w-2xl mx-auto rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all cursor-pointer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23374151' width='400' height='300'/%3E%3Ctext fill='%239CA3AF' font-family='sans-serif' font-size='16' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3EProof not available%3C/text%3E%3C/svg%3E";
+                      }}
                     />
                   </a>
                   <p className="text-xs text-[#ffdfc0]/60 text-center mt-2">Click to view full size</p>
