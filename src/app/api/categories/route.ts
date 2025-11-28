@@ -33,20 +33,19 @@ export async function GET() {
     const categoriesWithRemaining = await Promise.all(
       categories.map(async (c) => {
         const claims = await prisma.earlyBirdClaim.count({ where: { categoryId: c.id } });
-        const remaining =
-          typeof c.earlyBirdCapacity === "number" ? Math.max(0, c.earlyBirdCapacity - claims) : null;
-        console.log(`[API] Category ${c.name}: capacity=${c.earlyBirdCapacity}, claims=${claims}, remaining=${remaining}`);
+        const remaining = Math.max(0, (c.earlyBirdCapacity ?? 0) - claims);
+        console.log(`[API] Category ${c.name}: ${claims} claims, ${remaining} remaining`);
         return { ...c, earlyBirdRemaining: remaining };
       })
     );
 
-    console.log('[API] Returning categories with remaining:', categoriesWithRemaining);
-    return NextResponse.json(categoriesWithRemaining);
-  } catch (err: any) {
-    console.error("GET /api/categories error:", err);
-    return NextResponse.json(
-      { error: "failed to load categories", details: err?.message },
-      { status: 500 }
-    );
+    return NextResponse.json(categoriesWithRemaining, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      },
+    });
+  } catch (error) {
+    console.error('[API] Error fetching categories:', error);
+    return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });
   }
 }

@@ -234,15 +234,13 @@ export default function ConfirmPaymentClient() {
                     setShowPopup(true);
                     showToast("Payment submitted — awaiting verification.", "success");
                     
-                    // Clear category cache to force refresh on registration page
-                    try {
-                        if ('caches' in window) {
-                            caches.delete('category-cache');
-                        }
-                        sessionStorage.removeItem('categories');
-                    } catch (e) {
-                        console.warn('Failed to clear category cache:', e);
-                    }
+                    // REMOVE THIS BLOCK - Server already sends email
+                    // fetch("/api/notify/submission", {
+                    //     method: "POST",
+                    //     headers: { "Content-Type": "application/json" },
+                    //     body: JSON.stringify({ email, name: fullName }),
+                    //     credentials: "include",
+                    // }).catch(() => {});
                     
                     setIsSubmitting(false);
                     setUploadStatus("");
@@ -303,15 +301,13 @@ export default function ConfirmPaymentClient() {
             setShowPopup(true);
             showToast("Payment submitted — awaiting verification.", "success");
 
-            // Clear category cache
-            try {
-                if ('caches' in window) {
-                    caches.delete('category-cache');
-                }
-                sessionStorage.removeItem('categories');
-            } catch (e) {
-                console.warn('Failed to clear category cache:', e);
-            }
+            // REMOVE THIS BLOCK - Server already sends email
+            // fetch("/api/notify/submission", {
+            //     method: "POST",
+            //     headers: { "Content-Type": "application/json" },
+            //     body: JSON.stringify({ email, name: fullName }),
+            //     credentials: "include",
+            // }).catch(() => {});
 
         } catch (err: any) {
             console.error("[ConfirmPayment] submit error:", err);

@@ -135,17 +135,20 @@ export default function RegistrationPage() {
             }
         })();
 
+        // Fetch categories - always fetch fresh data on mount
         (async () => {
             try {
-                // Add cache buster to force fresh data
-                const timestamp = Date.now();
-                const res = await fetch(`/api/categories?t=${timestamp}`);
+                const res = await fetch(`/api/categories`, {
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                    }
+                });
                 if (!res.ok) throw new Error("Failed to load categories");
                 const data = await res.json();
                 setCategories(data);
                 if (data.length > 0) setCategoryId(data[0].id);
                 
-                // Log early bird info for debugging
                 console.log('[Registration] Loaded categories with early bird:', 
                     data.map((c: any) => ({ 
                         name: c.name, 
@@ -160,7 +163,7 @@ export default function RegistrationPage() {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, []); // Empty dependency array - only run on mount
 
     // --- Move all hook-based computations here so they always run in the same order ---
     // Check if user has family bundle in cart
