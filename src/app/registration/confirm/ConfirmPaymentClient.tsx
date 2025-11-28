@@ -91,6 +91,63 @@ export default function ConfirmPaymentClient() {
         });
     }
 
+    // Upload file in chunks
+    async function uploadFileInChunks(file: File): Promise<string> {
+        const CHUNK_SIZE = 200 * 1024; // 200KB chunks (well under nginx limit)
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const newFileName = `${uploadId}_proof.${fileExt}`;
+        
+        console.log(`[uploadFileInChunks] Uploading ${file.name} in ${totalChunks} chunks`);
+        
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+            const start = chunkIndex * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+            
+            // Convert chunk to base64
+            const chunkBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const result = reader.result as string;
+                    // Remove data URL prefix
+                    const base64 = result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(chunk);
+            });
+            
+            setUploadStatus(`Uploading... ${Math.round((chunkIndex + 1) / totalChunks * 100)}%`);
+            
+            const res = await fetch('/api/payments/upload-chunk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chunk: chunkBase64,
+                    fileName: newFileName,
+                    chunkIndex,
+                    totalChunks,
+                    uploadId,
+                }),
+            });
+            
+            if (!res.ok) {
+                throw new Error(`Chunk ${chunkIndex + 1} upload failed`);
+            }
+            
+            const result = await res.json();
+            
+            // Last chunk returns the file URL
+            if (chunkIndex === totalChunks - 1 && result.fileUrl) {
+                return result.fileUrl;
+            }
+        }
+        
+        throw new Error('Upload failed - no file URL returned');
+    }
+
     // Handle file selection - no compression, just accept the file
     async function handleProofSelect(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -133,62 +190,78 @@ export default function ConfirmPaymentClient() {
 
         setIsSubmitting(true);
         setShowConfirmModal(false);
-        setUploadStatus("Uploading payment proof...");
+        setUploadStatus("Preparing upload...");
 
         try {
-            // First, try the regular FormData endpoint
-            console.log("[handleConfirmedSubmit] Trying FormData upload...");
+            let proofUrl: string;
             
-            const formData = new FormData();
-            formData.append("proof", proofFile);
-            if (proofSenderName?.trim()) {
-                formData.append("proofSenderName", proofSenderName.trim());
-            }
-            formData.append("amount", String(totalPrice));
-            formData.append("fullName", fullName);
-            formData.append("email", email);
-            formData.append("phone", phone);
-            formData.append("birthDate", birthDate);
-            formData.append("gender", gender);
-            formData.append("currentAddress", currentAddress);
-            formData.append("nationality", nationality);
-            formData.append("emergencyPhone", emergencyPhone);
-            formData.append("medicalHistory", medicalHistory);
-            formData.append("medicationAllergy", medicationAllergy || "");
-            formData.append("registrationType", items[0]?.type || "individual");
-            if (groupName?.trim()) {
-                formData.append("groupName", groupName.trim());
-            }
-            if (userDetails?.idCardPhoto) {
-                formData.append("idCardPhoto", userDetails.idCardPhoto);
-            }
-            formData.append("items", JSON.stringify(items));
-
-            let res = await fetch("/api/payments", {
-                method: "POST",
-                body: formData,
-                credentials: "include",
-            });
-
-            // If we get 413 (nginx blocking), use the base64 fallback
-            if (res.status === 413) {
-                console.log("[handleConfirmedSubmit] Got 413, using base64 fallback...");
-                setUploadStatus("Retrying with alternative method...");
+            // Try FormData first (fastest for small files)
+            if (proofFile.size < 500_000) { // Under 500KB, try direct upload
+                console.log("[handleConfirmedSubmit] Trying direct FormData upload...");
                 
-                // Convert files to base64
-                const proofBase64 = await fileToBase64(proofFile);
-                
-                let idCardBase64: string | undefined;
-                if (userDetails?.idCardPhoto instanceof File) {
-                    idCardBase64 = await fileToBase64(userDetails.idCardPhoto);
+                const formData = new FormData();
+                formData.append("proof", proofFile);
+                if (proofSenderName?.trim()) formData.append("proofSenderName", proofSenderName.trim());
+                formData.append("amount", String(totalPrice));
+                formData.append("fullName", fullName);
+                formData.append("email", email);
+                formData.append("phone", phone);
+                formData.append("birthDate", birthDate);
+                formData.append("gender", gender);
+                formData.append("currentAddress", currentAddress);
+                formData.append("nationality", nationality);
+                formData.append("emergencyPhone", emergencyPhone);
+                formData.append("medicalHistory", medicalHistory);
+                formData.append("medicationAllergy", medicationAllergy || "");
+                formData.append("registrationType", items[0]?.type || "individual");
+                if (groupName?.trim()) formData.append("groupName", groupName.trim());
+                if (userDetails?.idCardPhoto) formData.append("idCardPhoto", userDetails.idCardPhoto);
+                formData.append("items", JSON.stringify(items));
+
+                const res = await fetch("/api/payments", {
+                    method: "POST",
+                    body: formData,
+                    credentials: "include",
+                });
+
+                if (res.ok) {
+                    const body = await res.json();
+                    // Success via FormData
+                    clearCart();
+                    setSubmitted(true);
+                    setShowPopup(true);
+                    showToast("Payment submitted — awaiting verification.", "success");
+                    
+                    // Fire-and-forget notification
+                    fetch("/api/notify/submission", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email, name: fullName }),
+                        credentials: "include",
+                    }).catch(() => {});
+                    
+                    setIsSubmitting(false);
+                    setUploadStatus("");
+                    return;
                 }
-
-                const jsonBody = {
-                    proofBase64,
-                    proofFileName: proofFile.name,
-                    idCardBase64,
-                    idCardFileName: userDetails?.idCardPhoto instanceof File ? userDetails.idCardPhoto.name : undefined,
-                    items: items,
+            }
+            
+            // For large files or if FormData failed, use chunked upload
+            console.log("[handleConfirmedSubmit] Using chunked upload...");
+            setUploadStatus("Uploading in chunks...");
+            
+            proofUrl = await uploadFileInChunks(proofFile);
+            console.log("[handleConfirmedSubmit] Proof uploaded:", proofUrl);
+            
+            // Now send metadata with proof URL
+            setUploadStatus("Saving registration...");
+            
+            const res = await fetch("/api/payments/base64", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    proofUrl, // Send URL instead of base64
+                    items,
                     amount: totalPrice,
                     fullName,
                     email,
@@ -203,28 +276,14 @@ export default function ConfirmPaymentClient() {
                     registrationType: items[0]?.type || "individual",
                     proofSenderName: proofSenderName?.trim() || undefined,
                     groupName: groupName?.trim() || undefined,
-                };
+                }),
+                credentials: "include",
+            });
 
-                res = await fetch("/api/payments/base64", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(jsonBody),
-                    credentials: "include",
-                });
-            }
-
-            // Parse response
-            let body: any = null;
-            const contentType = res.headers.get("content-type") || "";
-            if (contentType.includes("application/json")) {
-                body = await res.json().catch(() => ({}));
-            } else {
-                body = { message: await res.text().catch(() => res.statusText) };
-            }
+            const body: any = await res.json().catch(() => ({}));
 
             if (!res.ok) {
                 console.error("[handleConfirmedSubmit] Server error:", res.status, body);
-                
                 const errorMsg = body?.error || "An unexpected error occurred. Please try again.";
                 showToast(errorMsg, "error");
                 throw new Error("Upload failed");
@@ -246,6 +305,7 @@ export default function ConfirmPaymentClient() {
 
         } catch (err: any) {
             console.error("[ConfirmPayment] submit error:", err);
+            showToast(err?.message || "Upload failed. Please try again.", "error");
         } finally {
             setIsSubmitting(false);
             setUploadStatus("");
@@ -527,7 +587,21 @@ export default function ConfirmPaymentClient() {
                     <div className="bg-white rounded-xl p-6 max-w-sm w-full text-center shadow-xl animate-fadeIn">
                         <h3 className="text-xl text-[#602d4e] font-bold mb-2">Payment Successful!</h3>
                         <p className="text-[#602d4e]/80 mb-4">
-                            Thank you! Please join the WhatsApp group for important event information. Access codes will be provided once the payment has been verified.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}    );        </main>            )}                </div>                    </div>                        </button>                            Close                        >                            className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors"                            onClick={() => setShowPopup(false)}                        <button                        </p>                            Your payment has been submitted successfully. Our team will verify your payment shortly.                            Thank you! Please join the WhatsApp group for important event information. Access codes will be provided once the payment has been verified.
                         </p>
                         <p className="text-[#602d4e]/80 mb-4">
                             We have also sent a confirmation email to <strong>{email}</strong>. Please check your inbox (and spam) for further confirmation.

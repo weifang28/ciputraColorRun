@@ -164,7 +164,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     
     const {
-      proofBase64,
+      proofBase64,  // Keep for backwards compatibility
+      proofUrl,     // NEW: Accept pre-uploaded file URL
       proofFileName,
       idCardBase64,
       idCardFileName,
@@ -185,24 +186,35 @@ export async function POST(req: Request) {
       groupName,
     } = body;
 
-    if (!proofBase64) {
+    // Use proofUrl if provided, otherwise fall back to base64
+    let proofPath: string;
+    
+    if (proofUrl) {
+      // File was already uploaded via chunks
+      proofPath = proofUrl;
+      console.log("[payments/base64] Using pre-uploaded proof:", proofPath);
+    } else if (proofBase64) {
+      // Legacy base64 upload
+      if (!proofBase64) {
+        return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
+      }
+
+      const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const proofExt = proofFileName?.split(".").pop()?.toLowerCase() || "jpg";
+
+      console.log("[payments/base64] Uploading proof...");
+      const proofResult = await uploadBase64WithFallback(
+        proofBase64,
+        "ciputra-color-run/proofs",
+        "proofs",
+        `${txId}_proof`,
+        proofExt
+      );
+      proofPath = proofResult.url;
+      console.log("[payments/base64] Proof saved:", proofPath);
+    } else {
       return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
     }
-
-    const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const proofExt = proofFileName?.split(".").pop()?.toLowerCase() || "jpg";
-
-    // Upload proof - will fallback to local if Cloudinary fails
-    console.log("[payments/base64] Uploading proof...");
-    const proofResult = await uploadBase64WithFallback(
-      proofBase64,
-      "ciputra-color-run/proofs",
-      "proofs",
-      `${txId}_proof`,
-      proofExt
-    );
-    const proofPath = proofResult.url;
-    console.log("[payments/base64] Proof saved:", proofPath, proofResult.isLocal ? "(local)" : "(cloudinary)");
 
     // Upload ID card if provided
     let idCardPhotoPath: string | undefined;
