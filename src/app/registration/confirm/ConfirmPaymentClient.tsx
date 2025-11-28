@@ -57,7 +57,7 @@ export default function ConfirmPaymentClient() {
             setBirthDate(userDetails.birthDate);
             setGender(userDetails.gender);
             setCurrentAddress(userDetails.currentAddress);
-            setNationality(userDetails.nationality);
+            setNationality(userDetails.nationality || ""); // FIXED: Added fallback
             setEmergencyPhone(userDetails.emergencyPhone || "");
             setMedicalHistory(userDetails.medicalHistory || "");
             setMedicationAllergy(userDetails.medicationAllergy || ""); // NEW
