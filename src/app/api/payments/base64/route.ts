@@ -62,41 +62,41 @@ function generateBibNumber(categoryName: string | undefined, participantId: numb
   return `${prefix}${String(participantId).padStart(4, "0")}`;
 }
 
-async function sendRegistrationEmail(email: string | undefined, name: string | undefined, registrationId: number) {
-  if (!email) return;
-  try {
-    const user = process.env.EMAIL_USER;
-    const pass = process.env.EMAIL_PASS;
-    if (!user || !pass) return;
+// async function sendRegistrationEmail(email: string | undefined, name: string | undefined, registrationId: number) {
+//   if (!email) return;
+//   try {
+//     const user = process.env.EMAIL_USER;
+//     const pass = process.env.EMAIL_PASS;
+//     if (!user || !pass) return;
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: Number(process.env.EMAIL_PORT),
-      secure: process.env.EMAIL_SECURE === "true",
-      auth: { user, pass },
-    });
+//     const transporter = nodemailer.createTransport({
+//       host: process.env.EMAIL_HOST,
+//       port: Number(process.env.EMAIL_PORT),
+//       secure: process.env.EMAIL_SECURE === "true",
+//       auth: { user, pass },
+//     });
 
-    await transporter.sendMail({
-      from: `"Ciputra Color Run 2026" <${user}>`,
-      to: email,
-      subject: "Registration Received - Ciputra Color Run 2026",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #059669;">Registration Received!</h2>
-          <p>Dear ${name || "Participant"},</p>
-          <p>Thank you for registering for Ciputra Color Run 2026!</p>
-          <p>Your registration ID is: <strong>#${registrationId}</strong></p>
-          <p>We have received your payment proof and will verify it shortly.</p>
-          <a href="https://chat.whatsapp.com/HkYS1Oi3CyqFWeVJ7d18Ve" style="display: inline-block; background: #25D366; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;">Join WhatsApp Group</a>
-          <br><br>
-          <p>Best regards,<br>Ciputra Color Run Team</p>
-        </div>
-      `,
-    });
-  } catch (err) {
-    console.error("[sendRegistrationEmail] Failed:", err);
-  }
-}
+//     await transporter.sendMail({
+//       from: `"Ciputra Color Run 2026" <${user}>`,
+//       to: email,
+//       subject: "Registration Received - Ciputra Color Run 2026",
+//       html: `
+//         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+//           <h2 style="color: #059669;">Registration Received!</h2>
+//           <p>Dear ${name || "Participant"},</p>
+//           <p>Thank you for registering for Ciputra Color Run 2026!</p>
+//           <p>Your registration ID is: <strong>#${registrationId}</strong></p>
+//           <p>We have received your payment proof and will verify it shortly.</p>
+//           <a href="https://chat.whatsapp.com/HkYS1Oi3CyqFWeVJ7d18Ve" style="display: inline-block; background: #25D366; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;">Join WhatsApp Group</a>
+//           <br><br>
+//           <p>Best regards,<br>Ciputra Color Run Team</p>
+//         </div>
+//       `,
+//     });
+//   } catch (err) {
+//     console.error("[sendRegistrationEmail] Failed:", err);
+//   }
+// }
 
 export async function POST(req: Request) {
   console.log("[payments/base64] POST request received");

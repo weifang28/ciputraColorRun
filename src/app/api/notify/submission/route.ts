@@ -39,12 +39,16 @@ export async function POST(request: Request) {
     }
 
     const html = `
-      <div style="font-family:Inter, Arial, sans-serif; color:#111827; max-width:680px; margin:0 auto;">
-        <h2 style="color:#0f172a;">Registration Submitted</h2>
-        <p>Hi ${name},</p>
-        <p>We have received your payment submission for Ciputra Color Run. Your registration is now recorded and is awaiting verification by our team. You will receive another email once your payment is confirmed.</p>
-        <p style="margin-top:12px;">Thank you,<br/>Ciputra Color Run Team</p>
-      </div>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #059669;">Registration Received!</h2>
+          <p>Dear ${name || "Participant"},</p>
+          <p>Thank you for registering for Ciputra Color Run 2026!</p>
+          <p>Your registration ID is: <strong>#${registrationId}</strong></p>
+          <p>We have received your payment proof and will verify it shortly.</p>
+          <a href="https://chat.whatsapp.com/HkYS1Oi3CyqFWeVJ7d18Ve" style="display: inline-block; background: #25D366; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;">Join WhatsApp Group</a>
+          <br><br>
+          <p>Best regards,<br>Ciputra Color Run Team</p>
+        </div>
     `;
 
     await transporter.sendMail({
