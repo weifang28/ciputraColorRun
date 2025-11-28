@@ -136,6 +136,15 @@ export async function POST(req: Request) {
     
     const proofFile = form.get("proof") as File | null;
     const idCardPhotoFile = form.get("idCardPhoto") as File | null;
+    
+    // ADD THIS LOG
+    console.log("[payments] Files received:", {
+      hasProof: !!proofFile,
+      proofSize: proofFile?.size,
+      hasIdCard: !!idCardPhotoFile,
+      idCardSize: idCardPhotoFile?.size,
+    });
+    
     const cartItemsJson = (form.get("items") as string) || (form.get("cartItems") as string) || undefined;
     const amountStr = (form.get("amount") as string) || undefined;
     
@@ -172,6 +181,9 @@ export async function POST(req: Request) {
       const idExt = idCardPhotoFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const idFileName = `${txId}_id.${idExt}`;
       idCardPhotoPath = await saveFileLocally(idCardPhotoFile, "id-cards", idFileName);
+      console.log("[payments] ID card saved:", idCardPhotoPath); // ADD THIS LOG
+    } else {
+      console.log("[payments] No ID card file received"); // ADD THIS LOG
     }
 
     // Parse cart items
