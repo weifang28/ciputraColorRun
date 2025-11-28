@@ -56,6 +56,7 @@ export default function RegistrationPage() {
     const [currentAddress, setCurrentAddress] = useState("");
     const [nationality, setNationality] = useState<"WNI" | "WNA">("WNI");
     const [medicalHistory, setMedicalHistory] = useState("");
+    const [medicationAllergy, setMedicationAllergy] = useState(""); // NEW
     const [idCardPhoto, setIdCardPhoto] = useState<File | null>(null);
     const [idCardPhotoName, setIdCardPhotoName] = useState<string | null>(null);
     const [registrationType, setRegistrationType] = useState<"individual" | "community" | "family">("individual");
@@ -75,20 +76,20 @@ export default function RegistrationPage() {
       {
         title: "Fill Personal Details and Pick Registration Type",
         description: "Start off by filling your personal details and picking the registration type (Individual/Community/Family)",
-        image: "/images/tutorial/tut1.png",
-        tip: "Prepare ID and payment proof."
+        image: "/images/tutorial/tut1.jpg",
+        tip: "Prepare ID"
       },
       {
         title: "Choose Race Distance, and Jersey Sizes",
         description: 'Choose the race distance, jersey sizes and click "Add Category To Cart" button to save the order and to add more orders',
-        image: "/images/tutorial/tut2.png",
+        image: "/images/tutorial/tut2.jpg",
         tip: "Make sure that the jersey quantity is the same as the participant"
       },
       {
         title: "Check Cart",
         description: "Check the cart, make sure it is the same with the order placed",
-        image: "/images/tutorial/tut4.png",
-        tip: "Make sure that the pricing is the same"
+        image: "/images/tutorial/tut4.jpg",
+        tip: "Make sure that the total price is correct and prepare the proof of payment"
       },
       // Upload step moved to confirmation page
     ];
@@ -117,6 +118,7 @@ export default function RegistrationPage() {
                         setCurrentAddress(user.currentAddress || "");
                         setNationality(user.nationality || "WNI");
                         setMedicalHistory(user.medicalHistory || "");
+                        setMedicationAllergy(user.medicationAllergy || ""); // NEW
                         if (user.idCardPhoto) {
                             setExistingIdCardPhotoUrl(user.idCardPhoto);
                             // show filename if available
@@ -312,12 +314,12 @@ export default function RegistrationPage() {
 
     // Format checks
     if (!isValidEmail(email)) {
-        showToast("Please enter a valid email address", "error");
+        showToast("Please enter a valid email address (e.g. user@example.com)", "error");
         return false;
     }
 
     if (!isValidPhone(phone)) {
-        showToast("Please enter a valid WhatsApp number starting with 0 (e.g. 081234567890)", "error");
+        showToast("Please enter a valid WhatsApp number starting with 0 (e.g. 081234567890), length 9 to 15 digits", "error");
         return false;
     }
 
@@ -328,6 +330,10 @@ export default function RegistrationPage() {
         }
         if (!medicalHistory) {
             showToast("Please provide medical history information (or write 'None')", "error");
+            return false;
+        }
+        if (!medicationAllergy) {
+            showToast("Please provide medication allergy information (or write 'None')", "error");
             return false;
         }
         // validate emergency phone format as well
@@ -358,9 +364,7 @@ export default function RegistrationPage() {
             sessionStorage.setItem("reg_currentAddress", currentAddress);
             sessionStorage.setItem("reg_nationality", nationality);
             sessionStorage.setItem("reg_medicalHistory", medicalHistory);
-            sessionStorage.setItem("reg_registrationType", registrationType);
-            sessionStorage.setItem("reg_groupName", groupName);
-
+            sessionStorage.setItem("reg_medicationAllergy", medicationAllergy); // NEW
             // store the filename for convenience (either newly uploaded file name or existing saved file name)
             if (idCardPhoto) {
                  sessionStorage.setItem("reg_idCardPhotoName", idCardPhoto.name);
@@ -389,11 +393,6 @@ export default function RegistrationPage() {
                 return;
             }
 
-            if (hasCommunityRegistration) {
-                showToast("You cannot add a family bundle when you have community registrations in cart. Please checkout separately.", "error");
-                return;
-            }
-
             const bundleSize = category.bundleSize || 4;
             const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
             if (totalJerseys !== bundleSize) {
@@ -401,8 +400,7 @@ export default function RegistrationPage() {
                 return;
             }
 
-            savePersonalDetailsToSession();
-
+            // Add family bundle to cart
             addItem({
                 type: "family",
                 categoryId: category.id,
@@ -416,6 +414,12 @@ export default function RegistrationPage() {
 
             showToast(`Family bundle added! ${bundleSize} people at Rp ${currentPrice.toLocaleString("id-ID")}/person`, "success");
             setJerseys({ XS: "", S: "", M: "", L: "", XL: "", XXL: "" });
+
+            // UX: after adding a family bundle, switch the registration radio back to Individual
+            // so the form doesn't show family-specific inputs and avoids confusion.
+            setType("individual");
+            setRegistrationType("individual");
+
             return;
         }
 
@@ -428,11 +432,6 @@ export default function RegistrationPage() {
         
         if (totalWithCurrent < 10) {
             showToast(`Community registration requires a minimum of 10 total participants. You currently have ${totalInCart} in cart. Add at least ${10 - totalInCart} more.`, "error");
-            return;
-        }
-
-        if (hasFamilyBundle) {
-            showToast("You cannot add community registration when you have a family bundle in cart. Please checkout separately.", "error");
             return;
         }
 
@@ -535,6 +534,7 @@ export default function RegistrationPage() {
             currentAddress,
             nationality,
             medicalHistory,
+            medicationAllergy, // NEW
             idCardPhoto: idCardPhoto || undefined,
             registrationType,
             groupName: type === "community" ? groupName : undefined,
@@ -561,6 +561,13 @@ export default function RegistrationPage() {
                     Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
                 ),
             });
+
+            // same UX reset when family added via executeCheckout
+            setType("individual");
+            setRegistrationType("individual");
+
+            // reset local fields
+            setJerseys({ XS: "", S: "", M: "", L: "", XL: "", XXL: "" });
         } else {
             // For community, add current category if filled
             const currentParticipants = Number(participants || 0);
@@ -646,7 +653,7 @@ export default function RegistrationPage() {
         <main
             className="flex min-h-screen pt-28 pb-16"
             style={{
-                backgroundImage: "url('/images/generalBg.png')",
+                backgroundImage: "url('/images/generalBg.jpg')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
@@ -663,7 +670,7 @@ export default function RegistrationPage() {
 
                     {/* MOVED: Registration Type radios now on top for easier access */}
                     <div className="space-y-3 mb-6">
-                        <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-3">Registration Type *</p>
+                        <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-3">Registration Type <strong className="text-red-500">*</strong></p>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {/* Individual */}
                             <label className={`relative flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${type === "individual" ? 'border-blue-500 bg-blue-50 shadow-lg scale-105' : 'border-gray-300 bg-white hover:border-blue-300 hover:bg-blue-50/50'}`}>
@@ -677,32 +684,30 @@ export default function RegistrationPage() {
                             </label>
 
                             {/* Community */}
-                            <label className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all ${hasFamilyBundle ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60' : type === "community" ? 'border-emerald-500 bg-emerald-50 shadow-lg scale-105 cursor-pointer' : 'border-gray-300 bg-white hover:border-emerald-300 hover:bg-emerald-50/50 cursor-pointer'}`}>
-                                <input type="radio" name="regType" value="community" checked={type === "community"} onChange={() => { setType("community"); setRegistrationType("community"); }} disabled={hasFamilyBundle} className="sr-only" />
+                            <label className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${type === "community" ? 'border-emerald-500 bg-emerald-50 shadow-lg scale-105' : 'border-gray-300 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
+                                <input type="radio" name="regType" value="community" checked={type === "community"} onChange={() => { setType("community"); setRegistrationType("community"); }} className="sr-only" />
                                 <div className="flex flex-col items-center gap-2">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${type === "community" ? 'border-emerald-500 bg-emerald-500' : hasFamilyBundle ? 'border-gray-300 bg-gray-100' : 'border-gray-400 bg-white'}`}>
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${type === "community" ? 'border-emerald-500 bg-emerald-500' : 'border-gray-400 bg-white'}`}>
                                         {type === "community" && <div className="w-2 h-2 rounded-full bg-white"></div>}
                                     </div>
-                                    <span className={`text-sm font-semibold text-center ${type === "community" ? 'text-emerald-700' : hasFamilyBundle ? 'text-gray-400' : 'text-gray-700'}`}>
+                                    <span className={`text-sm font-semibold text-center ${type === "community" ? 'text-emerald-700' : 'text-gray-700'}`}>
                                         Community
                                         <span className="block text-xs font-normal">(Min. 10)</span>
                                     </span>
-                                    {hasFamilyBundle && <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-2 py-1 rounded-full">⚠</span>}
                                 </div>
                             </label>
 
                             {/* Family */}
-                            <label className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all ${hasCommunityRegistration ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60' : type === "family" ? 'border-purple-500 bg-purple-50 shadow-lg scale-105 cursor-pointer' : 'border-gray-300 bg-white hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'}`}>
-                                <input type="radio" name="regType" value="family" checked={type === "family"} onChange={() => { setType("family"); setRegistrationType("family"); }} disabled={hasCommunityRegistration} className="sr-only" />
+                            <label className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${type === "family" ? 'border-purple-500 bg-purple-50 shadow-lg scale-105' : 'border-gray-300 bg-white hover:border-purple-300 hover:bg-purple-50/50'}`}>
+                                <input type="radio" name="regType" value="family" checked={type === "family"} onChange={() => { setType("family"); setRegistrationType("family"); }} className="sr-only" />
                                 <div className="flex flex-col items-center gap-2">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${type === "family" ? 'border-purple-500 bg-purple-500' : hasCommunityRegistration ? 'border-gray-300 bg-gray-100' : 'border-gray-400 bg-white'}`}>
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${type === "family" ? 'border-purple-500 bg-purple-500' : 'border-gray-400 bg-white'}`}>
                                         {type === "family" && <div className="w-2 h-2 rounded-full bg-white"></div>}
                                     </div>
-                                    <span className={`text-sm font-semibold text-center ${type === "family" ? 'text-purple-700' : hasCommunityRegistration ? 'text-gray-400' : 'text-gray-700'}`}>
+                                    <span className={`text-sm font-semibold text-center ${type === "family" ? 'text-purple-700' : 'text-gray-700'}`}>
                                         Family Bundle
                                         <span className="block text-xs font-normal">(4 people)</span>
                                     </span>
-                                    {hasCommunityRegistration && <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-2 py-1 rounded-full">⚠</span>}
                                 </div>
                             </label>
                         </div>
@@ -882,7 +887,22 @@ export default function RegistrationPage() {
                                     value={medicalHistory}
                                     onChange={(e) => setMedicalHistory(e.target.value)}
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors resize-none text-base"
-                                    placeholder="Please list any medical conditions we should be aware of, or write &quot;None&quot; if not applicable"
+                                    placeholder="Please list any medical conditions we should be aware of (e.g. Heart Problems, Past Surgeries, Broken Bones, Pregnancy, Stroke, Family History, Congenital Conditions), or write &quot;None&quot; if not applicable"
+                                    rows={3}
+                                    required
+                                />
+                            </div>
+                        )}
+
+                        {/* Medication Allergy - Only for Individual */}
+                        {type === "individual" && (
+                            <div className="grid gap-3">
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Medication Allergy <strong className="text-red-500">*</strong></label>
+                                <textarea
+                                    value={medicationAllergy}
+                                    onChange={(e) => setMedicationAllergy(e.target.value)}
+                                    className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-colors resize-none text-base"
+                                    placeholder="List medication allergies (e.g. Penicillin, Aspirin, Ibuprofen), or write 'None' if not applicable"
                                     rows={3}
                                     required
                                 />
@@ -925,7 +945,7 @@ export default function RegistrationPage() {
 
                                     <div>
                                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-3">
-                                            Jersey Size Distribution (4 people total) *
+                                            Jersey Size Distribution (4 people total) <strong className ="text-red-500">*</strong>
                                         </label>
                                         <div className="grid grid-cols-3 gap-3">
                                             {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
@@ -949,31 +969,31 @@ export default function RegistrationPage() {
 
                                     {/* Family Bundle Pricing Display */}
                                     <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-lg">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <span className="text-sm font-semibold text-gray-700">Price per person:</span>
-                                            <div className="flex items-center gap-3">
+                                        <div className="space-y-2 mb-3">
+                                            <span className="text-sm font-semibold text-gray-700 block">Price per person:</span>
+                                            <div className="flex items-center gap-2 flex-wrap justify-end">
                                                 {discountInfo && (
                                                     <>
-                                                        <span className="text-sm text-gray-400 line-through">
+                                                        <span className="text-xs sm:text-sm text-gray-400 line-through">
                                                             Rp {discountInfo.basePrice.toLocaleString("id-ID")}
                                                         </span>
-                                                        <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+                                                        <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full whitespace-nowrap">
                                                             -{discountInfo.discountPercent}%
                                                         </span>
                                                     </>
                                                 )}
-                                                <span className="text-lg font-bold text-purple-700">
+                                                <span className="text-base sm:text-lg font-bold text-purple-700 whitespace-nowrap">
                                                     Rp {currentPrice.toLocaleString("id-ID")}
                                                 </span>
                                             </div>
                                         </div>
 
                                         <div className="pt-3 border-t border-purple-200">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm font-semibold text-gray-700">
+                                            <div className="space-y-2">
+                                                <span className="text-sm font-semibold text-gray-700 block">
                                                     Total Bundle ({selectedCategory?.bundleSize || 4} people):
                                                 </span>
-                                                <span className="text-xl font-bold text-purple-800">
+                                                <span className="text-lg sm:text-xl font-bold text-purple-800 block text-right">
                                                     Rp {currentSubtotal.toLocaleString("id-ID")}
                                                 </span>
                                             </div>
@@ -1273,43 +1293,47 @@ export default function RegistrationPage() {
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 text-gray-700">
-                            <h4 className="font-bold text-lg text-gray-800">Registration Agreement</h4>
+                            <h1 className="text-lg md:text-xl font-extrabold text-gray-900">
+                              TERMS AND CONDITIONS FOR PARTICIPANTS OF CIPUTRA COLOR RUN 2026
+                            </h1>
+
                             <p className="text-sm">
-                                By proceeding with this registration, you acknowledge and agree to the following terms and conditions for participating in the Ciputra Color Run event:
+                              <strong>By registering as a participant in Ciputra Color Run 2026, the participant fully accepts and agrees to comply with the rules and conditions below.</strong>
                             </p>
 
-                            <div className="space-y-3 text-sm">
-                                <div>
-                                    <h5 className="font-semibold text-gray-800">1. Participant Information</h5>
-                                    <p>All information provided must be accurate and complete. False information may result in disqualification.</p>
-                                </div>
+                            <h2 className="mt-4 font-bold">PART 1: GENERAL EVENT INFORMATION</h2>
+                            <ul className="list-disc pl-6 text-sm">
+                              <li><strong>Event Name:</strong> Ciputra Color Run 2026</li>
+                              <li><strong>Event Date:</strong> April 12, 2026</li>
+                              <li><strong>Event Time:</strong> 04:00 - 09:30 WIB</li>
+                              <li><strong>Event Location:</strong> Ciputra University Surabaya</li>
+                            </ul>
 
-                                <div>
-                                    <h5 className="font-semibold text-gray-800">2. Health & Safety</h5>
-                                    <p>Participants must be in good health and physically fit to participate. Those with medical conditions should consult a physician before registering.</p>
-                                </div>
-
-                                <div>
-                                    <h5 className="font-semibold text-gray-800">3. Payment & Refunds</h5>
-                                    <p>Registration fees are non-refundable. Payment must be completed within 24 hours of registration submission.</p>
-                                </div>
-
-                                <div>
-                                    <h5 className="font-semibold text-gray-800">4. Event Rules</h5>
-                                    <p>Participants must follow all event rules and instructions from organizers and staff. Failure to comply may result in removal from the event.</p>
-                                </div>
-
-                                <div>
-                                    <h5 className="font-semibold text-gray-800">5. Liability Waiver</h5>
-                                    <p>The organizer is not responsible for any injury, loss, or damage during the event. Participants join at their own risk.</p>
-                                </div>
-
-                                <div>
-                                    <h5 className="font-semibold text-gray-800">6. Media Release</h5>
-                                    <p>Participants consent to the use of their photos/videos taken during the event for promotional purposes.</p>
-                                </div>
-                            </div>
-                        </div>
+                            <h2 className="mt-4 font-bold">PART 2: REGISTRATION & PARTICIPANT CATEGORIES</h2>
+                            <ol className="list-decimal pl-6 text-sm space-y-2">
+                              <li>
+                                <strong>Identification Card Definition:</strong>
+                                <ol className="list-lower-alpha pl-6 mt-1">
+                                  <li>a. Identification Card as referred to in these terms and conditions is an official personal identification document issued by an authorized agency and is still valid.</li>
+                                  <li>b. Documents that can be used for registration, data verification, and race pack collection include:
+                                    <ol className="list-decimal pl-6 mt-1">
+                                      <li><strong>Adult Indonesian Citizen:</strong> ID Card, Driver's License (SIM), Digital Population Identity (IKD), or other official identification cards issued by the Government of the Republic of Indonesia.</li>
+                                      <li><strong>Child Participants (under 17 years old):</strong> Kartu Identitas Anak (KIA), Birth Certificate, Student Card, or other official documents.</li>
+                                      <li><strong>Foreign Citizens (WNA):</strong> Passport, Kartu Izin Tinggal Terbatas (KITAS), Kartu Izin Tinggal Tetap (KITAP), or official identification documents recognized internationally.</li>
+                                    </ol>
+                                  </li>
+                                </ol>
+                              </li>
+                              <li>
+                                <strong>Peserta:</strong>
+                                <ol className="list-lower-alpha pl-6 mt-1">
+                                  <li>Acara ini terbuka untuk Umum, Warga Negara Indonesia (WNI), dan Warga Negara Asing (WNA).</li>
+                                  <li>Kesalahan pengisian data yang mengakibatkan ketidaksesuaian saat verifikasi dapat menyebabkan pembatalan pendaftaran.</li>
+                                 <li>Peserta di bawah umur 13 tahun wajib didampingi oleh pendamping berusia minimal 17 tahun saat mengikuti seluruh rangkaian acara, termasuk saat pengambilan race pack dan selama berada di area event. Pendamping bertanggung jawab penuh atas keamanan, keselamatan, serta tindakan peserta selama acara berlangsung.</li>
+                                </ol>
+                              </li>
+                            </ol>
+                             </div>
 
                         <div className="border-t border-gray-200 px-6 py-4 space-y-4">
                             <label className="flex items-start gap-3 cursor-pointer">

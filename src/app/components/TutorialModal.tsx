@@ -63,7 +63,7 @@ export default function TutorialModal({ isOpen, onClose, steps }: TutorialModalP
           />
         </div>
 
-        <div className="flex-1 overflow-y-hidden p-8">
+        <div className="flex-1 overflow-y-auto p-8">
           <h4 className="text-2xl font-semibold mb-3 text-[#602d4e]">{currentStepData.title}</h4>
           <p className="text-[#e687a4] mb-4">{currentStepData.description}</p>
 

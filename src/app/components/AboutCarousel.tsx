@@ -3,13 +3,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const DEFAULT_IMAGES = [
-  "/Homepage/about/about1.JPG",
-  "/Homepage/about/about2.JPG",
-  "/Homepage/about/about3.JPG",
-  "/Homepage/about/about4.JPG",
-  "/Homepage/about/about5.JPG",
-  "/Homepage/about/about6.JPG",
-  "/Homepage/about/about7.JPG",
+  "/Homepage/about/about1.jpg",
+  "/Homepage/about/about2.jpg",
+  "/Homepage/about/about3.jpg",
+  "/Homepage/about/about4.jpg",
+  "/Homepage/about/about5.jpg",
+  "/Homepage/about/about6.jpg",
+  "/Homepage/about/about7.jpg",
 ];
 
 export default function AboutCarousel({

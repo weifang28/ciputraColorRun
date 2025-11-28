@@ -12,6 +12,8 @@ export default function ConfirmPaymentClient() {
     const [submitted, setSubmitted] = useState(false);
     // NEW: sender name captured from payment proof (e.g. account name on receipt)
     const [proofSenderName, setProofSenderName] = useState<string>("");
+    // NEW: Confirmation modal state
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     const search = useSearchParams();
     const router = useRouter();
@@ -29,19 +31,19 @@ export default function ConfirmPaymentClient() {
     const [nationality, setNationality] = useState<string>("");
     const [emergencyPhone, setEmergencyPhone] = useState<string>("");
     const [medicalHistory, setMedicalHistory] = useState<string>("");
+    const [medicationAllergy, setMedicationAllergy] = useState<string>(""); // NEW
     const [groupName, setGroupName] = useState<string>("");
     const [showUploadTutorial, setShowUploadTutorial] = useState(false);
 
     const [proofFile, setProofFile] = useState<File | null>(null);
     const [fileName, setFileName] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const uploadTutorialSteps = [
       {
         title: "Upload Payment Confirmation",
         description: "Upload an image of the proof of payment (PNG, JPG, JPEG). Make sure the amount and sender name are visible.",
-        image: "/images/tutorial/tut5.png",
+        image: "/images/tutorial/tut5.jpg",
         tip: "Make sure to send the payment to the correct address and include the sender name as shown on the transfer."
       }
     ];
@@ -58,6 +60,7 @@ export default function ConfirmPaymentClient() {
             setNationality(userDetails.nationality);
             setEmergencyPhone(userDetails.emergencyPhone || "");
             setMedicalHistory(userDetails.medicalHistory || "");
+            setMedicationAllergy(userDetails.medicationAllergy || ""); // NEW
             setGroupName(userDetails.groupName || "");
         } else {
             setFullName(sessionStorage.getItem("reg_fullName") || search.get("fullName") || "");
@@ -69,6 +72,7 @@ export default function ConfirmPaymentClient() {
             setNationality(sessionStorage.getItem("reg_nationality") || "WNI");
             setEmergencyPhone(sessionStorage.getItem("reg_emergencyPhone") || "");
             setMedicalHistory(sessionStorage.getItem("reg_medicalHistory") || "");
+            setMedicationAllergy(sessionStorage.getItem("reg_medicationAllergy") || ""); // NEW
             setGroupName(sessionStorage.getItem("reg_groupName") || "");
         }
     }, [userDetails, search]);
@@ -88,7 +92,7 @@ export default function ConfirmPaymentClient() {
         }
 
         // If already small, return original
-        if (file.size <= 1_200_000) return file;
+        if (file.size <= 900_000) return file;
 
         try {
             const imgBitmap = await createImageBitmap(file);
@@ -104,8 +108,8 @@ export default function ConfirmPaymentClient() {
                 canvas.toBlob(
                     (blob) => {
                         if (!blob) return resolve(file);
-                        // keep original name but ensure correct type
-                        const compressed = new File([blob], file.name, { type: blob.type });
+                        // keep original name but ensure correct type (convert to JPEG for better compression)
+                        const compressed = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: "image/jpeg" });
                         resolve(compressed);
                     },
                     "image/jpeg",
@@ -118,44 +122,98 @@ export default function ConfirmPaymentClient() {
         }
     }
 
-    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    // Try multiple size/quality combos to guarantee file under target bytes
+    async function ensureUnderLimit(file: File, maxBytes: number): Promise<File | null> {
+        if (file.size <= maxBytes) return file;
+        const widths = [1600, 1200, 900, 700, 500];
+        const qualities = [0.78, 0.7, 0.6, 0.55, 0.5];
+        for (const w of widths) {
+            for (const q of qualities) {
+                try {
+                    const candidate = await compressImage(file, w, q);
+                    if (candidate.size <= maxBytes) return candidate;
+                    // if candidate already equals original, avoid repeating same work
+                    if (candidate === file) break;
+                } catch (e) {
+                    // ignore and keep trying
+                }
+            }
+        }
+        return null;
+    }
+
+    // Safely handle selection: compress/resample immediately and store processed file
+    async function handleProofSelect(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Hard guard: very large files are rejected immediately to avoid hitting nginx limits
+        const ABSOLUTE_HARD_LIMIT = 12_000_000; // reject extremely large uploads up-front
+        if (file.size > ABSOLUTE_HARD_LIMIT) {
+            setProofFile(null);
+            setFileName(null);
+            showToast("Unknown Error Occured, Please try again or refresh the page", "error");
+            return;
+        }
+
+        // Safe target for the upstream nginx / Next server — keep compressed payload comfortably under limits
+        const SAFE_MAX_BYTES = 3_500_000; // 3.5 MB
+
+        const processed = await ensureUnderLimit(file, SAFE_MAX_BYTES);
+        if (!processed) {
+            setProofFile(null);
+            setFileName(null);
+            showToast("Unknown Error Occured, Please try again or refresh the page", "error");
+            return;
+        }
+
+        setProofFile(processed);
+        setFileName(file.name + (processed !== file ? " (optimized)" : ""));
+    }
+
+    // NEW: Handle form submission - show confirmation modal first
+    async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
 
         if (!proofFile) {
-            const msg = "Please upload payment proof";
-            setError(msg);
-            showToast(msg, "error"); // show toast
+            showToast("Unknown Error Occured, Please try again or refresh the page", "error");
+            return;
+        }
+
+        // Show confirmation modal instead of submitting directly
+        setShowConfirmModal(true);
+    }
+
+    // NEW: Actual submission after user confirms
+    async function handleConfirmedSubmit() {
+        if (!proofFile) {
+            showToast("Unknown Error Occured, Please try again or refresh the page", "error");
             return;
         }
 
         if (!navigator.onLine) {
-            const msg = "No network connection. Please try again when online.";
-            setError(msg);
-            showToast(msg, "error"); // show toast
+            showToast("Unknown Error Occured, Please try again or refresh the page", "error");
             return;
         }
 
-        setError(null);
         setIsSubmitting(true);
+        setShowConfirmModal(false); // Close confirmation modal
 
         try {
-            // compress if possible; if compression fails we still continue with original
+            // By this point the file should already be optimized by handleProofSelect.
+            // Still do a final safety check and attempt one more optimization pass if needed.
             let uploadFile = proofFile;
-            try {
-                uploadFile = await compressImage(proofFile, 1600, 0.78);
-            } catch (compressErr) {
-                console.warn("[compressImage] failed, using original file:", compressErr);
-                uploadFile = proofFile;
-            }
-
-            // Enforce 5 MB limit (server expects <= 5MB)
-            const MAX_UPLOAD_BYTES = 5_000_000;
-            if (uploadFile.size > MAX_UPLOAD_BYTES) {
-                const msg = `Selected image is too large (${(uploadFile.size / 1024 / 1024).toFixed(1)} MB). Please use an image under 5 MB.`;
-                setError(msg);
-                showToast(msg, "error"); // show toast
-                setIsSubmitting(false);
-                return;
+            const SERVER_MAX_BYTES = 5_000_000; // server-side limit
+            if (uploadFile.size > SERVER_MAX_BYTES) {
+                // try a last-ditch resize to a smaller target
+                const lastTry = await ensureUnderLimit(uploadFile, 4_500_000);
+                if (lastTry && lastTry.size <= SERVER_MAX_BYTES) {
+                    uploadFile = lastTry;
+                } else {
+                    showToast("Unknown Error Occured, Please try again or refresh the page", "error");
+                    setIsSubmitting(false);
+                    return;
+                }
             }
 
             const formData = new FormData();
@@ -173,6 +231,7 @@ export default function ConfirmPaymentClient() {
             formData.append("nationality", nationality);
             formData.append("emergencyPhone", emergencyPhone);
             formData.append("medicalHistory", medicalHistory);
+            formData.append("medicationAllergy", medicationAllergy || ""); // NEW
             formData.append("registrationType", items[0]?.type || "individual");
             if (groupName && groupName.trim() !== "") {
                 formData.append("groupName", groupName.trim());
@@ -199,10 +258,8 @@ export default function ConfirmPaymentClient() {
             }
 
             if (!res.ok) {
-                const serverMsg = body?.error || body?.message || res.statusText;
-                const msg = serverMsg || `Upload failed (status ${res.status})`;
-                showToast(String(msg), "error"); // show toast for server errors
-                throw new Error(msg);
+                showToast("Unknown Error Occured, Please try again or refresh the page", "error");
+                throw new Error("Upload failed");
             }
 
             // success
@@ -226,9 +283,7 @@ export default function ConfirmPaymentClient() {
             })();
         } catch (err: any) {
             console.error("[ConfirmPayment] submit error:", err);
-            const msg = err?.message || "Upload failed. Please try again.";
-            setError(msg);
-            showToast(String(msg), "error"); // surface toast for unexpected errors
+            showToast("Unknown Error Occured, Please try again or refresh the page", "error");
         } finally {
             setIsSubmitting(false);
         }
@@ -238,7 +293,7 @@ export default function ConfirmPaymentClient() {
         <main
             className="flex min-h-screen pt-28 pb-16"
             style={{
-                backgroundImage: "url('/images/generalBg.png')",
+                backgroundImage: "url('/images/generalBg.jpg')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
@@ -318,7 +373,7 @@ export default function ConfirmPaymentClient() {
                     </div>
 
                     {/* Upload Form */}
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleFormSubmit} className="space-y-4">
                         {/* Transfer Address Section */}
                         <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-lg mb-4">
                             <h3 className="font-bold text-emerald-800 mb-2 flex items-center gap-2">
@@ -358,18 +413,6 @@ export default function ConfirmPaymentClient() {
                                 Upload Payment Proof *
                             </label>
 
-                           {/* small helper link to open the tutorial modal */}
-                           {/* <div className="flex items-center justify-between mb-2">
-                             <span className="text-xs text-gray-500">Accepted: PNG, JPG, JPEG (Max 10MB)</span>
-                             <button
-                               type="button"
-                               onClick={() => setShowUploadTutorial(true)}
-                               className="text-xs text-emerald-600 hover:underline"
-                             >
-                               How to upload?
-                             </button>
-                           </div> */}
-
                             <label
                                 htmlFor="proofUpload"
                                 className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-emerald-400 transition-colors flex items-center justify-center gap-3"
@@ -386,34 +429,9 @@ export default function ConfirmPaymentClient() {
                                 type="file"
                                 accept="image/png,image/jpeg,image/jpg"
                                 className="hidden"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (!file) return;
-
-                                    const MAX_FILE_BYTES = 5_000_000; // 5 MB limit
-                                    if (file.size > MAX_FILE_BYTES) {
-                                        setProofFile(null);
-                                        setFileName(null);
-                                        const msg = "Selected file exceeds 5 MB. Please choose a smaller image.";
-                                        setError(msg);
-                                        showToast(msg, "error"); // show toast
-                                        return;
-                                    }
-
-                                    // clear any previous error and accept file
-                                    setError(null);
-                                    setProofFile(file);
-                                    setFileName(file.name);
-                                }}
+                                onChange={handleProofSelect}
                                 required
                             />
-
-                           {/* Show upload errors inline */}
-                           {error && (
-                               <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                                   {error}
-                               </div>
-                           )}
 
                            {/* Tutorial modal for upload help */}
                            {showUploadTutorial && (
@@ -449,6 +467,102 @@ export default function ConfirmPaymentClient() {
                     </form>
                 </section>
             </div>
+
+            {/* NEW: Confirmation Modal - IMPROVED TEXT VISIBILITY */}
+            {showConfirmModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4">
+                            <h3 className="text-2xl font-bold text-white">Confirm Payment Submission</h3>
+                        </div>
+                        
+                        <div className="px-6 py-4 overflow-y-auto flex-1">
+                            <div className="space-y-4">
+                                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r">
+                                    <p className="text-sm text-amber-900 font-medium">
+                                        <strong className="font-bold">⚠️ Important:</strong> Please verify all information is correct before submitting. You cannot edit this after submission.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-gray-900 text-base">Payment Details:</h4>
+                                    <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+                                        <p className="text-gray-900"><span className="font-semibold text-gray-700">Total Amount:</span> <span className="text-emerald-600 font-bold text-base">Rp {totalPrice.toLocaleString("id-ID")}</span></p>
+                                        {proofSenderName && (
+                                            <p className="text-gray-900"><span className="font-semibold text-gray-700">Sender Name:</span> <span className="font-medium">{proofSenderName}</span></p>
+                                        )}
+                                        <p className="text-gray-900"><span className="font-semibold text-gray-700">Payment Proof:</span> <span className="font-medium">{fileName}</span></p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-gray-900 text-base">Your Information:</h4>
+                                    <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+                                        <p className="text-gray-900"><span className="font-semibold text-gray-700">Name:</span> <span className="font-medium">{fullName}</span></p>
+                                        <p className="text-gray-900"><span className="font-semibold text-gray-700">Email:</span> <span className="font-medium">{email}</span></p>
+                                        <p className="text-gray-900"><span className="font-semibold text-gray-700">Phone:</span> <span className="font-medium">{phone}</span></p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-gray-900 text-base">Order Summary:</h4>
+                                    <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+                                        {items.map((item) => {
+                                            let secondaryLabel = "";
+                                            if (item.type === "community" || item.type === "family") {
+                                                const jerseysObj: Record<string, number> = item.jerseys || {};
+                                                const pairs = Object.entries(jerseysObj)
+                                                    .filter(([, cnt]) => Number(cnt) > 0)
+                                                    .map(([size, cnt]) => `${size}(${cnt})`);
+                                                secondaryLabel = pairs.length > 0 ? pairs.join(", ") : `${item.participants || 0} participants`;
+                                            } else {
+                                                secondaryLabel = `Size ${item.jerseySize || "—"}`;
+                                            }
+
+                                            return (
+                                                <div key={item.id} className="flex justify-between border-b border-gray-300 pb-2">
+                                                    <div>
+                                                        <p className="font-semibold text-gray-900">{item.categoryName}</p>
+                                                        <p className="text-gray-600 text-xs">{secondaryLabel}</p>
+                                                    </div>
+                                                    <p className="font-semibold text-gray-900">
+                                                        Rp {((item.type === "community" || item.type === "family") 
+                                                            ? Number(item.price) * Number(item.participants || 0)
+                                                            : Number(item.price)).toLocaleString("id-ID")}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowConfirmModal(false)}
+                                    className="flex-1 px-6 py-3 rounded-full border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                                >
+                                    Review Again
+                                </button>
+                                <button
+                                    onClick={handleConfirmedSubmit}
+                                    disabled={isSubmitting}
+                                    className={`flex-1 px-6 py-3 rounded-full font-semibold transition-all ${
+                                        isSubmitting
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-md'
+                                    }`}
+                                >
+                                    {isSubmitting ? "Submitting..." : "Confirm & Submit"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showPopup && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 max-w-sm w-full text-center shadow-xl animate-fadeIn">

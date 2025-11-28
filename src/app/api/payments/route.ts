@@ -142,6 +142,7 @@ export async function POST(req: Request) {
     const nationality = (form.get("nationality") as string) || undefined;
     const emergencyPhone = (form.get("emergencyPhone") as string) || undefined;
     const medicalHistory = (form.get("medicalHistory") as string) || undefined;
+    const medicationAllergy = (form.get("medicationAllergy") as string) || undefined; // NEW
     const registrationType =
       (form.get("registrationType") as string) || "individual";
     const proofSenderName = (form.get("proofSenderName") as string) || undefined;
@@ -239,6 +240,7 @@ export async function POST(req: Request) {
             idCardPhoto: idCardPhotoPath || undefined,
             emergencyPhone: emergencyPhone || undefined,
             medicalHistory: medicalHistory || undefined,
+            medicationAllergy: medicationAllergy || undefined, // NEW
           },
         });
       } else {
@@ -252,6 +254,7 @@ export async function POST(req: Request) {
             idCardPhoto: idCardPhotoPath || user.idCardPhoto,
             emergencyPhone: emergencyPhone || undefined,
             medicalHistory: medicalHistory || undefined,
+            medicationAllergy: medicationAllergy || undefined, // NEW
           },
         });
       }

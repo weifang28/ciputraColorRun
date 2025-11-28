@@ -5,7 +5,7 @@ export default function NotFound() {
     <main
       className="min-h-screen flex items-center justify-center bg-cover bg-center"
       style={{
-        backgroundImage: "url('/images/generalBg.png')",
+        backgroundImage: "url('/images/generalBg.jpg')",
       }}
     >
       <div className="max-w-xl mx-4 p-8 bg-black/60 rounded-2xl backdrop-blur-sm border border-white/10 shadow-xl text-center">

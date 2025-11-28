@@ -22,8 +22,9 @@ export interface UserDetails {
   birthDate: string;
   gender: string;
   currentAddress: string;
-  nationality: string;
+  nationality?: string;
   medicalHistory?: string;
+  medicationAllergy?: string; // NEW
   idCardPhoto?: File;
   registrationType: string;
   groupName?: string; // Add this

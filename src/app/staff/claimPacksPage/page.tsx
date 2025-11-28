@@ -199,7 +199,7 @@ export default function ClaimPacksPage() {
     <main 
       className="min-h-screen pt-24 pb-12 px-4"
       style={{
-        backgroundImage: "url('/images/generalBg.png')",
+        backgroundImage: "url('/images/generalBg.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

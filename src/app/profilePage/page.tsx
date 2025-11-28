@@ -228,7 +228,7 @@ export default function App() {
     <div 
       className="min-h-screen"
       style={{
-        backgroundImage: "url('/images/generalBg.png')",
+        backgroundImage: "url('/images/generalBg.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -236,7 +236,7 @@ export default function App() {
     >
       <FloatingElements />
       
-      <div className="relative z-10 min-h-screen pt-20">
+      <div className="relative z-10 min-h-screen pt-30">
         {/* <header className="relative overflow-hidden">
           <div className="absolute inset-0 bg-linear-to-r from-[#FFF1C5]/20 via-white/10 to-[#FFDFC0]/20"></div>
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -304,10 +304,10 @@ export default function App() {
                   {/* Purchases Tab Content */}
                   {activeTab === 'purchases' && (
                     <div>
-                      <div className="mb-8">
+                      {/* <div className="mb-8">
                         <h2 className="text-[#682950] mb-3">My Purchases</h2>
                         <div className="h-1.5 w-28 bg-[#92DDAE] rounded-full shadow-lg"></div>
-                      </div>
+                      </div> */}
 
                       <div className="space-y-6">
                         {purchases.length === 0 ? (

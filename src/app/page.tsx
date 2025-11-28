@@ -102,11 +102,11 @@ export default function Home() {
 	return (
 		<main className="bg-white overflow-hidden">
 			<div
-				ref={homeTopRef} // attach ref to outer jumbotron
+				ref={homeTopRef}
 				className="home_top pt-20"
 				style={{
 					// gradient overlay above the image
-					backgroundImage: `linear-gradient(rgba(152,232,206,0.6) 0%, rgba(255,225,196,0.4) 50%, rgba(238,150,157,0.5) 100%), url('${jumbotronImage}')`,
+					backgroundImage: `linear-gradient(rgba(152,232,206,0.85) 0%, rgba(255,225,196,0.7) 50%, rgba(238,150,157,0.8) 100%), url('${jumbotronImage}')`,
 					backgroundSize: "cover",
 					backgroundPosition: "center",
 					backgroundRepeat: "no-repeat",
@@ -514,7 +514,7 @@ export default function Home() {
 			<section className="timeline-section py-12 md:py-16">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6">
                     <h2
-                        className="text-3xl md:text-4xl font-bold text-center text-[#1F6251] mb-8 font-moderniz"
+                        className="text-3xl md:text-4xl font-moderniz font-extrabold text-center mb-8 benefit-section-title"
                         data-aos="fade-up"
                     >
                         TIMELINE

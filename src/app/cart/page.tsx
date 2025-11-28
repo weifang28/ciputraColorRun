@@ -145,7 +145,7 @@ export default function CartPage() {
     <main
       className="flex min-h-screen pt-28 pb-16"
       style={{
-        backgroundImage: "url('/images/generalBg.png')",
+        backgroundImage: "url('/images/generalBg.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

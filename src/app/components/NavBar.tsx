@@ -197,52 +197,49 @@ export default function NavBar() {
                             REGISTER
                         </Link>
 
-                        {/* Icons */}
-                        <div className="flex items-center gap-6">
-                            {/* Cart */}
-                            <button
-                                onClick={() => router.push("/cart")}
-                                className="relative text-white hover:text-white/80 transition-colors mr-2"
-                                aria-label="Shopping Cart"
-                            >
-                                <ShoppingCart size={26} strokeWidth={2.2} />
-                                {totalItems > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                                        {totalItems}
-                                    </span>
-                                )}
-                            </button>
-
-                            {/* Auth: show LOGIN when not logged in; show icon + name + logout when logged in */}
-                            {isAuthenticated === null ? (
-                                // Loading state
-                                <div className="w-20 h-8 bg-white/10 rounded animate-pulse"></div>
-                            ) : isAuthenticated ? (
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={goToProfile}
-                                        className="flex items-center text-white hover:text-white/80 transition-colors gap-2"
-                                        aria-label="User Profile"
-                                    >
-                                        <User size={26} strokeWidth={2.2} />
-                                        <span className="hidden sm:inline font-medium">{userName ?? "Profile"}</span>
-                                    </button>
-                                    <button
-                                        onClick={logout}
-                                        className="text-white/90 hover:text-white px-3 py-1 border border-white/10 rounded-md text-sm"
-                                    >
-                                        Logout
-                                    </button>
-                                </div>
-                            ) : (
+                        {/* Auth: show LOGIN when not logged in; show icon + name + logout when logged in */}
+                        {isAuthenticated === null ? (
+                            // Loading state
+                            <div className="w-20 h-8 bg-white/10 rounded animate-pulse"></div>
+                        ) : isAuthenticated ? (
+                            <div className="flex items-center gap-3">
                                 <button
-                                    onClick={() => router.push("/auth/login")}
-                                    className="text-white font-bold"
+                                    onClick={goToProfile}
+                                    className="flex items-center text-white hover:text-white/80 transition-colors gap-2"
+                                    aria-label="User Profile"
                                 >
-                                    LOGIN
+                                    <User size={26} strokeWidth={2.2} />
+                                    <span className="hidden sm:inline font-medium">{userName ?? "Profile"}</span>
                                 </button>
+                                <button
+                                    onClick={logout}
+                                    className="text-white/90 hover:text-white px-3 py-1 border border-white/10 rounded-md text-sm"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => router.push("/auth/login")}
+                                className="text-white font-bold"
+                            >
+                                LOGIN
+                            </button>
+                        )}
+
+                        {/* Cart (moved to the end) */}
+                        <button
+                            onClick={() => router.push("/cart")}
+                            className="relative text-white hover:text-white/80 transition-colors ml-2"
+                            aria-label="Shopping Cart"
+                        >
+                            <ShoppingCart size={26} strokeWidth={2.2} />
+                            {totalItems > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                    {totalItems}
+                                </span>
                             )}
-                        </div>
+                        </button>
                     </div>
 
                     <button

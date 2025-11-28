@@ -26,7 +26,7 @@ model User {
   idCardPhoto     String?
   emergencyPhone  String?
   medicalHistory  String?
-
+  medicationAllergy String?
   registrations   Registration[]
 }
 

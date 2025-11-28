@@ -105,9 +105,9 @@
     margin-top: 2rem; /* reduced gap from countdown timer */
     background: linear-gradient(
       90deg,
-      #8DD6A6 0%,
-      #CBDCD1 50%,
-      #EF929B 74%
+      #70b1e2 0%,
+      #e0a0a1 50%,
+      #d1e6d3 74%
     );
     box-shadow: 0 10px 30px rgba(0,0,0,0.12);
     transition: transform 220ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms ease;
@@ -704,9 +704,12 @@
 }
 
 @keyframes spin {
-  0% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-8px) rotate(18deg); }
-  100% { transform: translateY(0) rotate(0deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* attach animations to classes */
@@ -724,6 +727,10 @@
 
 .decor-item.spin {
   animation: spin 5s cubic-bezier(.2,.8,.2,1) infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 /* subtle pop-in on initial load */
@@ -910,6 +917,72 @@
 /* keep unobtrusive on small screens */
 @media (max-width: 768px) {
   .doc-decor, .doc-thumb-overlays { display: none; }
+}
+
+@media (min-width: 700px) and (max-width: 950px) {
+  .benefits-section {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .benefits-grid {
+    grid-template-columns: repeat(2, 1fr) !important; /* two columns for mid-wide phones */
+    gap: 0.9rem !important;
+    align-items: stretch;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .benefit-card {
+    min-width: 0 !important; /* allow the card to shrink inside grid */
+    padding: 0.9rem !important;
+    min-height: 120px !important;
+    gap: 0.6rem !important;
+    display: flex !important;
+    flex-direction: row !important; /* icon left / content right for tighter layouts */
+    align-items: center !important;
+    text-align: left !important;
+    box-sizing: border-box;
+  }
+
+  .benefit-icon-wrap {
+    width: 56px !important;
+    height: 56px !important;
+    margin-right: 0.9rem !important;
+    flex: 0 0 auto !important;
+  }
+
+  .benefit-icon-wrap img,
+  .benefit-icon-wrap svg,
+  .benefit-image {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .benefit-title {
+    font-size: 1rem !important;
+    line-height: 1.1 !important;
+    margin-top: 0 !important;
+  }
+
+  .benefit-description {
+    font-size: 0.92rem !important;
+    line-height: 1.3 !important;
+    max-width: 100% !important; /* allow wrapping inside right column */
+    margin-top: 0 !important;
+    padding-right: 0.2rem !important;
+  }
+
+  /* ensure grid items don't add unexpected whitespace */
+  .benefits-grid > * { box-sizing: border-box !important; }
+
+  /* avoid outer container causing overflow */
+  .max-w-1100, .max-w-6xl, .container, .benefits-section, .benefits-grid {
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
 }
 
 /* Pricing section (refined color scheme to match site palette) */
@@ -1428,6 +1501,10 @@
   font-size: 0.95rem;
   line-height: 1.4;
   margin-top: 0.25rem;
+
+  /* Make paragraph text justified on all viewports */
+  text-align: justify !important;
+  text-justify: inter-word !important;
 }
 
 /* Responsive: stack on small screens, increase touch targets */
@@ -1561,7 +1638,7 @@
 }
 
 /* Tablet: keep 3 columns on mid-sized screens (phones/tablets in landscape) */
-@media (min-width: 721px) and (max-width: 1024px) {
+@media (min-width: 821px) and (max-width: 1024px) {
   .benefits-grid {
     grid-template-columns: repeat(3, 1fr) !important;
     gap: 1rem;
@@ -1604,6 +1681,68 @@
     grid-column: auto;
     flex-direction: row;
     align-items: center;
+  }
+}
+
+/* Tablet portrait and smaller landscape: single column to prevent overflow */
+@media (max-width: 820px) {
+  .benefits-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  .benefit-card {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    text-align: left !important;
+    padding: 1rem !important;
+    gap: 1rem !important;
+    min-height: 100px !important;
+    max-width: 100% !important;
+  }
+
+  .benefit-icon-wrap {
+    width: 64px !important;
+    height: 64px !important;
+    flex-shrink: 0 !important;
+    margin-right: 1rem !important;
+    margin-bottom: 0 !important;
+  }
+
+  .benefit-icon-wrap img,
+  .benefit-icon-wrap svg,
+  .benefit-image {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .benefit-title {
+    font-size: 1.05rem !important;
+    line-height: 1.2 !important;
+    margin-top: 0 !important;
+    text-align: left !important;
+  }
+
+  .benefit-description {
+    font-size: 0.95rem !important;
+    line-height: 1.4 !important;
+    margin-top: 0.25rem !important;
+    text-align: left !important;
+    max-width: 100% !important;
+  }
+
+  /* Ensure last card follows same layout */
+  .benefits-grid .benefit-card:last-child {
+    grid-column: 1 !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    text-align: left !important;
+  }
+
+  .benefits-grid .benefit-card:last-child .benefit-icon-wrap {
+    margin-right: 1rem !important;
+    margin-bottom: 0 !important;
   }
 }
 
@@ -1870,7 +2009,33 @@ input:focus, textarea:focus, select:focus{
 .venue-map-wrapper {
   display: flex;
   justify-content: center;
-  align-items: center;
+}
+
+main[style*="backgroundImage"] {
+  background-attachment: fixed !important; /* lock background position */
+  background-size: cover !important;
+  background-position: center !important;
+  min-height: 100vh;
+  will-change: auto; /* prevent transform optimizations that cause zoom */
+}
+
+/* Ensure body doesn't cause layout shifts */
+body {
+  overflow-x: hidden;
+  width: 100vw; /* use viewport width to ignore scrollbar */
+  max-width: 100%;
+}
+
+/* For registration and profile pages specifically */
+body:has(main[style*="backgroundImage"]) {
+  overflow-y: auto; /* allow natural scrolling */
+  overflow-x: hidden;
+}
+
+/* Prevent any transform or scale changes on main content */
+main {
+  transform: none !important;
+  transition: none !important;
 }
 
 .venue-map-card {
@@ -2259,5 +2424,23 @@ label[for="idCardPhoto"]:focus-within {
   .timeline-section .timeline-list.minimal .timeline-item.minimal + .timeline-item.minimal {
     margin-top: 0 !important;
     border-top: none !important;
+  }
+}
+@media (max-width: 820px) {
+  .about-right h2,
+  .about-right p {
+    /* match desktop copy color and remove heavy text-shadow used for white-on-image */
+    color: #1F6251 !important;
+    -webkit-text-fill-color: #1F6251 !important;
+    text-shadow: none !important;
+  }
+
+  /* If the heading uses the gradient class, allow the gradient to show by removing the forced white fill */
+  .about-right .unified-gradient-title {
+    /* keep gradient if present (no forced white) */
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    -webkit-background-clip: text !important;
   }
 }
