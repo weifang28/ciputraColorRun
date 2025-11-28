@@ -164,6 +164,9 @@ export async function POST(req: Request) {
 
       const participantRows: Array<{ registrationId: number; categoryId: number; jerseyId: number }> = [];
 
+      // NEW: Track early bird claims
+      const earlyBirdClaims: Array<{ categoryId: number }> = [];
+
       for (const item of cartItems) {
         const categoryId = Number(item.categoryId);
         if (Number.isNaN(categoryId)) continue;
@@ -171,6 +174,15 @@ export async function POST(req: Request) {
         if (item.type === "individual") {
           const jerseyId = (item.jerseySize && jerseyMap.get(item.jerseySize)) || defaultJerseyId;
           participantRows.push({ registrationId: registration.id, categoryId, jerseyId });
+          
+          // NEW: Check if this is early bird pricing and claim it
+          const category = await tx.raceCategory.findUnique({ where: { id: categoryId } });
+          if (category?.earlyBirdPrice && category?.earlyBirdCapacity) {
+            const currentClaims = await tx.earlyBirdClaim.count({ where: { categoryId } });
+            if (currentClaims < category.earlyBirdCapacity) {
+              earlyBirdClaims.push({ categoryId });
+            }
+          }
         } else if (item.type === "community" || item.type === "family") {
           const jerseysObj: Record<string, number> = item.jerseys || {};
           for (const [size, cnt] of Object.entries(jerseysObj)) {
@@ -186,6 +198,17 @@ export async function POST(req: Request) {
 
       if (participantRows.length > 0) {
         await tx.participant.createMany({ data: participantRows });
+      }
+
+      // NEW: Create early bird claims
+      if (earlyBirdClaims.length > 0) {
+        await tx.earlyBirdClaim.createMany({
+          data: earlyBirdClaims.map(claim => ({
+            ...claim,
+            registrationId: registration.id,
+          })),
+        });
+        console.log("[payments/base64] Created early bird claims:", earlyBirdClaims.length);
       }
 
       const payment = await tx.payment.create({

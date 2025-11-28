@@ -115,50 +115,30 @@ export async function POST(request: Request) {
         include: { user: true, payments: true },
       });
 
-      // --- NEW: Deduct jersey quantities for this registration ---
-      // Gather participants and decrement jerseyOption.quantity by the number of participants per size
+      // Deduct jersey quantities (this stays)
       const participants = await tx.participant.findMany({
         where: { registrationId },
-        select: { jerseyId: true },
+        include: { jersey: true },
       });
 
-      if (participants && participants.length > 0) {
-        const counts: Record<number, number> = {};
-        for (const p of participants) {
-          if (typeof p.jerseyId === 'number') {
-            counts[p.jerseyId] = (counts[p.jerseyId] || 0) + 1;
-          }
+      const jerseyUpdates = participants.reduce((acc: Record<number, number>, p) => {
+        if (p.jerseyId) {
+          acc[p.jerseyId] = (acc[p.jerseyId] || 0) + 1;
         }
+        return acc;
+      }, {});
 
-        // Decrement each jersey option quantity atomically
-        for (const [jerseyIdStr, cnt] of Object.entries(counts)) {
-          const jId = Number(jerseyIdStr);
-          try {
-            // Use decrement to avoid race conditions
-            await tx.jerseyOption.update({
-              where: { id: jId },
-              data: {
-                quantity: { decrement: cnt },
-              },
-            });
-          } catch (err) {
-            console.warn(`[confirm] Failed to decrement jersey (${jId}) by ${cnt}:`, err);
-            // As a safety, attempt to clamp to zero if update fails due to negative constraint
-            try {
-              const existing = await tx.jerseyOption.findUnique({ where: { id: jId }, select: { quantity: true } });
-              if (existing && typeof existing.quantity === 'number' && existing.quantity < 0) {
-                await tx.jerseyOption.update({
-                  where: { id: jId },
-                  data: { quantity: 0 },
-                });
-              }
-            } catch (e) {
-              console.error('[confirm] Failed to clamp jersey quantity to 0:', e);
-            }
-          }
+      for (const [jerseyIdStr, count] of Object.entries(jerseyUpdates)) {
+        const jerseyId = Number(jerseyIdStr);
+        const jersey = await tx.jerseyOption.findUnique({ where: { id: jerseyId } });
+        if (jersey && jersey.quantity !== null) {
+          const newQty = Math.max(0, jersey.quantity - count);
+          await tx.jerseyOption.update({
+            where: { id: jerseyId },
+            data: { quantity: newQty },
+          });
         }
       }
-      // --- END NEW logic ---
 
       return reg;
     });

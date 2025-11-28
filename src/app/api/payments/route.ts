@@ -136,15 +136,6 @@ export async function POST(req: Request) {
     
     const proofFile = form.get("proof") as File | null;
     const idCardPhotoFile = form.get("idCardPhoto") as File | null;
-    
-    // ADD THIS LOG
-    console.log("[payments] Files received:", {
-      hasProof: !!proofFile,
-      proofSize: proofFile?.size,
-      hasIdCard: !!idCardPhotoFile,
-      idCardSize: idCardPhotoFile?.size,
-    });
-    
     const cartItemsJson = (form.get("items") as string) || (form.get("cartItems") as string) || undefined;
     const amountStr = (form.get("amount") as string) || undefined;
     
@@ -181,9 +172,6 @@ export async function POST(req: Request) {
       const idExt = idCardPhotoFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const idFileName = `${txId}_id.${idExt}`;
       idCardPhotoPath = await saveFileLocally(idCardPhotoFile, "id-cards", idFileName);
-      console.log("[payments] ID card saved:", idCardPhotoPath); // ADD THIS LOG
-    } else {
-      console.log("[payments] No ID card file received"); // ADD THIS LOG
     }
 
     // Parse cart items
@@ -263,6 +251,9 @@ export async function POST(req: Request) {
 
       const participantRows: Array<{ registrationId: number; categoryId: number; jerseyId: number }> = [];
 
+      // NEW: Track early bird claims
+      const earlyBirdClaims: Array<{ categoryId: number }> = [];
+
       for (const item of cartItems) {
         const categoryId = Number(item.categoryId);
         if (Number.isNaN(categoryId)) continue;
@@ -270,6 +261,15 @@ export async function POST(req: Request) {
         if (item.type === "individual") {
           const jerseyId = (item.jerseySize && jerseyMap.get(item.jerseySize)) || defaultJerseyId;
           participantRows.push({ registrationId: registration.id, categoryId, jerseyId });
+          
+          // NEW: Check if this is early bird pricing and claim it
+          const category = await tx.raceCategory.findUnique({ where: { id: categoryId } });
+          if (category?.earlyBirdPrice && category?.earlyBirdCapacity) {
+            const currentClaims = await tx.earlyBirdClaim.count({ where: { categoryId } });
+            if (currentClaims < category.earlyBirdCapacity) {
+              earlyBirdClaims.push({ categoryId });
+            }
+          }
         } else if (item.type === "community" || item.type === "family") {
           const jerseysObj: Record<string, number> = item.jerseys || {};
           for (const [size, cnt] of Object.entries(jerseysObj)) {
@@ -286,6 +286,17 @@ export async function POST(req: Request) {
       if (participantRows.length > 0) {
         await tx.participant.createMany({ data: participantRows });
         console.log("[payments] Created participants:", participantRows.length);
+      }
+
+      // NEW: Create early bird claims
+      if (earlyBirdClaims.length > 0) {
+        await tx.earlyBirdClaim.createMany({
+          data: earlyBirdClaims.map(claim => ({
+            ...claim,
+            registrationId: registration.id,
+          })),
+        });
+        console.log("[payments] Created early bird claims:", earlyBirdClaims.length);
       }
 
       const payment = await tx.payment.create({
@@ -346,7 +357,7 @@ export async function POST(req: Request) {
     }
     console.log("[payments] Created QR codes:", createdQrCodes.length);
 
-    // Send email notification via the dedicated notify endpoint
+    // Send email notification via dedicated endpoint
     fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notify/submission`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -57,7 +57,7 @@ export async function POST(request: Request) {
           </p>
           
           <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-            Thank you for registering for <strong>Ciputra Color Run 2026</strong>! We're thrilled to have you join us for the most colorful event in Surabaya.
+            Thank you for registering for <strong>Ciputra Color Run 2026</strong>! We're thrilled to have you join us.
           </p>
 
           ${registrationId ? `

@@ -195,11 +195,9 @@ export default function ConfirmPaymentClient() {
             let proofUrl: string;
             let idCardUrl: string | undefined;
             
-            // Check if we can use FormData (small files)
             const canUseFormData = proofFile.size < 500_000 && 
                 (!userDetails?.idCardPhoto || !(userDetails.idCardPhoto instanceof File) || userDetails.idCardPhoto.size < 500_000);
             
-            // Try FormData first (fastest for small files)
             if (canUseFormData) {
                 console.log("[handleConfirmedSubmit] Trying direct FormData upload...");
                 
@@ -236,12 +234,13 @@ export default function ConfirmPaymentClient() {
                     setShowPopup(true);
                     showToast("Payment submitted — awaiting verification.", "success");
                     
-                    fetch("/api/notify/submission", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ email, name: fullName }),
-                        credentials: "include",
-                    }).catch(() => {});
+                    // REMOVE THIS BLOCK - Server already sends email
+                    // fetch("/api/notify/submission", {
+                    //     method: "POST",
+                    //     headers: { "Content-Type": "application/json" },
+                    //     body: JSON.stringify({ email, name: fullName }),
+                    //     credentials: "include",
+                    // }).catch(() => {});
                     
                     setIsSubmitting(false);
                     setUploadStatus("");
@@ -249,21 +248,18 @@ export default function ConfirmPaymentClient() {
                 }
             }
             
-            // For large files or if FormData failed, use chunked upload
             console.log("[handleConfirmedSubmit] Using chunked upload...");
             setUploadStatus("Uploading payment proof...");
             
             proofUrl = await uploadFileInChunks(proofFile, "proofs");
             console.log("[handleConfirmedSubmit] Proof uploaded:", proofUrl);
             
-            // Upload ID card if exists
             if (userDetails?.idCardPhoto instanceof File) {
                 setUploadStatus("Uploading ID card...");
                 idCardUrl = await uploadFileInChunks(userDetails.idCardPhoto, "id-cards");
                 console.log("[handleConfirmedSubmit] ID card uploaded:", idCardUrl);
             }
             
-            // Now send metadata with file URLs
             setUploadStatus("Saving registration...");
             
             const res = await fetch("/api/payments/base64", {
@@ -271,7 +267,7 @@ export default function ConfirmPaymentClient() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     proofUrl,
-                    idCardUrl, // ADD THIS
+                    idCardUrl,
                     items,
                     amount: totalPrice,
                     fullName,
@@ -305,12 +301,13 @@ export default function ConfirmPaymentClient() {
             setShowPopup(true);
             showToast("Payment submitted — awaiting verification.", "success");
 
-            fetch("/api/notify/submission", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, name: fullName }),
-                credentials: "include",
-            }).catch(() => {});
+            // REMOVE THIS BLOCK - Server already sends email
+            // fetch("/api/notify/submission", {
+            //     method: "POST",
+            //     headers: { "Content-Type": "application/json" },
+            //     body: JSON.stringify({ email, name: fullName }),
+            //     credentials: "include",
+            // }).catch(() => {});
 
         } catch (err: any) {
             console.error("[ConfirmPayment] submit error:", err);
