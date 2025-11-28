@@ -2,12 +2,10 @@
 
 import { NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
-import { v2 as cloudinary } from "cloudinary";
 import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
 
-// Use singleton pattern for Prisma to avoid connection issues
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -16,21 +14,6 @@ const prisma = globalForPrisma.prisma ?? new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
-}
-
-// Configure Cloudinary (only if credentials exist)
-const cloudinaryConfigured = !!(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET
-);
-
-if (cloudinaryConfigured) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
 }
 
 // Helper function to ensure uploads directory exists
@@ -42,7 +25,7 @@ function ensureUploadsDir(subDir: string): string {
   return uploadsDir;
 }
 
-// Helper function to save file locally
+// Save file locally and return API path
 async function saveFileLocally(file: File, subDir: string, fileName: string): Promise<string> {
   try {
     const uploadsDir = ensureUploadsDir(subDir);
@@ -53,49 +36,12 @@ async function saveFileLocally(file: File, subDir: string, fileName: string): Pr
     fs.writeFileSync(filePath, buffer);
     
     const apiPath = `/api/uploads/${subDir}/${fileName}`;
-    console.log(`[L] Saved locally: ${apiPath} (${(file.size / 1024).toFixed(0)}KB)`);
+    console.log(`[saveFileLocally] Saved: ${apiPath} (${(file.size / 1024).toFixed(0)}KB)`);
     return apiPath;
   } catch (err: any) {
     console.error(`[saveFileLocally] Error:`, err?.message || err);
     throw new Error(`Failed to save file locally: ${err?.message || 'Unknown error'}`);
   }
-}
-
-// Helper function to upload to Cloudinary with local fallback
-async function uploadImageWithFallback(
-  file: File,
-  cloudinaryFolder: string,
-  localSubDir: string,
-  fileId: string
-): Promise<{ url: string; isLocal: boolean }> {
-  const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const fileName = `${fileId}.${fileExt}`;
-
-  // Try Cloudinary first (only if configured)
-  if (cloudinaryConfigured) {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64 = `data:${file.type};base64,${buffer.toString("base64")}`;
-      
-      const uploadResult = await cloudinary.uploader.upload(base64, {
-        folder: cloudinaryFolder,
-        public_id: fileId,
-        resource_type: "image",
-      });
-
-      console.log(`[C] Uploaded to Cloudinary: ${uploadResult.secure_url} (${(file.size / 1024).toFixed(0)}KB)`);
-      return { url: uploadResult.secure_url, isLocal: false };
-    } catch (cloudinaryErr: any) {
-      console.warn(`[payments] Cloudinary upload failed:`, cloudinaryErr?.message || cloudinaryErr);
-    }
-  } else {
-    console.log(`[payments] Cloudinary not configured, using local storage`);
-  }
-
-  // Fallback to local storage
-  const localUrl = await saveFileLocally(file, localSubDir, fileName);
-  return { url: localUrl, isLocal: true };
 }
 
 async function generateAccessCode(fullName: string): Promise<string> {
@@ -185,7 +131,6 @@ export async function POST(req: Request) {
   let idCardPhotoPath: string | undefined;
   
   try {
-    // Step 1: Parse form data
     console.log("[payments] Step 1: Parsing form data...");
     const form = await req.formData();
     
@@ -208,13 +153,6 @@ export async function POST(req: Request) {
     const proofSenderName = (form.get("proofSenderName") as string) || undefined;
     const groupName = (form.get("groupName") as string) || undefined;
 
-    console.log("[payments] Form parsed:", { 
-      hasProof: !!proofFile, 
-      proofSize: proofFile?.size,
-      fullName, 
-      email 
-    });
-
     if (!proofFile) {
       return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
     }
@@ -222,73 +160,47 @@ export async function POST(req: Request) {
     const amount = amountStr ? Number(amountStr) : undefined;
     const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    // Step 2: Upload proof image (BEFORE transaction to reduce transaction time)
-    console.log("[payments] Step 2: Uploading proof image...");
-    try {
-      const result = await uploadImageWithFallback(
-        proofFile,
-        "ciputra-color-run/proofs",
-        "proofs",
-        `${txId}_proof`
-      );
-      proofPath = result.url;
-      console.log("[payments] Proof uploaded:", proofPath);
-    } catch (uploadErr: any) {
-      console.error("[payments] Proof upload failed:", uploadErr);
-      return NextResponse.json(
-        { error: "Failed to upload payment proof. Please try again." },
-        { status: 500 }
-      );
-    }
+    // Save proof image locally
+    console.log("[payments] Step 2: Saving proof image locally...");
+    const proofExt = proofFile.name.split(".").pop()?.toLowerCase() || "jpg";
+    const proofFileName = `${txId}_proof.${proofExt}`;
+    proofPath = await saveFileLocally(proofFile, "proofs", proofFileName);
 
-    // Step 3: Upload ID card if provided (BEFORE transaction)
+    // Save ID card if provided
     if (idCardPhotoFile) {
-      console.log("[payments] Step 3: Uploading ID card...");
-      try {
-        const result = await uploadImageWithFallback(
-          idCardPhotoFile,
-          "ciputra-color-run/id-cards",
-          "id-cards",
-          `${txId}_id`
-        );
-        idCardPhotoPath = result.url;
-        console.log("[payments] ID card uploaded:", idCardPhotoPath);
-      } catch (uploadErr) {
-        console.warn("[payments] ID card upload failed (non-fatal):", uploadErr);
-      }
+      console.log("[payments] Step 3: Saving ID card locally...");
+      const idExt = idCardPhotoFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const idFileName = `${txId}_id.${idExt}`;
+      idCardPhotoPath = await saveFileLocally(idCardPhotoFile, "id-cards", idFileName);
     }
 
-    // Step 4: Parse cart items (BEFORE transaction)
+    // Parse cart items
     console.log("[payments] Step 4: Parsing cart items...");
     let cartItems: any[] = [];
     if (cartItemsJson) {
       try {
         cartItems = JSON.parse(cartItemsJson);
-        console.log("[payments] Cart items:", cartItems.length);
       } catch (e) {
         console.warn("[payments] Failed to parse cartItems:", e);
       }
     }
 
-    // Step 5: Pre-fetch jersey options BEFORE transaction to reduce transaction time
+    // Pre-fetch jersey options
     console.log("[payments] Step 5: Pre-fetching jersey options...");
     const jerseyOptions = await prisma.jerseyOption.findMany();
     const jerseyMap = new Map(jerseyOptions.map(j => [j.size, j.id]));
     const defaultJerseyId = jerseyOptions[0]?.id ?? 1;
 
-    // Step 6: Generate access code BEFORE transaction
+    // Generate access code
     console.log("[payments] Step 6: Generating access code...");
     const accessCode = await generateAccessCode(fullName || "user");
 
-    // Step 7: Database transaction - OPTIMIZED for Prisma Accelerate's 15s limit
-    // Remove timeout option as Accelerate enforces its own limit
+    // Database transaction
     console.log("[payments] Step 7: Starting database transaction...");
     
     const result = await prisma.$transaction(async (tx) => {
-      // Find or create user
       let user = email ? await tx.user.findUnique({ where: { email } }) : null;
 
-      // Build user data object - only include medicationAllergy if schema supports it
       const userData: any = {
         birthDate: birthDate ? new Date(birthDate) : undefined,
         gender: gender || undefined,
@@ -298,7 +210,6 @@ export async function POST(req: Request) {
         medicalHistory: medicalHistory || undefined,
       };
 
-      // Only add medicationAllergy if it's defined (schema might not have it yet)
       if (medicationAllergy !== undefined) {
         userData.medicationAllergy = medicationAllergy;
       }
@@ -307,7 +218,7 @@ export async function POST(req: Request) {
         user = await tx.user.create({
           data: {
             name: fullName,
-            email: email || `temp_${txId}@temp.com`, // Fallback email
+            email: email || `temp_${txId}@temp.com`,
             phone: phone || "",
             accessCode,
             role: "user",
@@ -327,7 +238,6 @@ export async function POST(req: Request) {
         console.log("[payments] Updated user:", user.id);
       }
 
-      // Create registration
       const registration = await tx.registration.create({
         data: {
           userId: user.id,
@@ -339,7 +249,6 @@ export async function POST(req: Request) {
       });
       console.log("[payments] Created registration:", registration.id);
 
-      // Build participant rows using pre-fetched jersey data
       const participantRows: Array<{ registrationId: number; categoryId: number; jerseyId: number }> = [];
 
       for (const item of cartItems) {
@@ -362,13 +271,11 @@ export async function POST(req: Request) {
         }
       }
 
-      // Batch create participants
       if (participantRows.length > 0) {
         await tx.participant.createMany({ data: participantRows });
         console.log("[payments] Created participants:", participantRows.length);
       }
 
-      // Create payment record
       const payment = await tx.payment.create({
         data: {
           registrationId: registration.id,
@@ -386,7 +293,7 @@ export async function POST(req: Request) {
 
     console.log("[payments] Transaction completed successfully");
 
-    // Step 8: Post-transaction operations (bib numbers, QR codes) - OUTSIDE transaction
+    // Post-transaction: bib numbers and QR codes
     console.log("[payments] Step 8: Assigning bib numbers and creating QR codes...");
     
     const createdParticipants = await prisma.participant.findMany({
@@ -395,7 +302,6 @@ export async function POST(req: Request) {
       orderBy: { id: 'asc' },
     });
 
-    // Update bib numbers (can be done outside transaction)
     for (const participant of createdParticipants) {
       const bibNumber = generateBibNumber(participant.category?.name, participant.id);
       await prisma.participant.update({
@@ -404,7 +310,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Create QR codes (can be done outside transaction)
     const grouped = createdParticipants.reduce((acc: Record<number, number>, r) => {
       const cid = r.categoryId ?? 0;
       acc[cid] = (acc[cid] || 0) + 1;
@@ -420,16 +325,15 @@ export async function POST(req: Request) {
           registrationId: result.registration.id,
           categoryId: catId,
           qrCodeData: token,
-          totalPacks: count as number,      // CHANGED: use totalPacks instead of participantCount
-          maxScans: count as number,         // CHANGED: set maxScans to the count
-          scansRemaining: count as number,   // CHANGED: initialize scansRemaining to the count
+          totalPacks: count as number,
+          maxScans: count as number,
+          scansRemaining: count as number,
         },
       });
       createdQrCodes.push(qr);
     }
     console.log("[payments] Created QR codes:", createdQrCodes.length);
 
-    // Fire-and-forget email
     sendRegistrationEmail(email, fullName, result.registration.id).catch(console.error);
 
     return NextResponse.json({
@@ -442,10 +346,7 @@ export async function POST(req: Request) {
 
   } catch (err: any) {
     console.error("[payments] POST error:", err?.message || err);
-    console.error("[payments] Error stack:", err?.stack);
-    console.error("[payments] Error code:", err?.code);
     
-    // Check for specific Prisma errors
     if (err?.code === 'P2002') {
       return NextResponse.json(
         { error: "A registration with this email already exists." },
@@ -453,16 +354,14 @@ export async function POST(req: Request) {
       );
     }
     
-    if (err?.code === 'P2024' || err?.code === 'P6005' || err?.message?.includes('timed out') || err?.message?.includes('15000ms')) {
+    if (err?.code === 'P6005' || err?.message?.includes('15000ms')) {
       return NextResponse.json(
         { error: "Server is busy. Please try again in a moment." },
         { status: 503 }
       );
     }
 
-    // Handle unknown field errors (like medicationAllergy not existing)
     if (err?.message?.includes('Unknown argument')) {
-      console.error("[payments] Schema mismatch - run prisma migrate");
       return NextResponse.json(
         { error: "Server configuration error. Please contact support." },
         { status: 500 }

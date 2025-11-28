@@ -8,16 +8,7 @@ const nextConfig: NextConfig = {
     },
   },
 
-  // Allow images from cloudinary
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
-        pathname: "/**",
-      },
-    ],
-  },
+  // No need for external images config anymore - everything is local
 };
 
 export default nextConfig;

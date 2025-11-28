@@ -3,7 +3,6 @@
 
 import { NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
-import { v2 as cloudinary } from "cloudinary";
 import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
@@ -18,70 +17,12 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-const cloudinaryConfigured = !!(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET
-);
-
-if (cloudinaryConfigured) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
-}
-
 function ensureUploadsDir(subDir: string): string {
   const uploadsDir = path.join(process.cwd(), "uploads", subDir);
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
   return uploadsDir;
-}
-
-function saveBase64Locally(base64Data: string, subDir: string, fileName: string): string {
-  const uploadsDir = ensureUploadsDir(subDir);
-  const filePath = path.join(uploadsDir, fileName);
-  
-  // Remove data URL prefix if present
-  const base64Clean = base64Data.replace(/^data:image\/\w+;base64,/, "");
-  const buffer = Buffer.from(base64Clean, "base64");
-  
-  fs.writeFileSync(filePath, buffer);
-  
-  const apiPath = `/api/uploads/${subDir}/${fileName}`;
-  console.log(`[L] Saved locally: ${apiPath} (${(buffer.length / 1024).toFixed(0)}KB)`);
-  return apiPath;
-}
-
-async function uploadBase64WithFallback(
-  base64Data: string,
-  cloudinaryFolder: string,
-  localSubDir: string,
-  fileId: string,
-  fileExt: string = "jpg"
-): Promise<{ url: string; isLocal: boolean }> {
-  const fileName = `${fileId}.${fileExt}`;
-
-  // Try Cloudinary first
-  if (cloudinaryConfigured) {
-    try {
-      const uploadResult = await cloudinary.uploader.upload(base64Data, {
-        folder: cloudinaryFolder,
-        public_id: fileId,
-        resource_type: "image",
-      });
-      console.log(`[C] Uploaded to Cloudinary: ${uploadResult.secure_url}`);
-      return { url: uploadResult.secure_url, isLocal: false };
-    } catch (err: any) {
-      console.warn(`[base64] Cloudinary failed, falling back to local:`, err?.message);
-    }
-  }
-
-  // Fallback to local storage - THIS WILL ALWAYS WORK
-  const localUrl = saveBase64Locally(base64Data, localSubDir, fileName);
-  return { url: localUrl, isLocal: true };
 }
 
 async function generateAccessCode(fullName: string): Promise<string> {
@@ -164,11 +105,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     
     const {
-      proofBase64,  // Keep for backwards compatibility
-      proofUrl,     // NEW: Accept pre-uploaded file URL
-      proofFileName,
-      idCardBase64,
-      idCardFileName,
+      proofUrl, // File already uploaded via chunks
       items,
       amount,
       fullName,
@@ -186,55 +123,13 @@ export async function POST(req: Request) {
       groupName,
     } = body;
 
-    // Use proofUrl if provided, otherwise fall back to base64
-    let proofPath: string;
-    
-    if (proofUrl) {
-      // File was already uploaded via chunks
-      proofPath = proofUrl;
-      console.log("[payments/base64] Using pre-uploaded proof:", proofPath);
-    } else if (proofBase64) {
-      // Legacy base64 upload
-      if (!proofBase64) {
-        return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
-      }
-
-      const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const proofExt = proofFileName?.split(".").pop()?.toLowerCase() || "jpg";
-
-      console.log("[payments/base64] Uploading proof...");
-      const proofResult = await uploadBase64WithFallback(
-        proofBase64,
-        "ciputra-color-run/proofs",
-        "proofs",
-        `${txId}_proof`,
-        proofExt
-      );
-      proofPath = proofResult.url;
-      console.log("[payments/base64] Proof saved:", proofPath);
-    } else {
+    if (!proofUrl) {
       return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
     }
 
-    // Upload ID card if provided
-    let idCardPhotoPath: string | undefined;
-    if (idCardBase64) {
-      console.log("[payments/base64] Uploading ID card...");
-      const idExt = idCardFileName?.split(".").pop()?.toLowerCase() || "jpg";
-      try {
-        const idResult = await uploadBase64WithFallback(
-          idCardBase64,
-          "ciputra-color-run/id-cards",
-          "id-cards",
-          `${txId}_id`,
-          idExt
-        );
-        idCardPhotoPath = idResult.url;
-        console.log("[payments/base64] ID card saved:", idCardPhotoPath);
-      } catch (err) {
-        console.warn("[payments/base64] ID card upload failed (non-fatal):", err);
-      }
-    }
+    const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    
+    console.log("[payments/base64] Using pre-uploaded proof:", proofUrl);
 
     // Parse cart items
     let cartItems: any[] = [];
@@ -246,15 +141,12 @@ export async function POST(req: Request) {
       }
     }
 
-    // Pre-fetch jersey options
     const jerseyOptions = await prisma.jerseyOption.findMany();
     const jerseyMap = new Map(jerseyOptions.map((j) => [j.size, j.id]));
     const defaultJerseyId = jerseyOptions[0]?.id ?? 1;
 
-    // Generate access code
     const accessCode = await generateAccessCode(fullName || "user");
 
-    // Database transaction
     console.log("[payments/base64] Starting transaction...");
     const result = await prisma.$transaction(async (tx) => {
       let user = email ? await tx.user.findUnique({ where: { email } }) : null;
@@ -280,17 +172,13 @@ export async function POST(req: Request) {
             phone: phone || "",
             accessCode,
             role: "user",
-            idCardPhoto: idCardPhotoPath || undefined,
             ...userData,
           },
         });
       } else {
         await tx.user.update({
           where: { id: user.id },
-          data: {
-            idCardPhoto: idCardPhotoPath || user.idCardPhoto,
-            ...userData,
-          },
+          data: userData,
         });
       }
 
@@ -334,7 +222,7 @@ export async function POST(req: Request) {
         data: {
           registrationId: registration.id,
           transactionId: txId,
-          proofOfPayment: proofPath,
+          proofOfPayment: proofUrl,
           status: "pending",
           amount: new Prisma.Decimal(String(amount ?? 0)),
           proofSenderName: proofSenderName,
@@ -346,7 +234,6 @@ export async function POST(req: Request) {
 
     console.log("[payments/base64] Transaction completed");
 
-    // Post-transaction: bib numbers and QR codes
     const createdParticipants = await prisma.participant.findMany({
       where: { registrationId: result.registration.id },
       include: { category: true },
@@ -376,9 +263,9 @@ export async function POST(req: Request) {
           registrationId: result.registration.id,
           categoryId: catId,
           qrCodeData: token,
-          totalPacks: count as number,      // CHANGED: use totalPacks instead of participantCount
-          maxScans: count as number,         // CHANGED: set maxScans to the count
-          scansRemaining: count as number,   // CHANGED: initialize scansRemaining to the count
+          totalPacks: count as number,
+          maxScans: count as number,
+          scansRemaining: count as number,
         },
       });
       createdQrCodes.push(qr);
@@ -395,7 +282,6 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error("[payments/base64] Error:", err?.message || err);
-    console.error("[payments/base64] Stack:", err?.stack);
 
     if (err?.code === "P2002") {
       return NextResponse.json({ error: "A registration with this email already exists." }, { status: 409 });
@@ -403,10 +289,6 @@ export async function POST(req: Request) {
 
     if (err?.code === "P6005" || err?.message?.includes("15000ms")) {
       return NextResponse.json({ error: "Server is busy. Please try again." }, { status: 503 });
-    }
-
-    if (err?.message?.includes("Unknown argument")) {
-      return NextResponse.json({ error: "Server configuration error." }, { status: 500 });
     }
 
     return NextResponse.json({ error: "An unexpected error occurred. Please try again." }, { status: 500 });
