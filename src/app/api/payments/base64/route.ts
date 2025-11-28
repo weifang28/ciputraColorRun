@@ -3,7 +3,6 @@
 
 import { NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
-import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
 
@@ -62,42 +61,6 @@ function generateBibNumber(categoryName: string | undefined, participantId: numb
   return `${prefix}${String(participantId).padStart(4, "0")}`;
 }
 
-// async function sendRegistrationEmail(email: string | undefined, name: string | undefined, registrationId: number) {
-//   if (!email) return;
-//   try {
-//     const user = process.env.EMAIL_USER;
-//     const pass = process.env.EMAIL_PASS;
-//     if (!user || !pass) return;
-
-//     const transporter = nodemailer.createTransport({
-//       host: process.env.EMAIL_HOST,
-//       port: Number(process.env.EMAIL_PORT),
-//       secure: process.env.EMAIL_SECURE === "true",
-//       auth: { user, pass },
-//     });
-
-//     await transporter.sendMail({
-//       from: `"Ciputra Color Run 2026" <${user}>`,
-//       to: email,
-//       subject: "Registration Received - Ciputra Color Run 2026",
-//       html: `
-//         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-//           <h2 style="color: #059669;">Registration Received!</h2>
-//           <p>Dear ${name || "Participant"},</p>
-//           <p>Thank you for registering for Ciputra Color Run 2026!</p>
-//           <p>Your registration ID is: <strong>#${registrationId}</strong></p>
-//           <p>We have received your payment proof and will verify it shortly.</p>
-//           <a href="https://chat.whatsapp.com/HkYS1Oi3CyqFWeVJ7d18Ve" style="display: inline-block; background: #25D366; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;">Join WhatsApp Group</a>
-//           <br><br>
-//           <p>Best regards,<br>Ciputra Color Run Team</p>
-//         </div>
-//       `,
-//     });
-//   } catch (err) {
-//     console.error("[sendRegistrationEmail] Failed:", err);
-//   }
-// }
-
 export async function POST(req: Request) {
   console.log("[payments/base64] POST request received");
 
@@ -105,7 +68,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     
     const {
-      proofUrl, // File already uploaded via chunks
+      proofUrl,
+      idCardUrl,
       items,
       amount,
       fullName,
@@ -130,8 +94,10 @@ export async function POST(req: Request) {
     const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     console.log("[payments/base64] Using pre-uploaded proof:", proofUrl);
+    if (idCardUrl) {
+      console.log("[payments/base64] Using pre-uploaded ID card:", idCardUrl);
+    }
 
-    // Parse cart items
     let cartItems: any[] = [];
     if (items) {
       try {
@@ -172,13 +138,17 @@ export async function POST(req: Request) {
             phone: phone || "",
             accessCode,
             role: "user",
+            idCardPhoto: idCardUrl || undefined,
             ...userData,
           },
         });
       } else {
         await tx.user.update({
           where: { id: user.id },
-          data: userData,
+          data: {
+            idCardPhoto: idCardUrl || user.idCardPhoto,
+            ...userData,
+          },
         });
       }
 
@@ -271,7 +241,17 @@ export async function POST(req: Request) {
       createdQrCodes.push(qr);
     }
 
-    sendRegistrationEmail(email, fullName, result.registration.id).catch(console.error);
+    // Send email notification via the dedicated notify endpoint
+    // Don't await - let it run async to not slow down response
+    fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notify/submission`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        email, 
+        name: fullName,
+        registrationId: result.registration.id 
+      }),
+    }).catch(err => console.error("[payments/base64] Email notification failed:", err));
 
     return NextResponse.json({
       success: true,

@@ -346,7 +346,16 @@ export async function POST(req: Request) {
     }
     console.log("[payments] Created QR codes:", createdQrCodes.length);
 
-    sendRegistrationEmail(email, fullName, result.registration.id).catch(console.error);
+    // Send email notification via the dedicated notify endpoint
+    fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notify/submission`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        email, 
+        name: fullName,
+        registrationId: result.registration.id 
+      }),
+    }).catch(err => console.error("[payments] Email notification failed:", err));
 
     return NextResponse.json({
       success: true,
