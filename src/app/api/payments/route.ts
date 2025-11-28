@@ -420,7 +420,9 @@ export async function POST(req: Request) {
           registrationId: result.registration.id,
           categoryId: catId,
           qrCodeData: token,
-          participantCount: count as number,
+          totalPacks: count as number,      // CHANGED: use totalPacks instead of participantCount
+          maxScans: count as number,         // CHANGED: set maxScans to the count
+          scansRemaining: count as number,   // CHANGED: initialize scansRemaining to the count
         },
       });
       createdQrCodes.push(qr);
