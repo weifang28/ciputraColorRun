@@ -144,6 +144,7 @@ export async function POST(req: Request) {
     const amount = Number(formData.get("amount") || 0);
     const proofSenderName = String(formData.get("proofSenderName") || "").trim();
     const groupName = String(formData.get("groupName") || "").trim();
+    const cartItemsJson = String(formData.get("items") || "");
 
     // CHANGED: Find existing user by full name (case-insensitive) - reuse if exists
     const existingUser = await prisma.user.findFirst({
@@ -154,6 +155,11 @@ export async function POST(req: Request) {
         }
       }
     });
+
+    // MOVED: Generate txId and accessCode BEFORE file operations
+    const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const accessCode = existingUser?.accessCode || await generateAccessCode(fullName);
+    console.log("[payments] Step 1: Generated transaction ID:", txId);
 
     let proofPath: string | undefined;
     let idCardPhotoPath: string | undefined;
@@ -196,9 +202,6 @@ export async function POST(req: Request) {
     const jerseyOptions = await prisma.jerseyOption.findMany();
     const jerseyMap = new Map(jerseyOptions.map(j => [j.size, j.id]));
     const defaultJerseyId = jerseyOptions[0]?.id ?? 1;
-
-    const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const accessCode = existingUser?.accessCode || await generateAccessCode(fullName);
 
     // Database transaction
     console.log("[payments] Step 7: Starting database transaction...");
