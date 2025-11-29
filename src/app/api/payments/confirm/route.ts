@@ -49,30 +49,50 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing registrationId' }, { status: 400 });
     }
 
-    // 0) Load registration + user
+    // 0) Load registration + user - CRITICAL: Get the specific userId from this registration
     const registration = await prisma.registration.findUnique({
       where: { id: registrationId },
       include: { user: true, payments: true },
     });
     if (!registration) return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
 
-    // 1) Ensure we have an access code to email (generate but do not persist yet)
-    const accessCode = registration.user?.accessCode || await makeUniqueAccessCode(registration.user?.name || registration.user?.email || `user${Date.now()}`);
+    // CRITICAL: Use the userId from this specific registration, not from email lookup
+    const userId = registration.userId;
+    if (!userId) {
+      return NextResponse.json({ error: 'Registration has no associated user' }, { status: 400 });
+    }
 
-    // 2) Build email content (same structure as sendQr route)
+    // Get the user by ID (not by email)
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // 1) Ensure we have an access code (use existing or generate new one)
+    let accessCode = user.accessCode;
+    
+    // If user doesn't have an access code yet, generate one
+    if (!accessCode) {
+      accessCode = await makeUniqueAccessCode(user.name || user.email || `user${Date.now()}`);
+    }
+
+    // 2) Build email content
     const accessHtml = accessCode
       ? `<p><strong>Your access code:</strong> <code style="background:#f3f4f6;padding:4px 8px;border-radius:6px;">${accessCode}</code></p>
-         <p>Use this code in the mobile app or profile page to manage your registration.</p>`
+         <p>Use this code to log in at <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/login">${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/login</a> and view your registration details.</p>`
       : `<p>Your registration has been confirmed. No access code available.</p>`;
 
     // SMTP configuration
     const host = process.env.EMAIL_HOST;
     const port = Number(process.env.EMAIL_PORT);
     const secure = (process.env.EMAIL_SECURE) === 'true';
-    const user = process.env.EMAIL_USER;
+    const emailUser = process.env.EMAIL_USER;
     const pass = process.env.EMAIL_PASS;
 
-    if (!user || !pass) {
+    if (!emailUser || !pass) {
       console.error('[confirm] Missing EMAIL_USER or EMAIL_PASS environment variables');
       return NextResponse.json(
         { error: 'SMTP credentials are not configured. Set EMAIL_USER and EMAIL_PASS.' },
@@ -84,7 +104,7 @@ export async function POST(request: Request) {
       host,
       port,
       secure,
-      auth: { user, pass },
+      auth: { user: emailUser, pass },
     });
 
     // verify SMTP first (fail fast)
@@ -98,7 +118,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3) Email will include QR images — perform DB updates first, then build & send the enriched email
+    // 3) Perform DB updates first, then send email
     const updated = await prisma.$transaction(async (tx) => {
       // mark payments as confirmed
       await tx.payment.updateMany({
@@ -106,13 +126,11 @@ export async function POST(request: Request) {
         data: { status: 'confirmed' },
       });
 
-      // ensure user accessCode persisted if we generated one
-      if (registration.user && !registration.user.accessCode) {
-        await tx.user.update({
-          where: { id: registration.user.id },
-          data: { accessCode },
-        });
-      }
+      // CRITICAL: Update the specific user by ID with their access code
+      await tx.user.update({
+        where: { id: userId }, // Use userId, not email
+        data: { accessCode },
+      });
 
       // update registration paymentStatus
       const reg = await tx.registration.update({
@@ -121,7 +139,7 @@ export async function POST(request: Request) {
         include: { user: true, payments: true },
       });
 
-      // Deduct jersey quantities (this stays)
+      // Deduct jersey quantities
       const participants = await tx.participant.findMany({
         where: { registrationId },
         include: { jersey: true },
@@ -224,11 +242,11 @@ export async function POST(request: Request) {
 
     try {
       const mailOptions: any = {
-        from: `"Ciputra Color Run 2026" <${user}>`,
-        to: updated.user?.email,
+        from: `"Ciputra Color Run 2026" <${emailUser}>`,
+        to: user.email, // CRITICAL: Send to the specific user's email from the registration
         subject: 'Your Registration is Verified — Ciputra Color Run',
         html: mailHtml,
-        attachments, // inline QR images here
+        attachments,
       };
       const info = await transporter.sendMail(mailOptions);
       console.log('[confirm] sendMail result:', { accepted: info.accepted, rejected: info.rejected });

@@ -366,16 +366,118 @@ export async function POST(req: Request) {
     }
     console.log("[payments] Created QR codes:", createdQrCodes.length);
 
-    // Send email notification via dedicated endpoint
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notify/submission`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        email, 
-        name: fullName,
-        registrationId: result.registration.id 
-      }),
-    }).catch(err => console.error("[payments] Email notification failed:", err));
+    // RESTORED: Simple email notification that works
+    const registeredUser = await prisma.user.findUnique({
+      where: { id: result.userId }
+    });
+
+    if (registeredUser && registeredUser.email) {
+      console.log("[payments] Sending registration confirmation email to:", registeredUser.email);
+      
+      // Send simple confirmation email directly here (no external API call)
+      try {
+        const emailUser = process.env.EMAIL_USER;
+        const emailPass = process.env.EMAIL_PASS;
+        
+        if (emailUser && emailPass) {
+          const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: Number(process.env.EMAIL_PORT),
+            secure: (process.env.EMAIL_SECURE) === "true",
+            auth: { user: emailUser, pass: emailPass },
+          });
+
+          await transporter.sendMail({
+            from: `"Ciputra Color Run 2026" <${emailUser}>`,
+            to: registeredUser.email,
+            subject: "🎉 Registration Received — Ciputra Color Run 2026",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+                <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 40px 24px; text-align: center;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">🎉 Registration Received!</h1>
+                  <p style="margin: 12px 0 0 0; color: rgba(255,255,255,0.95); font-size: 16px;">Ciputra Color Run 2026</p>
+                </div>
+
+                <div style="padding: 32px 24px;">
+                  <p style="margin: 0 0 20px 0; color: #111827; font-size: 16px;">
+                    Dear <strong>${registeredUser.name}</strong>,
+                  </p>
+
+                  <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px;">
+                    Thank you for registering! We have received your registration and payment proof.
+                  </p>
+
+                  <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 0; color: #065f46; font-size: 14px;">
+                      <strong>Registration ID:</strong> <span style="font-family: monospace; font-size: 16px; color: #047857;">#${result.registration.id}</span>
+                    </p>
+                  </div>
+
+                  <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 3px solid #3b82f6; border-radius: 12px; padding: 28px; margin: 28px 0; text-align: center;">
+                    <p style="margin: 0 0 16px 0; color: #1e40af; font-size: 15px; font-weight: 600;">🔑 YOUR ACCESS CODE</p>
+                    <div style="background: #ffffff; border: 3px dashed #3b82f6; border-radius: 10px; padding: 20px; margin: 16px 0;">
+                      <code style="font-size: 32px; font-weight: bold; color: #1e40af; font-family: 'Courier New', monospace; letter-spacing: 3px; display: block;">
+                        ${registeredUser.accessCode}
+                      </code>
+                    </div>
+                    <p style="margin: 16px 0 0 0; color: #1e40af; font-size: 14px;">
+                      <strong>⚠️ Save this code!</strong><br>
+                      Use it to check your payment status at <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/login" style="color: #2563eb;">${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/login</a>
+                    </p>
+                  </div>
+
+                  <div style="margin: 28px 0;">
+                    <h3 style="margin: 0 0 16px 0; color: #111827; font-size: 18px; font-weight: bold;">What happens next?</h3>
+                    <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px; line-height: 1.8;">
+                      <li style="margin-bottom: 8px;">Our admin will verify your payment (usually within <strong>48 hours</strong>).</li>
+                      <li style="margin-bottom: 8px;">Once approved, you'll receive a <strong>confirmation email with your QR code</strong>.</li>
+                      <li style="margin-bottom: 8px;">You can check your payment status anytime using your access code above.</li>
+                    </ol>
+                  </div>
+
+                  <div style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-radius: 12px; padding: 24px; margin: 28px 0; text-align: center;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">💬</div>
+                    <h3 style="margin: 0 0 8px 0; color: #065f46; font-size: 18px; font-weight: bold;">Join Our WhatsApp Group</h3>
+                    <p style="margin: 0 0 16px 0; color: #047857; font-size: 14px;">Get event updates and connect with other participants!</p>
+                    <a href="https://chat.whatsapp.com/HkYS1Oi3CyqFWeVJ7d18Ve" 
+                       style="display: inline-block; background: #25D366; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: bold; font-size: 15px;">
+                      Join WhatsApp Group
+                    </a>
+                  </div>
+
+                  <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #e5e7eb;">
+                    <p style="margin: 0 0 12px 0; color: #111827; font-weight: bold; font-size: 14px;">Need Help?</p>
+                    <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">Contact our support team:</p>
+                    <div style="margin-top: 12px;">
+                      <p style="margin: 6px 0; color: #374151; font-size: 14px;">
+                        <strong>📱 Abel</strong> — WhatsApp: <a href="https://wa.me/6289541031967" style="color: #059669; text-decoration: none;">0895410319676</a>
+                      </p>
+                      <p style="margin: 6px 0; color: #374151; font-size: 14px;">
+                        <strong>📱 Elysian</strong> — WhatsApp: <a href="https://wa.me/62811306658" style="color: #059669; text-decoration: none;">0811306658</a>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
+                  <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 12px;">© 2026 Ciputra Color Run. All rights reserved.</p>
+                  <p style="margin: 0; color: #9ca3af; font-size: 11px;">This email was sent to ${registeredUser.email}</p>
+                </div>
+              </div>
+            `,
+          });
+          
+          console.log("[payments] Registration email sent successfully to:", registeredUser.email);
+        } else {
+          console.warn("[payments] Email credentials not configured");
+        }
+      } catch (emailError: any) {
+        console.error("[payments] Failed to send registration email:", emailError?.message || emailError);
+        // Don't fail the whole request if email fails
+      }
+    } else {
+      console.warn("[payments] Cannot send email - no user email found");
+    }
 
     return NextResponse.json({
       success: true,
