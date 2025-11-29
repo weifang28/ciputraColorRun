@@ -62,7 +62,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Registration has no associated user' }, { status: 400 });
     }
 
-    // Get the user by ID (not by email)
+    console.log('[payments/confirm] Processing registration:', registrationId, 'for user ID:', userId);
+
+    // Get the SPECIFIC user by ID (not by email)
     const user = await prisma.user.findUnique({
       where: { id: userId }
     });
@@ -71,12 +73,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // 1) Ensure we have an access code (use existing or generate new one)
+    console.log('[payments/confirm] Found user:', user.id, 'Name:', user.name, 'Email:', user.email, 'Current accessCode:', user.accessCode);
+
+    // 1) Ensure THIS specific user has an access code
     let accessCode = user.accessCode;
     
-    // If user doesn't have an access code yet, generate one
+    // If THIS user doesn't have an access code yet, generate one specifically for them
     if (!accessCode) {
+      console.log('[payments/confirm] User', userId, 'has no access code, generating new one');
       accessCode = await makeUniqueAccessCode(user.name || user.email || `user${Date.now()}`);
+      console.log('[payments/confirm] Generated access code for user', userId, ':', accessCode);
+    } else {
+      console.log('[payments/confirm] User', userId, 'already has access code:', accessCode);
     }
 
     // 2) Build email content
@@ -126,9 +134,10 @@ export async function POST(request: Request) {
         data: { status: 'confirmed' },
       });
 
-      // CRITICAL: Update the specific user by ID with their access code
+      // CRITICAL: Update ONLY this specific user by their unique ID with their access code
+      console.log('[payments/confirm] Updating user', userId, 'with access code:', accessCode);
       await tx.user.update({
-        where: { id: userId }, // Use userId, not email
+        where: { id: userId }, // CRITICAL: Use the exact userId, not email
         data: { accessCode },
       });
 
@@ -138,6 +147,8 @@ export async function POST(request: Request) {
         data: { paymentStatus: 'confirmed' },
         include: { user: true, payments: true },
       });
+
+      console.log('[payments/confirm] Updated registration', registrationId, 'payment status to confirmed');
 
       // Deduct jersey quantities
       const participants = await tx.participant.findMany({
@@ -167,7 +178,15 @@ export async function POST(request: Request) {
       return reg;
     });
 
-    // 4) Fetch QR codes for this registration
+    console.log('[payments/confirm] Transaction completed for user:', userId);
+
+    // 4) Verify the user was updated correctly
+    const verifyUser = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    console.log('[payments/confirm] Verification - User', userId, 'now has access code:', verifyUser?.accessCode);
+
+    // 5) Fetch QR codes for this registration
     const qrRecords = await prisma.qrCode.findMany({
       where: { registrationId },
       include: { category: true },
@@ -189,7 +208,7 @@ export async function POST(request: Request) {
       
       const payload = rawToken.startsWith('http') ? rawToken : `${appUrl}/claim/${encodeURIComponent(rawToken)}`;
       
-      console.log(`[confirm] Generated QR URL: ${payload}`); // Debug log
+      console.log(`[confirm] Generated QR URL: ${payload}`);
 
       // generate PNG buffer server-side
       let pngBuffer: Buffer;
@@ -207,7 +226,6 @@ export async function POST(request: Request) {
         cid,
       });
 
-      // Wrap the inline image with a link that points to the claim page URL
       qrHtmlParts.push(
         `<div style="display:inline-block;margin:10px;text-align:center">
            ${label}
@@ -225,15 +243,19 @@ export async function POST(request: Request) {
         <p>Thank you for registering! You are officially on the list for the most colorful event in Surabaya.</p>
         <p><strong>Order Number:</strong> #${updated.id}</p>
         <p><strong>Access Code (Login to profile): </strong>${accessHtml}</p>
-        <p>Below is your unique QR Code. This is your ticket to joining the fun. Please present this code to our staff to claim your gear during the Race Pack Collection days.</p>
-        <div style="margin:18px 0; display:flex; flex-wrap:wrap; gap:12px;">
-          ${qrHtmlParts.join("\n")}
-        </div>
-        <div style="margin-top:12px; padding:12px; background:#fff7ed; border-radius:8px; border:1px solid #ffedd5;">
-          <strong>Important Note:</strong>
-          <p style="margin:6px 0 0;">Keep this QR Code private! Please do not share it with anyone unless they are a trusted person collecting the pack on your behalf. Treat it like a ticket; we don't want anyone else claiming your Race Pack!</p>
-        </div>
-        <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;" />
+
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+
+        <h2 style="color:#059669;">Your QR Codes:</h2>
+        <p>Below are your QR codes for race pack collection. You can also view them anytime by logging into your profile using your access code.</p>
+        <div>${qrHtmlParts.join("")}</div>
+
+        <p style="margin-top:20px;font-size:13px;color:#6b7280;">
+          <strong>Important:</strong> Present these QR codes at the race pack collection point along with your valid ID (KTP/Birth Certificate/Passport).
+        </p>
+
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+
         <p style="margin:0 0 6px;"><strong>Need Help?</strong> If you did not register for this event or believe you received this email by mistake, please contact our support team immediately:</p>
         <p style="margin:4px 0 0;"><strong>Abel</strong><br/>WA: 0895410319676</p>
         <p style="margin:4px 0 0;"><strong>Elysian</strong><br/>WA: 0811306658</p>
@@ -241,13 +263,17 @@ export async function POST(request: Request) {
     `;
 
     try {
+      // CRITICAL: Send email to the SPECIFIC user's email from the registration
       const mailOptions: any = {
         from: `"Ciputra Color Run 2026" <${emailUser}>`,
-        to: user.email, // CRITICAL: Send to the specific user's email from the registration
+        to: user.email, // Use the specific user's email fetched by ID
         subject: 'Your Registration is Verified — Ciputra Color Run',
         html: mailHtml,
         attachments,
       };
+      
+      console.log('[confirm] Sending email to:', user.email, 'for user ID:', userId);
+      
       const info = await transporter.sendMail(mailOptions);
       console.log('[confirm] sendMail result:', { accepted: info.accepted, rejected: info.rejected });
     } catch (err: any) {
