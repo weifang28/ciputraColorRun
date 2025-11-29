@@ -473,8 +473,8 @@ export default function Home() {
 						</div>
 						
 						{/* agar other benefits ditengah */}
-						<div className="hidden md:block">
-						</div>
+						{/* <div className="hidden md:block">
+						</div> */}
 
 						{/* Additional Benefits Card */}
 						<div
