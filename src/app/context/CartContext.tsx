@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 
-// Update the CartItem type to include "family"
+// Update the CartItem type to include jerseyCharges
 export interface CartItem {
   id: string;
   type: "individual" | "community" | "family";
@@ -12,6 +12,7 @@ export interface CartItem {
   jerseySize?: string;
   participants?: number;
   jerseys?: Record<string, number>;
+  jerseyCharges?: number; // NEW: Extra charges for sizes above 5XL
 }
 
 export interface UserDetails {
@@ -24,10 +25,10 @@ export interface UserDetails {
   currentAddress: string;
   nationality?: string;
   medicalHistory?: string;
-  medicationAllergy?: string; // NEW
+  medicationAllergy?: string;
   idCardPhoto?: File;
   registrationType: string;
-  groupName?: string; // Add this
+  groupName?: string;
 }
 
 interface CartContextType {
@@ -37,9 +38,9 @@ interface CartContextType {
   removeItem: (id: string) => void;
   clearCart: () => void;
   totalPrice: number;
-  totalItems: number; // <- added
+  totalItems: number;
   setUserDetails: (details: UserDetails) => void;
-  updateItem: (item: CartItem) => void; // <-- new helper to update items (price, participants, jerseys, etc.)
+  updateItem: (item: CartItem) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -48,12 +49,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [userDetails, setUserDetailsState] = useState<UserDetails | null>(null);
 
-  // compute total number of participants/items for the navbar badge
   const totalItems = useMemo(() => {
     return items.reduce((sum, item) => {
       if (item.type === "individual") return sum + 1;
       if (item.type === "community") return sum + (Number(item.participants ?? 0) || 0);
-      if (item.type === "family") return sum + (Number(item.participants ?? 0) || 4); // family bundle = 4 by default
+      if (item.type === "family") return sum + (Number(item.participants ?? 0) || 4);
       return sum;
     }, 0);
   }, [items]);
@@ -90,16 +90,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setUserDetailsState(details);
   }
 
-  // NEW: update a single cart item (used to update recalculated prices)
   function updateItem(updated: CartItem) {
     setItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)));
   }
 
+  // UPDATED: Include jersey charges in total price calculation
   const totalPrice = items.reduce((sum, item) => {
+    const jerseyCharge = Number(item.jerseyCharges || 0);
+    
     if (item.type === "individual") {
-      return sum + item.price;
+      return sum + item.price + jerseyCharge;
     } else {
-      return sum + item.price * (item.participants || 0);
+      const baseTotal = item.price * (item.participants || 0);
+      return sum + baseTotal + jerseyCharge;
     }
   }, 0);
 
@@ -112,9 +115,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeItem,
         clearCart,
         totalPrice,
-        totalItems, // <- expose here
+        totalItems,
         setUserDetails,
-        updateItem, // <-- exposed
+        updateItem,
       }}
     >
       {children}

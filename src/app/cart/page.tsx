@@ -225,28 +225,93 @@ export default function CartPage() {
                         </span>
                       </div>
 
+                      {/* Individual Item Display */}
                       {item.type === "individual" ? (
-                        <div className="text-sm text-gray-600">
-                          <p>Jersey Size: {item.jerseySize}</p>
-                          <p className="font-semibold text-gray-800 mt-1">
-                            Rp {item.price.toLocaleString("id-ID")}
+                        <>
+                          <p className="text-sm text-gray-600">
+                            Jersey Size: <span className="font-medium">{item.jerseySize}</span>
                           </p>
-                        </div>
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600">
+                              Base Price: <span className="font-semibold text-gray-900">Rp {item.price.toLocaleString("id-ID")}</span>
+                            </p>
+                            {item.jerseyCharges && item.jerseyCharges > 0 && (
+                              <p className="text-sm text-orange-600">
+                                Extra Size Charge: <span className="font-semibold">+Rp {item.jerseyCharges.toLocaleString("id-ID")}</span>
+                              </p>
+                            )}
+                            <p className="text-base font-bold text-emerald-700 mt-1">
+                              Total: Rp {(item.price + (item.jerseyCharges || 0)).toLocaleString("id-ID")}
+                            </p>
+                          </div>
+                        </>
+                      ) : item.type === "family" ? (
+                        <>
+                          <p className="text-sm text-gray-600">
+                            {item.participants || 4} people (Family Bundle)
+                          </p>
+                          {item.jerseys && (
+                            <div className="mt-2">
+                              <p className="text-xs text-gray-500 mb-1">Jersey Distribution:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {Object.entries(item.jerseys)
+                                  .filter(([_, count]) => count > 0)
+                                  .map(([size, count]) => (
+                                    <span key={size} className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
+                                      {size}: {count}
+                                    </span>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600">
+                              Base: Rp {item.price.toLocaleString("id-ID")} × {item.participants || 4} = Rp {(item.price * (item.participants || 4)).toLocaleString("id-ID")}
+                            </p>
+                            {item.jerseyCharges && item.jerseyCharges > 0 && (
+                              <p className="text-sm text-orange-600">
+                                Extra Size Charges: <span className="font-semibold">+Rp {item.jerseyCharges.toLocaleString("id-ID")}</span>
+                              </p>
+                            )}
+                            <p className="text-base font-bold text-purple-700 mt-1">
+                              Total: Rp {((item.price * (item.participants || 4)) + (item.jerseyCharges || 0)).toLocaleString("id-ID")}
+                            </p>
+                          </div>
+                        </>
                       ) : (
-                        <div className="text-sm text-gray-600">
-                          <p>Participants: {item.participants}</p>
-                          <p>
-                            Jerseys:{" "}
-                            {Object.entries(item.jerseys || {})
-                              .filter(([, count]) => count > 0)
-                              .map(([size, count]) => `${size}(${count})`)
-                              .join(", ")}
+                        /* Community Item Display */
+                        <>
+                          <p className="text-sm text-gray-600">
+                            {item.participants || 0} participants
                           </p>
-                          <p className="font-bold text-gray-900 text-lg mt-1">
-                            Rp {item.price.toLocaleString("id-ID")} × {item.participants} = Rp{" "}
-                            {((item.participants || 0) * item.price).toLocaleString("id-ID")}
-                          </p>
-                        </div>
+                          {item.jerseys && (
+                            <div className="mt-2">
+                              <p className="text-xs text-gray-500 mb-1">Jersey Distribution:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {Object.entries(item.jerseys)
+                                  .filter(([_, count]) => count > 0)
+                                  .map(([size, count]) => (
+                                    <span key={size} className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-xs">
+                                      {size}: {count}
+                                    </span>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600">
+                              Base: Rp {item.price.toLocaleString("id-ID")} × {item.participants || 0} = Rp {(item.price * (item.participants || 0)).toLocaleString("id-ID")}
+                            </p>
+                            {item.jerseyCharges && item.jerseyCharges > 0 && (
+                              <p className="text-sm text-orange-600">
+                                Extra Size Charges: <span className="font-semibold">+Rp {item.jerseyCharges.toLocaleString("id-ID")}</span>
+                              </p>
+                            )}
+                            <p className="text-base font-bold text-emerald-700 mt-1">
+                              Total: Rp {((item.price * (item.participants || 0)) + (item.jerseyCharges || 0)).toLocaleString("id-ID")}
+                            </p>
+                          </div>
+                        </>
                       )}
                     </div>
 

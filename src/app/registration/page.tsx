@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
-import "../styles/homepage.css"
+import { useState, useEffect, useMemo } from "react";
 import { showToast } from "../../lib/toast";
 import TutorialModal from "../components/TutorialModal";
-
 
 interface Category {
     id: number;
@@ -24,7 +22,17 @@ interface Category {
     bundlePrice?: string;
     bundleSize?: number;
     earlyBirdCapacity?: number;
-    earlyBirdRemaining?: number | null; // added by API
+    earlyBirdRemaining?: number | null;
+}
+
+// NEW: Interface for jersey option
+interface JerseyOption {
+    id: number;
+    size: string;
+    type: string;
+    price: string;
+    isExtraSize: boolean;
+    description: string | null;
 }
 
 export default function RegistrationPage() {
@@ -36,14 +44,11 @@ export default function RegistrationPage() {
     const [type, setType] = useState<"individual" | "community" | "family">("individual");
     
     const [loading, setLoading] = useState(true);
-    // categories loaded from server
     const [categories, setCategories] = useState<Category[]>([]);
+    const [jerseyOptions, setJerseyOptions] = useState<JerseyOption[]>([]); // NEW
     const [categoryId, setCategoryId] = useState<number | null>(null);
     const [participants, setParticipants] = useState<number | "">("");
-    const [jerseys, setJerseys] = useState<Record<string, number | "">>({
-        XS: "", S: "", M: "", L: "", XL: "", XXL: "",
-        "XS - KIDS": "", "S - KIDS": "", "M - KIDS": "", "L - KIDS": "", "XL - KIDS": "",
-    });
+    const [jerseys, setJerseys] = useState<Record<string, number | "">>({});
     const [selectedJerseySize, setSelectedJerseySize] = useState("M");
     const [useEarlyBird, setUseEarlyBird] = useState(false);
 
@@ -103,7 +108,7 @@ export default function RegistrationPage() {
             (window as any).AOS.refresh();
         }
 
-        // Try to load current logged-in user profile to prefill form
+        // Load current user
         (async () => {
             try {
                 const resUser = await fetch("/api/user");
@@ -112,7 +117,6 @@ export default function RegistrationPage() {
                     const user = body?.user;
                     if (user) {
                         setCurrentUser(user);
-                        // Prefill form fields from user record (do not override while typing later)
                         setFullName(user.name || "");
                         setEmail(user.email || "");
                         setPhone(user.phone || "");
@@ -134,40 +138,52 @@ export default function RegistrationPage() {
                     }
                 }
             } catch (err) {
-                // silent fail — not logged in or endpoint unavailable
-                // console.debug("No current user", err);
+                // silent fail
             }
         })();
 
-        // Fetch categories - always fetch fresh data on mount
+        // Fetch categories
         (async () => {
             try {
                 const res = await fetch(`/api/categories`, {
                     cache: 'no-store',
-                    headers: {
-                        'Cache-Control': 'no-cache',
-                    }
+                    headers: { 'Cache-Control': 'no-cache' }
                 });
                 if (!res.ok) throw new Error("Failed to load categories");
                 const data = await res.json();
                 setCategories(data);
                 if (data.length > 0) setCategoryId(data[0].id);
-                
-                console.log('[Registration] Loaded categories with early bird:', 
-                    data.map((c: any) => ({ 
-                        name: c.name, 
-                        capacity: c.earlyBirdCapacity, 
-                        remaining: c.earlyBirdRemaining 
-                    }))
-                );
             } catch (err) {
                 console.error("Failed to load categories:", err);
                 showToast("Failed to load categories. Please refresh the page.", "error");
+            }
+        })();
+
+        // NEW: Fetch jersey options
+        (async () => {
+            try {
+                const res = await fetch(`/api/jerseys`, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                if (!res.ok) throw new Error("Failed to load jersey options");
+                const data = await res.json();
+                setJerseyOptions(data);
+                
+                // Initialize jerseys state with all available sizes
+                const initialJerseys: Record<string, number | ""> = {};
+                data.forEach((jersey: JerseyOption) => {
+                    initialJerseys[jersey.size] = "";
+                });
+                setJerseys(initialJerseys);
+            } catch (err) {
+                console.error("Failed to load jersey options:", err);
+                showToast("Failed to load jersey sizes. Please refresh the page.", "error");
             } finally {
                 setLoading(false);
             }
         })();
-    }, []); // Empty dependency array - only run on mount
+    }, []);
 
     // --- Move all hook-based computations here so they always run in the same order ---
     // Check if user has family bundle in cart
@@ -188,6 +204,30 @@ export default function RegistrationPage() {
                 if (item.type === "family") return sum + (item.participants || 4);
                 return sum + (item.participants || 0);
             }, 0);
+    }
+
+    // NEW: Calculate extra jersey charges
+    function calculateJerseyCharges(jerseySelection: Record<string, number | "">): number {
+        let total = 0;
+        Object.entries(jerseySelection).forEach(([size, count]) => {
+            const numCount = Number(count || 0);
+            if (numCount > 0) {
+                const jerseyOption = jerseyOptions.find(j => j.size === size);
+                if (jerseyOption && jerseyOption.isExtraSize) {
+                    total += numCount * Number(jerseyOption.price);
+                }
+            }
+        });
+        return total;
+    }
+
+    // NEW: Calculate jersey charges for individual
+    function calculateIndividualJerseyCharge(size: string): number {
+        const jerseyOption = jerseyOptions.find(j => j.size === size);
+        if (jerseyOption && jerseyOption.isExtraSize) {
+            return Number(jerseyOption.price);
+        }
+        return 0;
     }
 
     // Calculate price based on total participants
@@ -250,15 +290,27 @@ export default function RegistrationPage() {
         return calculatePrice(category, type === "community" ? totalWithCurrent : 1);
     }, [categoryId, categories, participants, items, type]);
 
-    // Calculate subtotal for current category
+    // NEW: Calculate subtotal including jersey charges
     const currentSubtotal = useMemo(() => {
         if (type === "family") {
             const category = categories.find(c => c.id === categoryId);
-            return currentPrice * (category?.bundleSize || 4);
+            const bundleSize = category?.bundleSize || 4;
+            const baseTotal = currentPrice * bundleSize;
+            const jerseyCharge = calculateJerseyCharges(jerseys);
+            return baseTotal + jerseyCharge;
         }
+        
+        if (type === "individual") {
+            const basePrice = currentPrice;
+            const jerseyCharge = calculateIndividualJerseyCharge(selectedJerseySize);
+            return basePrice + jerseyCharge;
+        }
+        
         const currentParticipants = Number(participants || 0);
-        return currentPrice * currentParticipants;
-    }, [currentPrice, participants, type, categoryId, categories]);
+        const baseTotal = currentPrice * currentParticipants;
+        const jerseyCharge = calculateJerseyCharges(jerseys);
+        return baseTotal + jerseyCharge;
+    }, [currentPrice, participants, type, categoryId, categories, jerseys, selectedJerseySize, jerseyOptions]);
 
     // Calculate discount percentage
     const discountInfo = useMemo(() => {
@@ -281,6 +333,10 @@ export default function RegistrationPage() {
 
     // Display pricing breakdown (null when not available)
     const selectedCategory = categoryId ? categories.find(c => c.id === categoryId) ?? null : null;
+
+    // NEW: Get adult and kids jersey options separately
+    const adultJerseys = useMemo(() => jerseyOptions.filter(j => j.type === "adult"), [jerseyOptions]);
+    const kidsJerseys = useMemo(() => jerseyOptions.filter(j => j.type === "kids"), [jerseyOptions]);
 
     function updateJersey(size: string, value: number | "") {
         setJerseys((s) => ({ ...s, [size]: value }));
@@ -382,7 +438,7 @@ export default function RegistrationPage() {
             sessionStorage.setItem("reg_currentAddress", currentAddress);
             sessionStorage.setItem("reg_nationality", nationality);
             sessionStorage.setItem("reg_medicalHistory", medicalHistory);
-            sessionStorage.setItem("reg_medicationAllergy", medicationAllergy); // NEW
+            sessionStorage.setItem("reg_medicationAllergy", medicationAllergy);
             // store the filename for convenience (either newly uploaded file name or existing saved file name)
             if (idCardPhoto) {
                  sessionStorage.setItem("reg_idCardPhotoName", idCardPhoto.name);
@@ -418,6 +474,8 @@ export default function RegistrationPage() {
                 return;
             }
 
+            const jerseyCharge = calculateJerseyCharges(jerseys);
+
             // Add family bundle to cart
             addItem({
                 type: "family",
@@ -428,13 +486,16 @@ export default function RegistrationPage() {
                 jerseys: Object.fromEntries(
                     Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
                 ),
+                jerseyCharges: jerseyCharge, // NEW
             });
 
-            showToast(`Family bundle added! ${bundleSize} people at Rp ${currentPrice.toLocaleString("id-ID")}/person`, "success");
-            setJerseys({ 
-                XS: "", S: "", M: "", L: "", XL: "", XXL: "",
-                "XS - KIDS": "", "S - KIDS": "", "M - KIDS": "", "L - KIDS": "", "XL - KIDS": ""
-            });
+            const totalWithCharges = (currentPrice * bundleSize) + jerseyCharge;
+            showToast(`Family bundle added! Total: Rp ${totalWithCharges.toLocaleString("id-ID")}${jerseyCharge > 0 ? ` (includes Rp ${jerseyCharge.toLocaleString("id-ID")} extra size charges)` : ''}`, "success");
+            
+            // Reset jerseys
+            const resetJerseys: Record<string, number | ""> = {};
+            jerseyOptions.forEach(j => { resetJerseys[j.size] = ""; });
+            setJerseys(resetJerseys);
 
             // UX: after adding a family bundle, switch the registration radio back to Individual
             // so the form doesn't show family-specific inputs and avoids confusion.
@@ -464,6 +525,7 @@ export default function RegistrationPage() {
         }
 
         const pricePerPerson = calculatePrice(category, totalWithCurrent);
+        const jerseyCharge = calculateJerseyCharges(jerseys);
 
         savePersonalDetailsToSession();
 
@@ -477,16 +539,17 @@ export default function RegistrationPage() {
             jerseys: Object.fromEntries(
                 Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
             ),
+            jerseyCharges: jerseyCharge, // NEW
         });
 
-        showToast(`Category added! Total participants: ${totalWithCurrent}. Price per person: Rp ${pricePerPerson.toLocaleString("id-ID")}`, "success");
+        const totalPrice = (pricePerPerson * currentParticipants) + jerseyCharge;
+        showToast(`Category added! Total: Rp ${totalPrice.toLocaleString("id-ID")}${jerseyCharge > 0 ? ` (includes Rp ${jerseyCharge.toLocaleString("id-ID")} extra size charges)` : ''}`, "success");
 
         // Reset community fields to allow adding another category
         setParticipants("");
-        setJerseys({ 
-            XS: "", S: "", M: "", L: "", XL: "", XXL: "",
-            "XS - KIDS": "", "S - KIDS": "", "M - KIDS": "", "L - KIDS": "", "XL - KIDS": ""
-        });
+        const resetJerseys: Record<string, number | ""> = {};
+        jerseyOptions.forEach(j => { resetJerseys[j.size] = ""; });
+        setJerseys(resetJerseys);
     }
 
     // Checkout with modal (for both individual and community)
@@ -506,7 +569,7 @@ export default function RegistrationPage() {
 
             const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
             if (totalJerseys !== category.bundleSize && totalJerseys > 0) {
-                showToast(`Please complete jersey selection (${totalJerseys}/${category.bundleSize}) or clear it before checkout`, "error");
+                showToast(`Please complete jersey selection`, "error");
                 return;
             }
 
@@ -517,7 +580,7 @@ export default function RegistrationPage() {
             const totalInCart = getTotalCommunityParticipants();
 
             if (totalInCart < 10) {
-                showToast(`Community registration requires a minimum of 10 total participants. You currently have ${totalInCart} in cart. Please add more participants before checkout.`, "error");
+                showToast(`Community registration requires minimum 10 participants. Currently have ${totalInCart}`, "error");
                 return;
             }
 
@@ -526,7 +589,7 @@ export default function RegistrationPage() {
             if (currentParticipants > 0) {
                 const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
                 if (totalJerseys !== currentParticipants) {
-                    showToast(`Jersey count (${totalJerseys}) must match participant count (${currentParticipants}). Please complete or clear the current category before checkout.`, "error");
+                    showToast(`Jersey count must match participant count`, "error");
                     return;
                 }
             }
@@ -552,6 +615,8 @@ export default function RegistrationPage() {
 
         savePersonalDetailsToSession();
 
+        const jerseyCharge = calculateIndividualJerseyCharge(selectedJerseySize);
+        
         // Add individual item to cart
         addItem({
             type: "individual",
@@ -559,15 +624,15 @@ export default function RegistrationPage() {
             categoryName: category.name,
             price: currentPrice,
             jerseySize: selectedJerseySize,
+            jerseyCharges: jerseyCharge, // NEW
         });
 
-        showToast(`Individual registration added to cart! Price: Rp ${currentPrice.toLocaleString("id-ID")}`, "success");
+        const totalPrice = currentPrice + jerseyCharge;
+        showToast(`Added to cart! Total: Rp ${totalPrice.toLocaleString("id-ID")}${jerseyCharge > 0 ? ` (includes Rp ${jerseyCharge.toLocaleString("id-ID")} extra size charge)` : ''}`, "success");
 
         // Reset jersey size selection
         setSelectedJerseySize("M");
     }
-
-    // --- END OF CART LOGIC ---
 
     // Checkout execution (after terms accepted)
     function executeCheckout() {
@@ -597,6 +662,8 @@ export default function RegistrationPage() {
         });
 
         if (type === "individual") {
+            const jerseyCharge = calculateIndividualJerseyCharge(selectedJerseySize);
+            
             // Add individual item to cart
             addItem({
                 type: "individual",
@@ -604,9 +671,12 @@ export default function RegistrationPage() {
                 categoryName: category.name,
                 price: currentPrice,
                 jerseySize: selectedJerseySize,
+                jerseyCharges: jerseyCharge,
             });
         } else if (type === "family") {
             const bundleSize = category.bundleSize || 4;
+            const jerseyCharge = calculateJerseyCharges(jerseys);
+            
             addItem({
                 type: "family",
                 categoryId: category.id,
@@ -616,6 +686,7 @@ export default function RegistrationPage() {
                 jerseys: Object.fromEntries(
                     Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
                 ),
+                jerseyCharges: jerseyCharge,
             });
 
             // same UX reset when family added via executeCheckout
@@ -623,11 +694,15 @@ export default function RegistrationPage() {
             setRegistrationType("individual");
 
             // reset local fields
-            setJerseys({ XS: "", S: "", M: "", L: "", XL: "", XXL: "" });
+            const resetJerseys: Record<string, number | ""> = {};
+            jerseyOptions.forEach(j => { resetJerseys[j.size] = ""; });
+            setJerseys(resetJerseys);
         } else {
             // For community, add current category if filled
             const currentParticipants = Number(participants || 0);
             if (currentParticipants > 0) {
+                const jerseyCharge = calculateJerseyCharges(jerseys);
+                
                 addItem({
                     type: "community",
                     categoryId: category.id,
@@ -637,6 +712,7 @@ export default function RegistrationPage() {
                     jerseys: Object.fromEntries(
                         Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
                     ),
+                    jerseyCharges: jerseyCharge,
                 });
             }
         }
@@ -709,6 +785,23 @@ export default function RegistrationPage() {
         setShowSizeChart(true);
     }
 
+    if (loading) {
+        return (
+            <main className="flex min-h-screen pt-28 pb-16 items-center justify-center"
+                style={{
+                    backgroundImage: "url('/images/generalBg.jpg')",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                }}>
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+                    <p className="mt-4 text-gray-700 font-semibold">Loading registration form...</p>
+                </div>
+            </main>
+        );
+    }
+
     return (
         <main
             className="flex min-h-screen pt-28 pb-16"
@@ -728,7 +821,7 @@ export default function RegistrationPage() {
                     <h2 className="text-2xl font-bold text-center mb-1 text-gray-800 font-moderniz">REGISTRATION FORM</h2>
                     <p className="text-center text-sm text-gray-600 mb-6 font-mustica">Enter the details to get going</p>
 
-                    {/* MOVED: Registration Type radios now on top for easier access */}
+                    {/* Registration Type Selection */}
                     <div className="space-y-3 mb-6">
                         <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-3">Registration Type <strong className="text-red-500">*</strong></p>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -773,7 +866,7 @@ export default function RegistrationPage() {
                         </div>
                     </div>
 
-                    {/* Personal details */}
+                    {/* Personal Details Form - Keep all existing personal details inputs */}
                     <div className="space-y-4">
                         <div className="grid gap-3">
                             <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Full Name (as per ID Card) <strong className = "text-red-500">*</strong></label>
@@ -975,16 +1068,6 @@ export default function RegistrationPage() {
                     {/* Family Bundle Layout */}
                     {type === "family" && (
                         <div className="space-y-6 mt-6">
-                            {/* <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                                <h3 className="font-semibold text-purple-900 mb-2">👨‍👩‍👧‍👦 Family Bundle - 3km Only</h3>
-                                <p className="text-sm text-purple-700">
-                                    Special family package for 4 people at Rp 145,000/person (Total: Rp 580,000)
-                                </p>
-                                <p className="text-xs text-purple-600 mt-1">
-                                    ⚠️ Note: Cannot be combined with community registration
-                                </p>
-                            </div> */}
-
                             <div className="rounded-lg border border-gray-200 p-5 bg-white">
                                 <div className="space-y-5">
                                     <div className="grid gap-3">
@@ -1006,7 +1089,7 @@ export default function RegistrationPage() {
                                     <div>
                                         <div className="flex items-center justify-between mb-3">
                                             <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                                                Jersey Size Distribution (4 people total) <strong className ="text-red-500">*</strong>
+                                                Jersey Size Distribution (4 people total) <strong className="text-red-500">*</strong>
                                             </label>
                                             <button
                                                 type="button"
@@ -1020,10 +1103,10 @@ export default function RegistrationPage() {
                                             </button>
                                         </div>
                                         
-                                        {/* Adult Sizes */}
+                                        {/* Adult Sizes - Standard */}
                                         <div className="mb-4">
                                             <div className="flex items-center justify-between mb-2">
-                                                <p className="text-xs font-semibold text-gray-700">Adult Sizes:</p>
+                                                <p className="text-xs font-semibold text-gray-700">Adult Sizes (Standard):</p>
                                                 <button
                                                     type="button"
                                                     onClick={() => openSizeChart()}
@@ -1033,20 +1116,60 @@ export default function RegistrationPage() {
                                                 </button>
                                             </div>
                                             <div className="grid grid-cols-3 gap-3">
-                                                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                                                    <div key={size} className="flex flex-col items-center">
-                                                        <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
-                                                        <input
-                                                          type="number"
-                                                          min={0}
-                                                          value={jerseys[size]}
-                                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                          className="jersey-input shift-right accent-[#e687a4]"
-                                                          placeholder="0"
-                                                        />
-                                                    </div>
-                                                ))}
+                                                {["S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"].map((size) => {
+                                                    const jerseyInfo = adultJerseys.find(j => j.size === size);
+                                                    return (
+                                                        <div key={size} className="flex flex-col items-center">
+                                                            <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                value={jerseys[size]}
+                                                                onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                                className="jersey-input shift-right accent-[#e687a4]"
+                                                                placeholder="0"
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
+                                        </div>
+
+                                        {/* Adult Sizes - Extra (6XL with +10k charge) */}
+                                        <div className="mb-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-xs font-semibold text-orange-700">Adult Sizes (Extra - +Rp 10.000 each):</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSizeChart()}
+                                                    className="text-xs text-orange-600 hover:text-orange-700 underline"
+                                                >
+                                                    Size Guide
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="flex flex-col items-center">
+                                                    <div className="flex items-center gap-1 mb-2">
+                                                        <span className="text-xs font-medium text-orange-600">6XL</span>
+                                                        <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
+                                                    </div>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        value={jerseys["6XL"]}
+                                                        onChange={(e) => updateJersey("6XL", e.target.value === "" ? "" : Number(e.target.value))}
+                                                        className="jersey-input shift-right accent-orange-500 border-orange-300 focus:border-orange-500"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {Number(jerseys["6XL"] || 0) > 0 && (
+                                                <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                                                    <p className="text-xs text-orange-700">
+                                                        ℹ️ Extra size charges: +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Kids Sizes */}
@@ -1079,7 +1202,7 @@ export default function RegistrationPage() {
                                         </div>
 
                                         <p className="text-xs text-gray-500 mt-3 text-center">
-                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / {participants || 0}
+                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / 4
                                         </p>
                                     </div>
 
@@ -1106,15 +1229,31 @@ export default function RegistrationPage() {
 
                                         <div className="pt-3 border-t border-purple-200">
                                             <div className="space-y-2">
-                                                <span className="text-sm font-semibold text-gray-700 block">
-                                                    Total Bundle ({selectedCategory?.bundleSize || 4} people):
-                                                </span>
-                                                <span className="text-lg sm:text-xl font-bold text-purple-800 block text-right">
-                                                    Rp {currentSubtotal.toLocaleString("id-ID")}
-                                                </span>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-sm font-semibold text-gray-700">
+                                                        Subtotal ({selectedCategory?.bundleSize || 4} people):
+                                                    </span>
+                                                    <span className="text-base font-bold text-purple-700">
+                                                        Rp {(currentPrice * (selectedCategory?.bundleSize || 4)).toLocaleString("id-ID")}
+                                                    </span>
+                                                </div>
+                                                {calculateJerseyCharges(jerseys) > 0 && (
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-orange-600">Extra size charges:</span>
+                                                        <span className="text-sm font-semibold text-orange-600">
+                                                            +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div className="pt-2 border-t border-purple-200">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm font-bold text-gray-700">Grand Total:</span>
+                                                        <span className="text-lg sm:text-xl font-bold text-purple-800 block">
+                                                            Rp {currentSubtotal.toLocaleString("id-ID")}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            
-                                    
                                         </div>
                                     </div>
 
@@ -1223,10 +1362,10 @@ export default function RegistrationPage() {
                                     <div className="grid gap-3">
                                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Jersey Size Distribution *</label>
                                         
-                                        {/* Adult Sizes */}
+                                        {/* Adult Sizes - Standard */}
                                         <div className="mb-4">
                                             <div className="flex items-center justify-between mb-2">
-                                                <p className="text-xs font-semibold text-gray-700">Adult Sizes:</p>
+                                                <p className="text-xs font-semibold text-gray-700">Adult Sizes (Standard):</p>
                                                 <button
                                                     type="button"
                                                     onClick={() => openSizeChart()}
@@ -1236,20 +1375,60 @@ export default function RegistrationPage() {
                                                 </button>
                                             </div>
                                             <div className="grid grid-cols-3 gap-3">
-                                                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                                                    <div key={size} className="flex flex-col items-center">
-                                                        <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
-                                                        <input
-                                                          type="number"
-                                                          min={0}
-                                                          value={jerseys[size]}
-                                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                          className="jersey-input shift-right accent-[#e687a4]"
-                                                          placeholder="0"
-                                                        />
-                                                    </div>
-                                                ))}
+                                                {["S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"].map((size) => {
+                                                    const jerseyInfo = adultJerseys.find(j => j.size === size);
+                                                    return (
+                                                        <div key={size} className="flex flex-col items-center">
+                                                            <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                value={jerseys[size]}
+                                                                onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                                className="jersey-input shift-right accent-[#e687a4]"
+                                                                placeholder="0"
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
+                                        </div>
+
+                                        {/* Adult Sizes - Extra (6XL with +10k charge) */}
+                                        <div className="mb-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-xs font-semibold text-orange-700">Adult Sizes (Extra - +Rp 10.000 each):</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSizeChart()}
+                                                    className="text-xs text-orange-600 hover:text-orange-700 underline"
+                                                >
+                                                    Size Guide
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="flex flex-col items-center">
+                                                    <div className="flex items-center gap-1 mb-2">
+                                                        <span className="text-xs font-medium text-orange-600">6XL</span>
+                                                        <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
+                                                    </div>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        value={jerseys["6XL"]}
+                                                        onChange={(e) => updateJersey("6XL", e.target.value === "" ? "" : Number(e.target.value))}
+                                                        className="jersey-input shift-right accent-orange-500 border-orange-300 focus:border-orange-500"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {Number(jerseys["6XL"] || 0) > 0 && (
+                                                <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                                                    <p className="text-xs text-orange-700">
+                                                        ℹ️ Extra size charges: +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Kids Sizes */}
@@ -1286,10 +1465,9 @@ export default function RegistrationPage() {
                                         </p>
                                     </div>
 
-                                    {/* Dynamic Pricing Display with Discount */}
+                                    {/* Dynamic Pricing Display with Discount and Jersey Charges */}
                                     {Number(participants || 0) > 0 && (
                                         <div className="p-4 bg-gradient-to-r from-emerald-50 to-blue-50 border-2 border-emerald-300 rounded-lg">
-                                            {/* Price per person with discount badge */}
                                             <div className="flex justify-between items-center mb-3">
                                                 <span className="text-sm font-semibold text-gray-700">Price per person:</span>
                                                 <div className="flex items-center gap-3">
@@ -1309,30 +1487,32 @@ export default function RegistrationPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Subtotal with discount calculation */}
                                             <div className="pt-3 border-t border-emerald-200">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="text-sm font-semibold text-gray-700">
-                                                        Subtotal ({participants} people):
+                                                        Base subtotal ({participants} people):
                                                     </span>
-                                                    <div className="text-right">
-                                                        {discountInfo && (
-                                                            <div className="text-xs text-gray-400 line-through mb-1">
-                                                                Rp {(discountInfo.basePrice * Number(participants)).toLocaleString("id-ID")}
-                                                            </div>
-                                                        )}
+                                                    <span className="text-base font-bold text-emerald-700">
+                                                        Rp {(currentPrice * Number(participants || 0)).toLocaleString("id-ID")}
+                                                    </span>
+                                                </div>
+                                                {calculateJerseyCharges(jerseys) > 0 && (
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="text-sm text-orange-600">Extra size charges:</span>
+                                                        <span className="text-sm font-semibold text-orange-600">
+                                                            +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div className="pt-2 border-t border-emerald-200">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm font-bold text-gray-700">Grand Total:</span>
                                                         <span className="text-xl font-bold text-emerald-800">
                                                             Rp {currentSubtotal.toLocaleString("id-ID")}
                                                         </span>
                                                     </div>
                                                 </div>
-                                                
-                        
                                             </div>
-
-                                            <p className="text-xs text-gray-600 mt-3">
-                                                Total with cart: {getTotalCommunityParticipants() + Number(participants || 0)} participants
-                                            </p>
                                         </div>
                                     )}
 
@@ -1403,37 +1583,13 @@ export default function RegistrationPage() {
 
                             <div className="text-xs text-gray-500">
                                 {type === "individual" && selectedCategory?.earlyBirdRemaining && selectedCategory?.earlyBirdRemaining > 0
-                                    ? `Early-bird automatically applied for first ${selectedCategory?.earlyBirdCapacity} individuals (${selectedCategory?.earlyBirdRemaining} slots remaining).`
+
+                                    ? `Early-bird automatically applied (${selectedCategory?.earlyBirdRemaining} slots remaining).`
+                                   
                                     : null}
                             </div>
 
-                            {/* Price display with discount */}
-                            <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-lg">
-                                <div className="space-y-2">
-                                    <span className="text-sm font-semibold text-gray-700 block">Price per person:</span>
-                                    <div className="flex items-center gap-3 justify-end flex-wrap">
-                                        {discountInfo && (
-                                            <>
-                                                <span className="text-sm text-gray-400 line-through">
-                                                    Rp {discountInfo.basePrice.toLocaleString("id-ID")}
-                                                </span>
-                                                <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                                                    -{discountInfo.discountPercent}%
-                                                </span>
-                                            </>
-                                        )}
-                                        <span className="text-2xl font-bold text-blue-700">
-                                            Rp {currentPrice.toLocaleString("id-ID")}
-                                        </span>
-                                    </div>
-                                    {/* {selectedCategory?.earlyBirdRemaining && selectedCategory?.earlyBirdRemaining > 0 && (
-                                        <p className="text-xs text-blue-600 mt-2 text-right">
-                                            ✨ Early Bird price automatically applied!
-                                        </p>
-                                    )} */}
-                                </div>
-                            </div>
-
+                            {/* Jersey Size Selection with Extra Size Indicator */}
                             <div className="grid gap-3">
                                 <div className="flex items-center justify-between">
                                     <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Jersey Size</label>
@@ -1454,24 +1610,63 @@ export default function RegistrationPage() {
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 focus:border-blue-500 focus:outline-none transition-colors text-base cursor-pointer"
                                 >
                                     <optgroup label="Adult Sizes">
-                                        <option value="XS">XS</option>
-                                        <option value="S">S</option>
-                                        <option value="M">M</option>
-                                        <option value="L">L</option>
-                                        <option value="XL">XL</option>
-                                        <option value="XXL">XXL</option>
+                                        {adultJerseys.map((jersey) => (
+                                            <option key={jersey.size} value={jersey.size}>
+                                                {jersey.size} {jersey.isExtraSize ? `(+Rp ${Number(jersey.price).toLocaleString("id-ID")})` : ''}
+                                            </option>
+                                        ))}
                                     </optgroup>
                                     <optgroup label="Kids Sizes">
-                                        <option value="XS - KIDS">XS - KIDS</option>
-                                        <option value="S - KIDS">S - KIDS</option>
-                                        <option value="M - KIDS">M - KIDS</option>
-                                        <option value="L - KIDS">L - KIDS</option>
-                                        <option value="XL - KIDS">XL - KIDS</option>
+                                        {kidsJerseys.map((jersey) => (
+                                            <option key={jersey.size} value={jersey.size}>
+                                                {jersey.size}
+                                            </option>
+                                        ))}
                                     </optgroup>
                                 </select>
+                                
+                                {/* Extra Size Notice */}
+                                {jerseyOptions.find(j => j.size === selectedJerseySize)?.isExtraSize && (
+                                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                        <p className="text-xs text-orange-700">
+                                            <strong>ℹ️ Extra Size:</strong> This size requires an additional charge of Rp {calculateIndividualJerseyCharge(selectedJerseySize).toLocaleString("id-ID")}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
-                            {/* NEW: Add to Cart and Buy Now buttons */}
+                            {/* Price Display with Jersey Charges - FIXED */}
+                            <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-lg">
+                                <div className="space-y-2">
+                                    <span className="text-sm font-semibold text-gray-700 block">Price breakdown:</span>
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm text-gray-600">Base price:</span>
+                                            <span className="text-lg font-bold text-blue-700">
+                                                Rp {currentPrice.toLocaleString("id-ID")}
+                                            </span>
+                                        </div>
+                                        {calculateIndividualJerseyCharge(selectedJerseySize) > 0 && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Extra size charge:</span>
+                                                <span className="text-sm font-semibold text-orange-600">
+                                                    +Rp {calculateIndividualJerseyCharge(selectedJerseySize).toLocaleString("id-ID")}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className="pt-2 border-t border-blue-200">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-bold text-gray-700">Total:</span>
+                                                <span className="text-xl font-bold text-blue-700">
+                                                    Rp {currentSubtotal.toLocaleString("id-ID")}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Add to Cart and Buy Now Buttons */}
                             <div className="flex flex-col sm:flex-row gap-3 mt-4">
                                 <button
                                     onClick={handleAddIndividualToCart}
@@ -1488,7 +1683,8 @@ export default function RegistrationPage() {
                             </div>
                         </div>
                     )}
-                </section>
+
+                                    </section>
             </div>
 
             {/* Terms and Conditions Modal */}

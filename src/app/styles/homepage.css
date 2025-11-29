@@ -1558,7 +1558,7 @@
 /* Benefits grid: use 4 columns on wide screens (was 3 + last card spanning) */
 .benefits-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.25rem;
   align-items: stretch;
 }
@@ -1569,7 +1569,6 @@
   grid-column: auto;
   min-height: 84px;
   padding: 1.25rem;
-  /* Put the icon on top and center the text to match other cards */
   flex-direction: column;
   align-items: center;
   text-align: center;
@@ -1579,32 +1578,30 @@
   margin-bottom: 0.6rem;
 }
 
-/* Tablet: keep 3 columns on mid-sized screens (phones/tablets in landscape) */
+/* Tablet: keep responsive behavior */
 @media (min-width: 931px) and (max-width: 1024px) {
   .benefits-grid {
-    grid-template-columns: 1fr !important; /* Changed to single column */
+    grid-template-columns: repeat(3, 1fr) !important;
     gap: 1rem !important;
   }
 
-  .benefits-grid .benefit-card:last-child {
-    grid-column: auto;
-    min-height: 100px; /* Reduced from 150px for consistency */
+  .benefits-grid .benefit-card:nth-child(4) {
+    grid-column: 2 / 3 !important;
   }
 
-  /* Tablet: icon left / content right so benefits stack nicely */
   .benefits-grid .benefit-card {
     flex-direction: row !important;
     align-items: center !important;
     text-align: left !important;
     padding: 1rem !important;
     gap: 1rem !important;
-    min-height: 100px !important; /* Reduced from 120px */
+    min-height: 100px !important;
   }
 
   .benefits-grid .benefit-card .benefit-icon-wrap {
     margin-right: 1rem !important;
     margin-bottom: 0 !important;
-    width: 64px !important; /* Slightly larger icon */
+    width: 64px !important;
     height: 64px !important;
     border-radius: 12px !important;
     flex-shrink: 0 !important;
@@ -1616,7 +1613,7 @@
   .benefits-grid .benefit-card .benefit-icon-wrap img,
   .benefits-grid .benefit-card .benefit-icon-wrap svg,
   .benefits-grid .benefit-card .benefit-image {
-    width: 42px !important; /* Match the larger wrapper */
+    width: 42px !important;
     height: 42px !important;
   }
 
@@ -1635,15 +1632,15 @@
     line-height: 1.4 !important;
   }
 
-  /* keep the last card consistent with the others on tablet */
-  .benefits-grid .benefit-card:last-child {
-    grid-column: auto !important;
+  /* Keep 4th card centered */
+  .benefits-grid .benefit-card:nth-child(4) {
+    grid-column: 2 / 3 !important;
     flex-direction: row !important;
     align-items: center !important;
     text-align: left !important;
   }
 
-  .benefits-grid .benefit-card:last-child .benefit-icon-wrap {
+  .benefits-grid .benefit-card:nth-child(4) .benefit-icon-wrap {
     margin-right: 1rem !important;
     margin-bottom: 0 !important;
   }
@@ -1654,6 +1651,11 @@
   .benefits-grid {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;
+  }
+
+  /* Reset 4th card to normal flow in single column */
+  .benefits-grid .benefit-card:nth-child(4) {
+    grid-column: auto !important;
   }
 
   .benefit-card {
@@ -1697,15 +1699,15 @@
     max-width: 100% !important;
   }
 
-  /* Ensure last card follows same layout */
-  .benefits-grid .benefit-card:last-child {
+  /* Ensure 4th card follows same layout */
+  .benefits-grid .benefit-card:nth-child(4) {
     grid-column: 1 !important;
     flex-direction: row !important;
     align-items: center !important;
     text-align: left !important;
   }
 
-  .benefits-grid .benefit-card:last-child .benefit-icon-wrap {
+  .benefits-grid .benefit-card:nth-child(4) .benefit-icon-wrap {
     margin-right: 1rem !important;
     margin-bottom: 0 !important;
   }
@@ -1716,6 +1718,11 @@
   .benefits-grid {
     grid-template-columns: 1fr;
     gap: 0.9rem;
+  }
+
+  /* Reset 4th card to normal flow */
+  .benefits-grid .benefit-card:nth-child(4) {
+    grid-column: auto !important;
   }
 
   .benefit-card {
@@ -1735,8 +1742,7 @@
   .benefit-title { font-size: 1rem; }
   .benefit-description { font-size: 0.9rem; }
 
-  /* --- Ensure the last "Other Benefits" card matches the other cards on small screens --- */
-  .benefits-grid .benefit-card:last-child {
+  .benefits-grid .benefit-card:nth-child(4) {
     flex-direction: row !important;
     align-items: center !important;
     text-align: left !important;
@@ -1744,7 +1750,7 @@
     gap: 0.9rem !important;
     min-height: 84px !important;
   }
-  .benefits-grid .benefit-card:last-child .benefit-icon-wrap {
+  .benefits-grid .benefit-card:nth-child(4) .benefit-icon-wrap {
     margin-right: 0.9rem !important;
     margin-bottom: 0 !important;
     width: 56px !important;
@@ -1754,8 +1760,8 @@
     align-items: center !important;
     justify-content: center !important;
   }
-  .benefits-grid .benefit-card:last-child .benefit-title,
-  .benefits-grid .benefit-card:last-child .benefit-description {
+  .benefits-grid .benefit-card:nth-child(4) .benefit-title,
+  .benefits-grid .benefit-card:nth-child(4) .benefit-description {
     text-align: left !important;
   }
 }

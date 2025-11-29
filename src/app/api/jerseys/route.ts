@@ -6,14 +6,17 @@ const prisma = new PrismaClient();
 export async function GET() {
   try {
     const jerseys = await prisma.jerseyOption.findMany({
-      orderBy: { id: "asc" },
-      select: { id: true, size: true },
+      orderBy: [
+        { type: "asc" }, // Adult first, then kids
+        { id: "asc" }, // Then by size order
+      ],
     });
+
     return NextResponse.json(jerseys);
-  } catch (err: any) {
-    console.error("GET /api/jerseys error:", err);
+  } catch (error: any) {
+    console.error("[jerseys] GET error:", error);
     return NextResponse.json(
-      { error: "failed to load jersey options" },
+      { error: error.message || "Failed to fetch jersey options" },
       { status: 500 }
     );
   }

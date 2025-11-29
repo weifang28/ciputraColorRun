@@ -62,9 +62,11 @@ model RaceCategory {
 model JerseyOption {
   id           Int            @id @default(autoincrement())
   size         String         @unique
-  type         String         @default("adult") // NEW: "adult" or "kids"
-  price        Decimal
+  type         String         @default("adult") // "adult" or "kids"
+  price        Decimal        @db.Decimal(10, 2) // Price for extra charge (e.g., 10000 for 6XL+)
   quantity     Int?
+  isExtraSize  Boolean        @default(false) // NEW: Flag for sizes with extra charge
+  description  String?        // NEW: Description for extra sizes
   participants Participant[]
 }
 
