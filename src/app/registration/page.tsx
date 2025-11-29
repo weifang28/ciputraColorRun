@@ -1689,7 +1689,7 @@ export default function RegistrationPage() {
                             <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
                                 <li>
                                     Participants agree that all photos, videos, and media recordings taken during the event may be used by the Organizer for promotional and marketing purposes across various platforms (social media, web, print) without obligation to provide compensation to the participant.
-                                <li>
+                                </li>
                                 <li>
                                     All photo and video materials are the intellectual property of Ciputra Color Run 2026 and its network.
                                 </li>
