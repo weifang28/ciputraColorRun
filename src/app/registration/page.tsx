@@ -1339,10 +1339,9 @@ export default function RegistrationPage() {
                                       className="pl-6 mt-1 space-y-1 terms-ol-alpha"
                                       style={{ listStyleType: "lower-alpha" }}
                                     >
-                                      <li><strong>WNI Dewasa:</strong> Kartu Tanda Penduduk (KTP), Surat Izin Mengemudi (SIM), Identitas Kependudukan Digital (IKD), atau kartu pengenal resmi lainnya yang diterbitkan oleh Pemerintah Republik Indonesia.</li>
-                                      <li><strong>Peserta Anak (di bawah 17 tahun):</strong> Kartu Identitas Anak (KIA), Akta Kelahiran, Kartu Pelajar, atau dokumen resmi lainnya.</li>
-                                      <li><strong>Warga Negara Asing (WNA):</strong> Paspor, Kartu Izin Tinggal Terbatas (KITAS), Kartu Izin Tinggal Tetap (KITAP), atau dokumen identitas resmi yang diakui secara internasional.</li>
-                                      <li><strong>Lainnya:</strong> Dokumen identitas resmi lain yang relevan dan dapat diterima oleh panitia.</li>
+                                      <li><strong>Adult Indonesian Citizen: </strong> Resident Identity Card (KTP), Driver's License (SIM), Digital Population Identity (IKD), or other official identification cards issued by the Government of the Republic of Indonesia.</li>
+                                      <li><strong>Child Participants (under 17 years old):</strong> Child Identity Card (KIA), Birth Certificate, Student Card, or other official documents.</li>
+                                      <li><strong>Foreign Citizens (WNA):</strong> Passport, Limited Stay Permit Card (KITAS), Permanent Stay Permit Card (KITAP), or other internationally recognized official identification documents.</li>
                                     </ol>
                                   </li>
                                 </ol>
@@ -1632,6 +1631,171 @@ export default function RegistrationPage() {
                                             Participant Lateness
                                         </li>
                                     </ol>
+                                </li>
+                            </ol>
+                            <h2 className="mt-4 font-bold">SECTION 7: WINNER PROVISIONS AND PRIZE COLLECTION</h2>
+                            <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
+                                <li>
+                                    <strong>Winner Determination: </strong>Winners are determined based on arrival order at the finish line (Gun Time) as recorded by the system or official judges. Winners must complete the full route and pass all checkpoints.
+                                </li>
+                                <li>
+                                    <strong>Foreign National (WNA) Provisions: </strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            The Winner/Podium Category is a Closed Category applicable only to Indonesian Citizens (WNI).
+                                        </li>
+                                        <li>
+                                            Foreign Nationals (WNA) are not entitled to champion titles, podium positions, or any prizes, even if they finish first.
+                                        </li>
+                                        <li>
+                                            Position determination will be based on the arrival order of WNI participants.
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Winner Verification</strong>
+                                    Potential podium winners must verify their data immediately upon finishing by showing:
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            The physical Bib Number still attached and intact.
+                                        </li>
+                                        <li>
+                                            An original ID Card matching registration data .
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Disqualification: </strong>Winner status may be revoked if the participant:
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            Cuts the course/does not complete the route
+                                        </li>
+                                        <li>
+                                            Uses mobility aids
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Award Ceremony: </strong>Winners must be present at the main stage for the announcement. If absent after being called 3 (three) times, podium ceremony rights may be forfeited.
+                                </li>
+                                <li>
+                                    <strong>Jury Decision: </strong>All decisions by the jury and committee regarding winners are absolute, final, and incontestable.
+                                </li>
+                                <li>
+                                    <strong>Prize Collection: </strong>Physical prizes must be collected at the venue. Cash prizes (if any) will be transferred to the winner's account within a maximum of 14 (fourteen) working days.
+                                </li>
+                            </ol>
+                            <h2 className="mt-4 font-bold">SECTION 8: MEDIA USAGE & INTELLECTUAL PROPERTY RIGHTS</h2>
+                            <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
+                                <li>
+                                    Participants agree that all photos, videos, and media recordings taken during the event may be used by the Organizer for promotional and marketing purposes across various platforms (social media, web, print) without obligation to provide compensation to the participant.
+                                <li>
+                                <li>
+                                    All photo and video materials are the intellectual property of Ciputra Color Run 2026 and its network.
+                                </li>
+                            </ol>
+                            <h2 className="mt-4 font-bold">SECTION 9: SPECIAL PROVISIONS FOR RUNNING COMMUNITIES</h2>
+                            <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
+                                <li>
+                                    <strong>Community Definition: </strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            A Community is defined as a group registering collectively under one group identity (e.g., running club, hobby community, company, school) with a clear structure or Person in Charge (PIC).
+                                        </li>
+                                        <li>
+                                            A minimum of 10 (ten) participants is required.
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>PIC Responsibilities: </strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            Each community must appoint 1 (one) PIC to act as a liaison.
+                                        </li>
+                                        <li>
+                                            The PIC is responsible for conveying all official information and rules to members.
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Collective Race Pack Collection: </strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            Can be done by the PIC/Representative
+                                        </li>
+                                        <li>
+                                            Requirements:
+                                            <ol type="i" className="pl-6 mt-1 space-y-1">
+                                                <li>
+                                                    QR Code from the registered accounts from the website for race pack collection
+                                                </li>
+                                                <li>
+                                                    Power of Attorney signed by the representative
+                                                </li>
+                                                <li>
+                                                    Copy of ID cards
+                                                </li>
+                                                <li>
+                                                    Once handed over to the PIC, internal distribution is the community's responsibility. The Organizer is not liable for loss/shortage after the goods leave the collection area.
+                                                </li>
+                                            </ol>
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Route Etiquette: </strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            Members are prohibited from forming barricades that block the entire road, preventing other runners from passing.
+                                        </li>
+                                        <li>
+                                            Attributes (flags/banners) are allowed if they do not endanger others or obstruct views.
+                                        </li>
+                                        <li>
+                                            Excessive commotion that disturbs the concentration or safety of others is prohibited.
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Podium Rules: </strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            Only the individual winner may ascend the podium.
+                                        </li>
+                                        <li>
+                                            PIC is responsible for the validity and submission of their member's data declared as winners during the event.
+                                        </li>
+                                        <li>
+                                            Excessive celebrations on stage are strictly prohibited, including:
+                                            <ol type="i" className="pl-6 mt-1 space-y-1">
+                                                <li>
+                                                    Bringing other members onto the stage
+                                                </li>
+                                                <li>
+                                                    Representation by others (unless in a medical emergency)
+                                                </li>
+                                                <li>
+                                                    blocking sponsors/documentation with community banners .
+                                                </li>
+                                            </ol>
+                                        </li>
+                                        <li>
+                                            Community photo sessions must take place off-stage or at designated photobooths after the official ceremony.
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Rendezvous Point (Basecamp): </strong>Communities may gather in the Bazaar area but are prohibited from setting up private tents, permanent banners, or blocking public access without written permission.
+                                </li>
+                            </ol>
+                            <h2 className="mt-4 font-bold">SECTION 10: CLOSING</h2>
+                            <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
+                                <li>
+                                    The Organizer reserves the right to amend or add to these rules and regulations at any time without prior notice.
+                                </li>
+                                <li>
+                                    Matters not listed in these Terms and Conditions (T&C) are fully under the authority of the event Organizer.
                                 </li>
                             </ol>
                         </div>
