@@ -89,7 +89,7 @@ export async function POST(request: Request) {
       try {
         await sendDeclineEmail(
           registration.user.email,
-          registration.user.name,
+          registration.user.name || "Participant",
           registrationId,
           declineReason
         );
