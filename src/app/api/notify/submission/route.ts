@@ -57,7 +57,7 @@ export async function POST(request: Request) {
           </p>
           
           <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-            Thank you for registering for <strong>Ciputra Color Run 2026</strong>! We're thrilled to have you join us.
+            Thank you for registering to <strong>Ciputra Color Run 2026</strong>! We're thrilled to have you join us.
           </p>
 
           ${registrationId ? `
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
                   Payment Under Review
                 </p>
                 <p style="margin: 0; color: #78350f; font-size: 14px; line-height: 1.4;">
-                  We have received your payment proof and will verify it within <strong>24 hours</strong>.
+                  We have received your payment proof and will verify it within <strong>48 hours</strong>.
                 </p>
               </div>
             </div>
@@ -90,13 +90,13 @@ export async function POST(request: Request) {
             </h3>
             <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px; line-height: 1.8;">
               <li style="margin-bottom: 8px;">
-                Our admin will verify your payment (usually within 24 hours)
+                Our admin will verify your payment (usually within 48 hours).
               </li>
               <li style="margin-bottom: 8px;">
-                You'll receive an <strong>access code</strong> via email once approved
+                You'll receive an <strong>access code</strong> via email once approved.
               </li>
               <li style="margin-bottom: 8px;">
-                Use the access code to view your registration details and QR code on the website
+                Use the access code to view your registration details and QR code on the website.
               </li>
             </ol>
           </div>

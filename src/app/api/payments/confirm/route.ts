@@ -7,21 +7,27 @@ import nodemailer from "nodemailer";
 const prisma = new PrismaClient();
 
 async function makeUniqueAccessCode(baseName: string): Promise<string> {
-  const base = (baseName || 'user')
+  // Extract first name (first word before space)
+  const firstName = (baseName || 'user')
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, '_')
-    .replace(/_$/, '')
-    .slice(0, 30) || `u${Date.now().toString(36).slice(-6)}`;
+    .trim()
+    .split(/\s+/)[0] || 'user';
 
-  let code = base;
-  let counter = 0;
-  while (true) {
-    const existing = await prisma.user.findUnique({ where: { accessCode: code } });
-    if (!existing) return code;
-    counter += 1;
-    code = `${base}_${counter}`;
+  // Generate random string (8 characters)
+  const randomStr = Math.random().toString(36).substring(2, 10);
+  
+  const accessCode = `${firstName}_${randomStr}`;
+  
+  // Check if code already exists (very unlikely but good practice)
+  const exists = await prisma.user.findUnique({ where: { accessCode } });
+  
+  if (exists) {
+    // If by chance it exists, add timestamp
+    return `${firstName}_${randomStr}_${Date.now().toString(36)}`;
   }
+  
+  return accessCode;
 }
 
 export async function POST(request: Request) {

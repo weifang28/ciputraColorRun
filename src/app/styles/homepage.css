@@ -991,9 +991,9 @@
   padding-top: 2.5rem;
   padding-bottom: 2.5rem;
   color: var(--foreground);
-  --pricing-border: rgba(31,98,81,0.08);
-  --pricing-odd: rgba(31,98,81,0.02);
-  --pricing-hover: rgba(31,98,81,0.045);
+  --pricing-border: rgba(31,98,81,0.15);
+  --pricing-odd: rgba(31,98,81,0.06);
+  --pricing-hover: transparent; /* Disabled hover */
   --accent-strong: #91DCAC;
   --accent-muted: #F581A4;
   overflow-x: hidden;
@@ -1037,165 +1037,104 @@
   max-width: 100%;
 }
 
-/* prevent columns from compressing too far — allow scroll instead */
+/* Pricing table: improved visibility with stronger colors */
 .pricing-table {
-  /* Explicit table-only background (uses your requested colors).
-     Using a CSS rule here avoids Tailwind JIT/purge issues with arbitrary classes. */
-  background: linear-gradient(90deg, #d5e8d7 0%, #daa4a7 100%) !important;
-  /* preserve existing look & layout */
+  /* Stronger gradient for better visibility */
+  background: linear-gradient(90deg, rgba(213,232,215,0.85) 0%, rgba(218,164,167,0.85) 100%) !important;
   min-width: 780px;
   width: 100%;
   border-collapse: collapse;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 14px 40px rgba(16,24,40,0.06);
+  box-shadow: 0 14px 40px rgba(16,24,40,0.12);
   font-size: 0.95rem;
 }
 
-/* adjust header sticky background so it sits nicely on top of the new table bg */
+/* Header with stronger visibility */
 .pricing-table thead th {
-  background: rgba(255,255,255,0.92);
-}
-
-/* tiny polish: ensure the first column remains readable when scrolling horizontally */
-.pricing-table tbody td.col-item {
-  position: relative;
-  padding-left: 18px; /* reduced since dot removed */
-  font-weight: 700;
-  color: #682950 !important; /* always visible, override hover rules */
-  font-family: var(--font-moderniz);
-  background: transparent;
-}
-
-/* Remove the decorative gradient dot (was purely ornamental) */
-.pricing-table tbody td.col-item::before {
-  display: none !important;
-  content: none;
-}
-
-/* Ensure hover styles don't make text disappear — keep subtle row hover only */
-.pricing-table tbody tr:hover {
-  /* optional light tint on hover; set to transparent if you want none */
-  background: rgba(0,0,0,0.00);
-}
-
-/* Prevent other rules from changing category color on hover/active */
-.pricing-table tbody tr:hover td.col-item,
-.pricing-table tbody td.col-item {
-  color: #682950 !important;
-}
-
-/* Make sure body cells inherit color unless explicitly set */
-.pricing-table tbody td {
-  color: inherit;
-}
-
-/* clean table layout */
-.pricing-table {
-  width: 100%;
-  border-collapse: collapse;
-  /* translucent glass surface */
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-  backdrop-filter: blur(6px) saturate(1.02);
-  -webkit-backdrop-filter: blur(6px) saturate(1.02);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 14px 40px rgba(16,24,40,0.06);
-  font-size: 0.95rem;
-  border: 1px solid var(--pricing-border);
-  z-index: 2;
-}
-
-/* ensure claim cards sit above the overlay as well */
-.claim-card,
-.venue-card {
-  position: relative;
-  z-index: 2;
-  /* keep cards translucent (glass) so image is visible */
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-  backdrop-filter: blur(8px) saturate(1.02);
-  -webkit-backdrop-filter: blur(8px) saturate(1.02);
-  border-radius: 14px;
-  padding: 1.25rem;
-  box-shadow: 0 10px 28px rgba(16,24,40,0.06);
-  border: 1px solid rgba(31,98,81,0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  color: #23312b;
-}
-
-/* header row */
-.pricing-table thead th {
-  position: relative;
-  z-index: 3;
+  position: sticky;
+  top: 0;
+  z-index: 10;
   text-align: left;
   padding: 14px 18px;
-  /* make header visually match the table gradient (works on desktop & mobile) */
-  background: linear-gradient(90deg, rgba(213,232,215,0.18) 0%, rgba(218,164,167,0.18) 100%);
-  color: #28543b; /* darker text for accessibility */
+  /* Stronger header background */
+  background: linear-gradient(90deg, rgba(213,232,215,0.95) 0%, rgba(218,164,167,0.95) 100%);
+  color: #1a4d3a; /* Darker green for better contrast */
   font-weight: 700;
   letter-spacing: 0.2px;
-  border-bottom: 1px solid rgba(16,24,40,0.06);
+  border-bottom: 2px solid rgba(16,24,40,0.15);
   font-family: var(--font-moderniz);
 }
 
-/* body cells - stronger separators while preserving translucency */
+/* Body cells with better contrast */
 .pricing-table tbody td {
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(31,98,81,0.10);
+  border-bottom: 1px solid rgba(31,98,81,0.15);
   vertical-align: middle;
-  color: #374151;
   background: transparent;
 }
 
-/* category badge on first column for visual hierarchy */
+/* Category column - stronger green */
 .pricing-table tbody td.col-item {
   position: relative;
-  padding-left: 18px; /* reduced since dot removed */
+  padding-left: 18px;
   font-weight: 700;
-  color: #682950 !important; /* always visible, override hover rules */
+  color: #1a4d3a !important; /* Darker green */
   font-family: var(--font-moderniz);
-  background: transparent;
-}
-.pricing-table tbody td.col-item::before {
-  display: none !important;
-  content: none;
+  background: rgba(145,220,172,0.25) !important; /* More visible green tint */
 }
 
-/* primary price column */
+/* Main price column - stronger contrast */
 .col-main {
   width: 18%;
   font-weight: 800;
-  color: #0f5132;
+  color: #0a3d24 !important; /* Much darker green */
   font-family: var(--font-mustica);
+  background: rgba(255,255,255,0.95) !important;
 }
 
-/* tier columns */
-.col-tier { width: 16%; text-align: left; color: #ffffff; }
+/* Tier columns - darker text */
+.col-tier { 
+  width: 16%; 
+  text-align: left; 
+  color: #4a1535 !important; /* Darker purple/pink */
+  font-weight: 600;
+  background: rgba(255,255,255,0.90) !important;
+}
 
-/* note column */
-.col-note { width: 22%; color: #52605f; white-space: pre-wrap; }
+/* Note column - better visibility */
+.col-note { 
+  width: 22%; 
+  color: #2d4a49 !important; /* Darker teal */
+  white-space: pre-wrap;
+  font-weight: 500;
+  background: rgba(255,255,255,0.85) !important;
+}
 
-/* alternating subtle row background for readability */
+/* Alternating rows with stronger visibility */
 .pricing-table tbody tr:nth-child(even) td {
-  background: var(--pricing-odd);
+  background: rgba(31,98,81,0.08) !important;
 }
 
-/* hover highlight */
-.pricing-table tbody tr:hover td {
-  background: var(--pricing-hover);
-  transition: background 160ms ease;
+/* REMOVE ALL HOVER EFFECTS */
+.pricing-table tbody tr:hover,
+.pricing-table tbody tr:hover td,
+.pricing-table tbody tr:active,
+.pricing-table tbody tr:active td {
+  background: none !important;
+  box-shadow: none !important;
+  cursor: default !important;
 }
 
-/* Make only the pricing table body price/note cells bold white (does not affect other text) */
-.pricing-table tbody td.col-main,
-.pricing-table tbody td.col-tier,
-.pricing-table tbody td.col-note {
-  color: #602d4e !important;
+/* Ensure category color never changes */
+.pricing-table tbody tr:hover td.col-item,
+.pricing-table tbody tr:active td.col-item,
+.pricing-table tbody td.col-item {
+  color: #1a4d3a !important;
+  background: rgba(145,220,172,0.25) !important;
 }
 
-/* responsive: transform table into informative cards on narrow screens */
+/* Responsive: transform table into informative cards on narrow screens */
 @media (max-width: 720px) {
   .pricing-decor-large,
   .pricing-decor-small {
@@ -1230,7 +1169,7 @@
     top: 0;
     z-index: 10;
     /* keep the header gradient visible even when scrolled on small screens */
-    background: linear-gradient(90deg, rgba(213,232,215,0.18) 0%, rgba(218,164,167,0.18) 100%);
+    background: linear-gradient(90deg, rgba(213,232,215,0.98) 0%, rgba(218,164,167,0.98) 100%);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     white-space: nowrap;
@@ -1565,8 +1504,8 @@
   }
 }
 
-/* ===== Pricing & Benefits visual tweaks =====
-   - Make the last benefit card ("Benefit Lainnya") span the full width of the 3-card row on larger screens
+/* ===== Pricing & Benefits visual tweaks ===== */
+/* - Make the last benefit card ("Benefit Lainnya") span the full width of the 3-card row on larger screens
    - Keep desktop layout unchanged; ensure mobile stacks normally
    - Add gradient text for HARGA TIKET and BENEFIT PENDAFTARAN headings
 */
@@ -1616,7 +1555,7 @@
 /* Benefits grid: use 4 columns on wide screens (was 3 + last card spanning) */
 .benefits-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.25rem;
   align-items: stretch;
 }
@@ -1640,47 +1579,70 @@
 /* Tablet: keep 3 columns on mid-sized screens (phones/tablets in landscape) */
 @media (min-width: 931px) and (max-width: 1024px) {
   .benefits-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 1rem;
+    grid-template-columns: 1fr !important; /* Changed to single column */
+    gap: 1rem !important;
   }
 
   .benefits-grid .benefit-card:last-child {
     grid-column: auto;
-    min-height: 150px;
+    min-height: 100px; /* Reduced from 150px for consistency */
   }
 
-  /* Tablet: icon left / content right so "Other Benefits" matches other cards */
+  /* Tablet: icon left / content right so benefits stack nicely */
   .benefits-grid .benefit-card {
-    flex-direction: row;
-    align-items: center;
-    text-align: left;
-    padding: 1rem;
-    gap: 1rem;
-    min-height: 120px;
+    flex-direction: row !important;
+    align-items: center !important;
+    text-align: left !important;
+    padding: 1rem !important;
+    gap: 1rem !important;
+    min-height: 100px !important; /* Reduced from 120px */
   }
 
   .benefits-grid .benefit-card .benefit-icon-wrap {
-    margin-right: 1rem;
-    margin-bottom: 0;
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    margin-right: 1rem !important;
+    margin-bottom: 0 !important;
+    width: 64px !important; /* Slightly larger icon */
+    height: 64px !important;
+    border-radius: 12px !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .benefits-grid .benefit-card .benefit-icon-wrap img,
+  .benefits-grid .benefit-card .benefit-icon-wrap svg,
+  .benefits-grid .benefit-card .benefit-image {
+    width: 42px !important; /* Match the larger wrapper */
+    height: 42px !important;
   }
 
   .benefits-grid .benefit-card .benefit-title,
   .benefits-grid .benefit-card .benefit-description {
-    text-align: left;
+    text-align: left !important;
+  }
+
+  .benefits-grid .benefit-card .benefit-title {
+    font-size: 1.05rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .benefits-grid .benefit-card .benefit-description {
+    font-size: 0.95rem !important;
+    line-height: 1.4 !important;
   }
 
   /* keep the last card consistent with the others on tablet */
   .benefits-grid .benefit-card:last-child {
-    grid-column: auto;
-    flex-direction: row;
-    align-items: center;
+    grid-column: auto !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    text-align: left !important;
+  }
+
+  .benefits-grid .benefit-card:last-child .benefit-icon-wrap {
+    margin-right: 1rem !important;
+    margin-bottom: 0 !important;
   }
 }
 
@@ -2085,6 +2047,7 @@ main {
   border: 0;
   display: block;
   filter: grayscale(0.16) contrast(0.96) saturate(0.9);
+ 
   transition: filter .2s ease, transform .12s ease;
 }
 

@@ -63,7 +63,6 @@ export default function CartPage() {
         setLoading(false);
       }
     }
-
     loadAndRecalculate();
   }, [items.length]); // Re-run when number of items changes
 
@@ -108,6 +107,14 @@ export default function CartPage() {
     }
   }, 0);
 
+  // NEW: Calculate total community participants (excluding individual and family)
+  const totalCommunityParticipants = items
+    .filter(item => item.type === "community")
+    .reduce((sum, item) => sum + (item.participants || 0), 0);
+
+  // NEW: Check if cart has community items
+  const hasCommunityItems = items.some(item => item.type === "community");
+
   async function handleCheckout() {
     if (items.length === 0) {
       showToast("Your cart is empty!", "error");
@@ -116,6 +123,15 @@ export default function CartPage() {
 
     if (!fullName || !email || !phone) {
       showToast("Please complete your personal information first!", "error");
+      return;
+    }
+
+    // NEW: Validate community participants minimum
+    if (hasCommunityItems && totalCommunityParticipants < 10) {
+      showToast(
+        `Community registration requires a minimum of 10 participants. You currently have ${totalCommunityParticipants} community participants in cart. Please add ${10 - totalCommunityParticipants} more community participants before checkout.`,
+        "error"
+      );
       return;
     }
 
@@ -170,6 +186,28 @@ export default function CartPage() {
             </div>
           ) : (
             <>
+              {/* NEW: Community participants warning */}
+              {hasCommunityItems && totalCommunityParticipants < 10 && (
+                <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                      <p className="font-semibold text-amber-800 mb-1">
+                        Community Minimum Not Met
+                      </p>
+                      <p className="text-sm text-amber-700">
+                        You have {totalCommunityParticipants} community participants in cart. Need {10 - totalCommunityParticipants} more to meet the minimum of 10 participants for checkout.
+                      </p>
+                      <p className="text-xs text-amber-600 mt-1">
+                        Note: Individual and Family Bundle participants don't count toward the community minimum.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Cart Items */}
               <div className="space-y-4 mb-6">
                 {items.map((item) => (
@@ -223,6 +261,13 @@ export default function CartPage() {
                       >
                         Edit
                       </button>
+                      <button
+                        onClick={() => removeItem(item.id)}
+                        className="p-2 rounded-full hover:bg-red-100 text-red-600 transition"
+                        aria-label="Remove item"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -234,6 +279,12 @@ export default function CartPage() {
                   <span>Total:</span>
                   <span>Rp {totalPrice.toLocaleString("id-ID")}</span>
                 </div>
+                {/* NEW: Show community participant count if applicable */}
+                {hasCommunityItems && (
+                  <div className="mt-2 text-sm text-gray-600">
+                    <p>Community Participants: {totalCommunityParticipants} / 10 minimum</p>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
@@ -246,36 +297,49 @@ export default function CartPage() {
                 </button>
                 <button
                   onClick={handleCheckout}
-                  className="flex-1 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow hover:shadow-lg transition-all"
+                  disabled={hasCommunityItems && totalCommunityParticipants < 10}
+                  className={`flex-1 px-6 py-3 rounded-full font-bold shadow transition-all ${
+                    hasCommunityItems && totalCommunityParticipants < 10
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-lg hover:from-emerald-700 hover:to-teal-700'
+                  }`}
                 >
                   Proceed to Checkout
                 </button>
               </div>
+              {/* NEW: Disabled button helper text */}
+              {hasCommunityItems && totalCommunityParticipants < 10 && (
+                <p className="text-center text-xs text-gray-500 mt-2">
+                  Add {10 - totalCommunityParticipants} more community participants to proceed
+                </p>
+              )}
             </>
           )}
         </section>
-
-        {/* Edit modal */}
-        {isEditOpen && editingItem && (
-          <EditCartItemModal
-            item={editingItem}
-            onClose={() => {
-              setIsEditOpen(false);
-              setEditingItem(null);
-            }}
-            onSave={(updated) => {
-              updateItem(updated);
-              setIsEditOpen(false);
-              setEditingItem(null);
-            }}
-            onRemove={() => {
-              removeItem(editingItem.id);
-              setIsEditOpen(false);
-              setEditingItem(null);
-            }}
-          />
-        )}
       </div>
+
+      {/* Edit Modal */}
+      {isEditOpen && editingItem && (
+        <EditCartItemModal
+          item={editingItem}
+          onClose={() => {
+            setIsEditOpen(false);
+            setEditingItem(null);
+          }}
+          onSave={(updated) => {
+            updateItem(updated);
+            setIsEditOpen(false);
+            setEditingItem(null);
+            showToast("Item updated successfully!", "success");
+          }}
+          onRemove={() => {
+            removeItem(editingItem.id);
+            setIsEditOpen(false);
+            setEditingItem(null);
+            showToast("Item removed from cart", "success");
+          }}
+        />
+      )}
     </main>
   );
 }

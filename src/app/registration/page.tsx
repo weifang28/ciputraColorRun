@@ -72,6 +72,9 @@ export default function RegistrationPage() {
     // Tutorial modal state
     const [showTutorial, setShowTutorial] = useState(true); // show immediately
 
+    // Size chart state - simplified since we're showing both at once
+    const [showSizeChart, setShowSizeChart] = useState(false);
+
     // Tutorial steps - you can add/edit these easily
     const tutorialSteps = [
       {
@@ -428,7 +431,10 @@ export default function RegistrationPage() {
             });
 
             showToast(`Family bundle added! ${bundleSize} people at Rp ${currentPrice.toLocaleString("id-ID")}/person`, "success");
-            setJerseys({ XS: "", S: "", M: "", L: "", XL: "", XXL: "" });
+            setJerseys({ 
+                XS: "", S: "", M: "", L: "", XL: "", XXL: "",
+                "XS - KIDS": "", "S - KIDS": "", "M - KIDS": "", "L - KIDS": "", "XL - KIDS": ""
+            });
 
             // UX: after adding a family bundle, switch the registration radio back to Individual
             // so the form doesn't show family-specific inputs and avoids confusion.
@@ -438,17 +444,17 @@ export default function RegistrationPage() {
             return;
         }
 
-        // Community validation
+        // Community validation - UPDATED: Allow adding 1+ participants, no minimum
         const currentParticipants = Number(participants || 0);
         
+        if (currentParticipants < 1) {
+            showToast("Please enter at least 1 participant to add to cart", "error");
+            return;
+        }
+
         // NEW: Check total participants including cart
         const totalInCart = getTotalCommunityParticipants();
         const totalWithCurrent = totalInCart + currentParticipants;
-        
-        if (totalWithCurrent < 10) {
-            showToast(`Community registration requires a minimum of 10 total participants. You currently have ${totalInCart} in cart. Add at least ${10 - totalInCart} more.`, "error");
-            return;
-        }
 
         // FIXED: Validate jersey distribution matches participant count - MUST MATCH EXACTLY
         const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
@@ -507,16 +513,16 @@ export default function RegistrationPage() {
             setAgreedToTerms(false);
             setIsModalOpen(true);
         } else {
-            // For community, check if total meets minimum
-            const currentParticipants = Number(participants || 0);
-            const totalWithCurrent = getTotalCommunityParticipants() + currentParticipants;
+            // For community, check if total meets minimum - UPDATED: Check cart total, not current input
+            const totalInCart = getTotalCommunityParticipants();
 
-            if (totalWithCurrent < 10) {
-                showToast(`Community registration requires minimum 10 total participants. You currently have ${getTotalCommunityParticipants()} in cart.`, "error");
+            if (totalInCart < 10) {
+                showToast(`Community registration requires a minimum of 10 total participants. You currently have ${totalInCart} in cart. Please add more participants before checkout.`, "error");
                 return;
             }
 
             // If there's a current category being filled, validate it before checkout
+            const currentParticipants = Number(participants || 0);
             if (currentParticipants > 0) {
                 const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
                 if (totalJerseys !== currentParticipants) {
@@ -531,7 +537,39 @@ export default function RegistrationPage() {
         }
     }
 
-    // Execute checkout after terms accepted
+    // NEW: Add individual to cart function
+    function handleAddIndividualToCart() {
+        if (!validatePersonalDetails()) return;
+        if (!categoryId) return;
+
+        const category = categories.find((c) => c.id === categoryId);
+        if (!category) return;
+
+        if (!selectedJerseySize) {
+            showToast("Please select a jersey size", "error");
+            return;
+        }
+
+        savePersonalDetailsToSession();
+
+        // Add individual item to cart
+        addItem({
+            type: "individual",
+            categoryId: category.id,
+            categoryName: category.name,
+            price: currentPrice,
+            jerseySize: selectedJerseySize,
+        });
+
+        showToast(`Individual registration added to cart! Price: Rp ${currentPrice.toLocaleString("id-ID")}`, "success");
+
+        // Reset jersey size selection
+        setSelectedJerseySize("M");
+    }
+
+    // --- END OF CART LOGIC ---
+
+    // Checkout execution (after terms accepted)
     function executeCheckout() {
         if (!categoryId) return;
 
@@ -666,6 +704,10 @@ export default function RegistrationPage() {
             totalWithCurrent,
         };
     }, [type, categoryId, categories, participants, items]);
+
+    function openSizeChart() {
+        setShowSizeChart(true);
+    }
 
     return (
         <main
@@ -962,13 +1004,34 @@ export default function RegistrationPage() {
                                     </div>
 
                                     <div>
-                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-3">
-                                            Jersey Size Distribution (4 people total) <strong className ="text-red-500">*</strong>
-                                        </label>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                                                Jersey Size Distribution (4 people total) <strong className ="text-red-500">*</strong>
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => openSizeChart()}
+                                                className="text-xs text-purple-600 hover:text-purple-700 font-semibold underline flex items-center gap-1"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                View Size Charts
+                                            </button>
+                                        </div>
                                         
                                         {/* Adult Sizes */}
                                         <div className="mb-4">
-                                            <p className="text-xs font-semibold text-gray-700 mb-2">Adult Sizes:</p>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-xs font-semibold text-gray-700">Adult Sizes:</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSizeChart()}
+                                                    className="text-xs text-blue-600 hover:text-blue-700 underline"
+                                                >
+                                                    Size Guide
+                                                </button>
+                                            </div>
                                             <div className="grid grid-cols-3 gap-3">
                                                 {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
                                                     <div key={size} className="flex flex-col items-center">
@@ -988,7 +1051,16 @@ export default function RegistrationPage() {
 
                                         {/* Kids Sizes */}
                                         <div>
-                                            <p className="text-xs font-semibold text-gray-700 mb-2">Kids Sizes:</p>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-xs font-semibold text-gray-700">Kids Sizes:</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSizeChart()}
+                                                    className="text-xs text-purple-600 hover:text-purple-700 underline"
+                                                >
+                                                    Size Guide
+                                                </button>
+                                            </div>
                                             <div className="grid grid-cols-3 gap-3">
                                                 {["XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"].map((size) => (
                                                     <div key={size} className="flex flex-col items-center">
@@ -1080,7 +1152,7 @@ export default function RegistrationPage() {
                                     <p className="text-xs text-emerald-600">
                                         {getTotalCommunityParticipants() >= 10 
                                             ? "✓ Minimum requirement met! Add more for better pricing."
-                                            : `Add ${10 - getTotalCommunityParticipants()} more to meet minimum.`}
+                                            : `Add ${10 - getTotalCommunityParticipants()} more to meet minimum for checkout.`}
                                     </p>
                                 </div>
                             )}
@@ -1113,11 +1185,11 @@ export default function RegistrationPage() {
                                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Number of Participants (for this category) *</label>
                                         <input
                                             type="number"
-                                            min={getTotalCommunityParticipants() >= 10 ? 1 : 10}
+                                            min={1}
                                             value={participants}
                                             onChange={(e) => setParticipants(e.target.value === "" ? "" : Number(e.target.value))}
                                             className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-emerald-500 focus:outline-none transition-colors text-base"
-                                            placeholder={getTotalCommunityParticipants() >= 10 ? "Enter participant amount" : "Minimum 10 participants"}
+                                            placeholder="Enter participant amount (minimum 1)"
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
                                             This will be added to your community total ({getTotalCommunityParticipants()} currently in cart)
@@ -1153,7 +1225,16 @@ export default function RegistrationPage() {
                                         
                                         {/* Adult Sizes */}
                                         <div className="mb-4">
-                                            <p className="text-xs font-semibold text-gray-700 mb-2">Adult Sizes:</p>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-xs font-semibold text-gray-700">Adult Sizes:</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSizeChart()}
+                                                    className="text-xs text-blue-600 hover:text-blue-700 underline"
+                                                >
+                                                    Size Guide
+                                                </button>
+                                            </div>
                                             <div className="grid grid-cols-3 gap-3">
                                                 {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
                                                     <div key={size} className="flex flex-col items-center">
@@ -1173,7 +1254,16 @@ export default function RegistrationPage() {
 
                                         {/* Kids Sizes */}
                                         <div>
-                                            <p className="text-xs font-semibold text-gray-700 mb-2">Kids Sizes:</p>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-xs font-semibold text-gray-700">Kids Sizes:</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSizeChart()}
+                                                    className="text-xs text-purple-600 hover:text-purple-700 underline"
+                                                >
+                                                    Size Guide
+                                                </button>
+                                            </div>
                                             <div className="grid grid-cols-3 gap-3">
                                                 {["XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"].map((size) => (
                                                     <div key={size} className="flex flex-col items-center">
@@ -1251,7 +1341,7 @@ export default function RegistrationPage() {
                                             onClick={handleAddToCart}
                                             disabled={
                                                 !participants || 
-                                                (getTotalCommunityParticipants() + Number(participants || 0)) < 10 ||
+                                                Number(participants || 0) < 1 ||
                                                 Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0) !== Number(participants || 0)
                                             }
                                             className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
@@ -1263,9 +1353,9 @@ export default function RegistrationPage() {
                                                 ⚠️ Jersey count must match participant count to add to cart
                                             </p>
                                         )}
-                                        {(getTotalCommunityParticipants() + Number(participants || 0)) < 10 && (
+                                        {getTotalCommunityParticipants() < 10 && (
                                             <p className="text-center text-xs text-gray-500 mt-2">
-                                                Need {10 - (getTotalCommunityParticipants() + Number(participants || 0))} more total participants (minimum 10)
+                                                Note: Total {getTotalCommunityParticipants()} in cart. Need {10 - getTotalCommunityParticipants()} more for checkout (you can still add categories)
                                             </p>
                                         )}
                                     </div>
@@ -1287,7 +1377,7 @@ export default function RegistrationPage() {
                             </div>
                             {getTotalCommunityParticipants() < 10 && (
                                 <p className="text-center text-xs text-gray-500">
-                                    Need {10 - getTotalCommunityParticipants()} more participants to checkout
+                                    Need {10 - getTotalCommunityParticipants()} more participants in cart to checkout
                                 </p>
                             )}
                         </div>
@@ -1317,14 +1407,47 @@ export default function RegistrationPage() {
                                     : null}
                             </div>
 
-                            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded">
-                                <p className="text-sm font-semibold text-emerald-800">
-                                    Price: Rp {currentPrice.toLocaleString("id-ID")}
-                                </p>
+                            {/* Price display with discount */}
+                            <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-lg">
+                                <div className="space-y-2">
+                                    <span className="text-sm font-semibold text-gray-700 block">Price per person:</span>
+                                    <div className="flex items-center gap-3 justify-end flex-wrap">
+                                        {discountInfo && (
+                                            <>
+                                                <span className="text-sm text-gray-400 line-through">
+                                                    Rp {discountInfo.basePrice.toLocaleString("id-ID")}
+                                                </span>
+                                                <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+                                                    -{discountInfo.discountPercent}%
+                                                </span>
+                                            </>
+                                        )}
+                                        <span className="text-2xl font-bold text-blue-700">
+                                            Rp {currentPrice.toLocaleString("id-ID")}
+                                        </span>
+                                    </div>
+                                    {/* {selectedCategory?.earlyBirdRemaining && selectedCategory?.earlyBirdRemaining > 0 && (
+                                        <p className="text-xs text-blue-600 mt-2 text-right">
+                                            ✨ Early Bird price automatically applied!
+                                        </p>
+                                    )} */}
+                                </div>
                             </div>
 
                             <div className="grid gap-3">
-                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Jersey Size</label>
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Jersey Size</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => openSizeChart()}
+                                        className="text-xs text-blue-600 hover:text-blue-700 font-semibold underline flex items-center gap-1"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Size Guide
+                                    </button>
+                                </div>
                                 <select
                                     value={selectedJerseySize}
                                     onChange={(e) => setSelectedJerseySize(e.target.value)}
@@ -1348,10 +1471,17 @@ export default function RegistrationPage() {
                                 </select>
                             </div>
 
-                            <div className="flex justify-end items-center gap-3 mt-4">
+                            {/* NEW: Add to Cart and Buy Now buttons */}
+                            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                                <button
+                                    onClick={handleAddIndividualToCart}
+                                    className="flex-1 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95"
+                                >
+                                    Add to Cart
+                                </button>
                                 <button
                                     onClick={handleCheckout}
-                                    className="px-8 py-3 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95"
+                                    className="flex-1 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95"
                                 >
                                     Buy Now
                                 </button>
@@ -1436,7 +1566,7 @@ export default function RegistrationPage() {
                               <li>
                                 <strong>Categories & Pricing: </strong>
                                 <ol className="pl-6 mt-1 space-y-1 terms-ol-roman">
-                                    <li>Registration fee pendaftaran dibagi berdasarkan kategori jarak tempuh sebagai berikut:
+                                    <li>Registration fee is divided based on distance categories as follows:
                                         <ol type = "a" className="pl-6 mt-1 space-y-1 terms-ol-alpha">
                                             <li>3 KM: Rp 130.000,- (Early Bird) | Rp 150.000,- (Normal Price)</li>
                                             <li>5 KM: Rp 180.000,- (Early Bird) | Rp 200.000,- (Normal Price)</li>
@@ -1446,8 +1576,9 @@ export default function RegistrationPage() {
                                 </ol>
                               </li>
                               <li>
+                               
                                 <strong>Registration Status: </strong>
-                                 Registration will be declared successful and valid after the participant has made full payment. The organizer will send a confirmation email as proof of ticket purchase.
+                                Registration will be declared successful and valid after the participant has made full payment. The organizer will send a confirmation email as proof of ticket purchase.
                               </li>
                               <li>
                                 <strong>Data Accuracy: </strong>
@@ -1486,10 +1617,12 @@ export default function RegistrationPage() {
                               <li>
                                 <strong>Force Majeure: </strong>
                                 If the event is forcefully canceled due to conditions beyond the organizer's control (such as heavy rain, storms, natural disasters, demonstrations, government policies), the organizer is <strong>not obligated to refund the registration fee.</strong>
+                             
+                              </li>
+                              <li>
+                                
                               </li>
                             </ol>
-                            <strong>Changes of schedule/location:</strong>
-                            If there are changes to the event date or location, purchased tickets remain valid for the new schedule or location. Participants are not entitled to a refund.
                             <h2 className = "mt-4 font-bold">SECTION 4: RACE PACK CLAIM</h2>
                             <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
                                 <li>
@@ -1912,6 +2045,63 @@ export default function RegistrationPage() {
                     steps={tutorialSteps}
                     onClose={() => setShowTutorial(false)}
                 />
+            )}
+
+            {/* Size Chart Modal - Updated to show both charts side by side */}
+            {showSizeChart && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-2xl font-bold text-white">
+                                    Jersey Size Charts
+                                </h3>
+                                <button
+                                    onClick={() => setShowSizeChart(false)}
+                                    className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                                >
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {/* Responsive grid: 2 columns on desktop, 1 column on mobile */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Adult Size Chart */}
+                                <div className="flex flex-col">
+                                    <h4 className="text-lg font-bold text-emerald-700 mb-3 text-center">Adult Sizes</h4>
+                                    <img
+                                        src="/assets/sizes/dewasa.jpg"
+                                        alt="Adult size chart"
+                                        className="w-full h-auto rounded-lg shadow-md object-contain"
+                                    />
+                                </div>
+
+                                {/* Kids Size Chart */}
+                                <div className="flex flex-col">
+                                    <h4 className="text-lg font-bold text-purple-700 mb-3 text-center">Kids Sizes</h4>
+                                    <img
+                                        src="/assets/sizes/anak.jpg"
+                                        alt="Kids size chart"
+                                        className="w-full h-auto rounded-lg shadow-md object-contain"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-gray-200 bg-gray-50">
+                            <button
+                                onClick={() => setShowSizeChart(false)}
+                                className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-full transition-all"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </main>
     );

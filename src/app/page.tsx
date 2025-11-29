@@ -127,6 +127,9 @@ export default function Home() {
 						data-aos="fade-up"
 						data-aos-duration="1000"
 						data-aos-delay="300"
+						style={{
+							filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))'
+						}}
 					>
 						CIPUTRA COLOR RUN 2026
 					</h1>
@@ -437,7 +440,7 @@ export default function Home() {
 						</div>
 
 						{/* Powder Color War Card */}
-						{/* <div
+						<div
 							className="benefit-card"
 							data-aos="zoom-in"
 							data-aos-delay="300"
@@ -470,7 +473,7 @@ export default function Home() {
 							<p className="benefit-description">
 								Immerse yourself in the euphoria of our signature Color War using safe, non-toxic powder. (Note: This part is fully optional if you prefer to stay clean!)
 							</p>
-						</div> */}
+						</div>
 
 						{/* Additional Benefits Card */}
 						<div

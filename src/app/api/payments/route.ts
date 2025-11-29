@@ -45,31 +45,30 @@ async function saveFileLocally(file: File, subDir: string, fileName: string): Pr
 }
 
 async function generateAccessCode(fullName: string): Promise<string> {
-  const normalized = (fullName || "user")
+  // Extract first name (first word before space)
+  const firstName = (fullName || "user")
     .toString()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, "")
     .trim()
-    .replace(/\s+/g, "_")
-    .replace(/^_+|_+$/g, "");
+    .split(/\s+/)[0] || "user";
 
-  const base = normalized || `user`;
-  let code = base;
-  let counter = 0;
-
-  while (true) {
-    const exists = await prisma.user.findUnique({ where: { accessCode: code } });
-    if (!exists) return code;
-    counter++;
-    code = `${base}_${counter}`;
-    if (counter > 1000) {
-      code = `${base}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      break;
-    }
+  // Generate random string (8 characters: mix of letters and numbers)
+  const randomStr = Math.random().toString(36).substring(2, 10);
+  
+  const accessCode = `${firstName}_${randomStr}`;
+  
+  // Check if code already exists (very unlikely but good practice)
+  const exists = await prisma.user.findUnique({ where: { accessCode } });
+  
+  if (exists) {
+    // If by chance it exists, add timestamp
+    return `${firstName}_${randomStr}_${Date.now().toString(36)}`;
   }
-  return code;
+  
+  return accessCode;
 }
 
 function generateBibNumber(categoryName: string | undefined, participantId: number): string {
