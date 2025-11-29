@@ -103,7 +103,7 @@ export default function Home() {
 		<main className="bg-white overflow-hidden">
 			<div
 				ref={homeTopRef}
-				className="home_top pt-20"
+				className="home_top pt-8"
 				style={{
 					// gradient overlay above the image
 					backgroundImage: `linear-gradient(rgba(152,232,206,0.85) 0%, rgba(255,225,196,0.7) 50%, rgba(238,150,157,0.8) 100%), url('${jumbotronImage}')`,
@@ -127,9 +127,6 @@ export default function Home() {
 						data-aos="fade-up"
 						data-aos-duration="1000"
 						data-aos-delay="300"
-						style={{
-							filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))'
-						}}
 					>
 						CIPUTRA COLOR RUN 2026
 					</h1>
@@ -224,17 +221,17 @@ export default function Home() {
 							<h2 className="text-2xl md:text-4xl font-bold mb-4 md:mb-6 unified-gradient-title">
 								About Ciputra Color Run
 							</h2>
-							<p className="text-base md:text-xl text-[#1F6251] mb-3 md:mb-4 leading-relaxed">
+							<p className="text-sm text-justify md:text-lg text-[#1F6251] mb-3 leading-relaxed">
 								Ciputra Color Run is the most vibrant celebration of health and
 								happiness in Surabaya. Proudly organized by the Student Council
 								of Universitas Ciputra, this annual Fun Run takes you through
 								CitraLand and ends with a twist.
 							</p>
-							<p className="text-sm md:text-xl text-[#1F6251] mb-4 md:mb-6 leading-relaxed">
+							<p className="text-sm text-justify md:text-lg text-[#1F6251] mb-3 leading-relaxed">
 								The finish line is just the beginning. Get ready for our
-							
-								celebrate under a shower of colorful powder. <br />
-								<br />
+								celebrate under a shower of colorful powder.
+							</p>
+							<p className="text-sm text-justify md:text-lg text-[#1F6251] mb-5 leading-relaxed">
 								From casuals to professionals, individuals to families, everyone
 								is welcome to run and have fun with us. Let’s make colorful
 								memories at Ciputra Color Run 2026!
@@ -469,10 +466,14 @@ export default function Home() {
 									/>
 								</svg>
 							</div>
-							<h4 className="benefit-title">Color War Powder</h4>
+							<h4 className="benefit-title">Color War</h4>
 							<p className="benefit-description">
 								Immerse yourself in the euphoria of our signature Color War using safe, non-toxic powder. (Note: This part is fully optional if you prefer to stay clean!)
 							</p>
+						</div>
+						
+						{/* agar other benefits ditengah */}
+						<div className="hidden md:block">
 						</div>
 
 						{/* Additional Benefits Card */}
@@ -528,17 +529,17 @@ export default function Home() {
                         <ul className="timeline-list minimal" aria-label="Event timeline">
                             <li className="timeline-item minimal">
                                 <div className="timeline-date">1 Dec 2025 — 28 Mar 2026</div>
-                                <div className="timeline-title">Open registration</div>
+                                <div className="timeline-title">Open Registration</div>
                             </li>
 
                             <li className="timeline-item minimal">
                                 <div className="timeline-date">9 — 11 Apr 2026</div>
-                                <div className="timeline-title">Race pack collection</div>
+                                <div className="timeline-title">Race Pack Collection</div>
                             </li>
 
                             <li className="timeline-item minimal">
                                 <div className="timeline-date">12 Apr 2026</div>
-                                <div className="timeline-title">Race day</div>
+                                <div className="timeline-title">Race Day</div>
                             </li>
                         </ul>
                     </div>
@@ -624,7 +625,7 @@ export default function Home() {
                                 </div>
 							</div>
 							<p className="mt-4 text-sm text-[#52605f]">
-								Assembly point and route will be announced later via registered e-mail and event’s homepage. More information on our Instagram <a className = "underline font-bold" href = "https://instagram.com/ciputrarun.uc">@ciputrarun.uc</a> as well for additional information.
+								More information on our Instagram <a className = "underline font-bold" href = "https://instagram.com/ciputrarun.uc">@ciputrarun.uc</a>
 							</p>
 						</div>
 					</div>
