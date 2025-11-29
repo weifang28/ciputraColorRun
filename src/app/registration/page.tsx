@@ -42,6 +42,7 @@ export default function RegistrationPage() {
     const [participants, setParticipants] = useState<number | "">("");
     const [jerseys, setJerseys] = useState<Record<string, number | "">>({
         XS: "", S: "", M: "", L: "", XL: "", XXL: "",
+        "XS - KIDS": "", "S - KIDS": "", "M - KIDS": "", "L - KIDS": "", "XL - KIDS": "",
     });
     const [selectedJerseySize, setSelectedJerseySize] = useState("M");
     const [useEarlyBird, setUseEarlyBird] = useState(false);
@@ -476,7 +477,10 @@ export default function RegistrationPage() {
 
         // Reset community fields to allow adding another category
         setParticipants("");
-        setJerseys({ XS: "", S: "", M: "", L: "", XL: "", XXL: "" });
+        setJerseys({ 
+            XS: "", S: "", M: "", L: "", XL: "", XXL: "",
+            "XS - KIDS": "", "S - KIDS": "", "M - KIDS": "", "L - KIDS": "", "XL - KIDS": ""
+        });
     }
 
     // Checkout with modal (for both individual and community)
@@ -961,23 +965,49 @@ export default function RegistrationPage() {
                                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-3">
                                             Jersey Size Distribution (4 people total) <strong className ="text-red-500">*</strong>
                                         </label>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                                                <div key={size} className="flex flex-col items-center">
-                                                    <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
-                                                    <input
-                                                      type="number"
-                                                      min={0}
-                                                      value={jerseys[size]}
-                                                      onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                      className="jersey-input shift-right"
-                                                      placeholder="0"
-                                                    />
-                                                </div>
-                                            ))}
+                                        
+                                        {/* Adult Sizes */}
+                                        <div className="mb-4">
+                                            <p className="text-xs font-semibold text-gray-700 mb-2">Adult Sizes:</p>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                                                    <div key={size} className="flex flex-col items-center">
+                                                        <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
+                                                        <input
+                                                          type="number"
+                                                          min={0}
+                                                          value={jerseys[size]}
+                                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                          className="jersey-input shift-right accent-[#e687a4]"
+                                                          placeholder="0"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
+
+                                        {/* Kids Sizes */}
+                                        <div>
+                                            <p className="text-xs font-semibold text-gray-700 mb-2">Kids Sizes:</p>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                {["XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"].map((size) => (
+                                                    <div key={size} className="flex flex-col items-center">
+                                                        <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
+                                                        <input
+                                                          type="number"
+                                                          min={0}
+                                                          value={jerseys[size]}
+                                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                          className="jersey-input shift-right accent-[#e687a4]"
+                                                          placeholder="0"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
                                         <p className="text-xs text-gray-500 mt-3 text-center">
-                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / {selectedCategory?.bundleSize || 4}
+                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / {participants || 0}
                                         </p>
                                     </div>
 
@@ -1120,21 +1150,47 @@ export default function RegistrationPage() {
 
                                     <div className="grid gap-3">
                                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Jersey Size Distribution *</label>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                                                <div key={size} className="flex flex-col items-center">
-                                                    <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
-                                                    <input
-                                                      type="number"
-                                                      min={0}
-                                                      value={jerseys[size]}
-                                                      onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                      className="jersey-input shift-right accent-[#e687a4]"
-                                                      placeholder="0"
-                                                    />
-                                                </div>
-                                            ))}
+                                        
+                                        {/* Adult Sizes */}
+                                        <div className="mb-4">
+                                            <p className="text-xs font-semibold text-gray-700 mb-2">Adult Sizes:</p>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                                                    <div key={size} className="flex flex-col items-center">
+                                                        <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
+                                                        <input
+                                                          type="number"
+                                                          min={0}
+                                                          value={jerseys[size]}
+                                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                          className="jersey-input shift-right accent-[#e687a4]"
+                                                          placeholder="0"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
+
+                                        {/* Kids Sizes */}
+                                        <div>
+                                            <p className="text-xs font-semibold text-gray-700 mb-2">Kids Sizes:</p>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                {["XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"].map((size) => (
+                                                    <div key={size} className="flex flex-col items-center">
+                                                        <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
+                                                        <input
+                                                          type="number"
+                                                          min={0}
+                                                          value={jerseys[size]}
+                                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                          className="jersey-input shift-right accent-[#e687a4]"
+                                                          placeholder="0"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
                                         <p className="text-xs text-gray-500 mt-3 text-center">
                                             Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / {participants || 0}
                                         </p>
@@ -1274,12 +1330,21 @@ export default function RegistrationPage() {
                                     onChange={(e) => setSelectedJerseySize(e.target.value)}
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 focus:border-blue-500 focus:outline-none transition-colors text-base cursor-pointer"
                                 >
-                                    <option value="XS">XS</option>
-                                    <option value="S">S</option>
-                                    <option value="M">M</option>
-                                    <option value="L">L</option>
-                                    <option value="XL">XL</option>
-                                    <option value="XXL">XXL</option>
+                                    <optgroup label="Adult Sizes">
+                                        <option value="XS">XS</option>
+                                        <option value="S">S</option>
+                                        <option value="M">M</option>
+                                        <option value="L">L</option>
+                                        <option value="XL">XL</option>
+                                        <option value="XXL">XXL</option>
+                                    </optgroup>
+                                    <optgroup label="Kids Sizes">
+                                        <option value="XS - KIDS">XS - KIDS</option>
+                                        <option value="S - KIDS">S - KIDS</option>
+                                        <option value="M - KIDS">M - KIDS</option>
+                                        <option value="L - KIDS">L - KIDS</option>
+                                        <option value="XL - KIDS">XL - KIDS</option>
+                                    </optgroup>
                                 </select>
                             </div>
 

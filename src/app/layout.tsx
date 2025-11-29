@@ -1,21 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavBar from "./components/NavBar";
 import { CartProvider } from "./context/CartContext";
 import Script from "next/script";
 import Footer from "./components/Footer";
 import ClientToaster from "./components/ClientToaster";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Ciputra Color Run 2026 - The Most Vibrant Fun Run in Surabaya",
@@ -138,7 +127,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className="antialiased">
         <CartProvider>
           <NavBar />
           {/* ensure page content is pushed below fixed navbar */}

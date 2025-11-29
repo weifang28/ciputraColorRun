@@ -60,10 +60,11 @@ model RaceCategory {
 }
 
 model JerseyOption {
-  id           Int           @id @default(autoincrement())
-  size         String        @unique
-  price        Decimal       @db.Decimal(10, 2)
-  quantity     Int
+  id           Int            @id @default(autoincrement())
+  size         String         @unique
+  type         String         @default("adult") // NEW: "adult" or "kids"
+  price        Decimal
+  quantity     Int?
   participants Participant[]
 }
 

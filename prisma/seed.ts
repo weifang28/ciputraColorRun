@@ -70,15 +70,22 @@ async function main() {
     }
     console.log("✅ Seeded RaceCategory table");
 
-    // --- Seed Jersey Options (unchanged) ---
+    // --- Seed Jersey Options (updated with kids sizes) ---
     console.log("👕 Seeding Jersey Options...");
     const jerseys = [
-      { size: "XS", price: new Prisma.Decimal("0"), quantity: 1000 },
-      { size: "S", price: new Prisma.Decimal("0"), quantity: 1000 },
-      { size: "M", price: new Prisma.Decimal("0"), quantity: 1000 },
-      { size: "L", price: new Prisma.Decimal("0"), quantity: 1000 },
-      { size: "XL", price: new Prisma.Decimal("0"), quantity: 1000 },
-      { size: "XXL", price: new Prisma.Decimal("0"), quantity: 1000 },
+      // Adult sizes
+      { size: "XS", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000 },
+      { size: "S", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000 },
+      { size: "M", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000 },
+      { size: "L", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000 },
+      { size: "XL", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000 },
+      { size: "XXL", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000 },
+      // Kids sizes
+      { size: "XS - KIDS", type: "kids", price: new Prisma.Decimal("0"), quantity: 10000 },
+      { size: "S - KIDS", type: "kids", price: new Prisma.Decimal("0"), quantity: 10000 },
+      { size: "M - KIDS", type: "kids", price: new Prisma.Decimal("0"), quantity: 10000 },
+      { size: "L - KIDS", type: "kids", price: new Prisma.Decimal("0"), quantity: 10000 },
+      { size: "XL - KIDS", type: "kids", price: new Prisma.Decimal("0"), quantity: 10000 },
     ];
 
     for (const j of jerseys) {
@@ -87,7 +94,7 @@ async function main() {
         update: {},
         create: j,
       });
-      console.log(`✅ Created/Updated jersey size: ${j.size}`);
+      console.log(`✅ Created/Updated jersey size: ${j.size} (${j.type})`);
     }
     console.log("✅ Seeded JerseyOption table");
 
