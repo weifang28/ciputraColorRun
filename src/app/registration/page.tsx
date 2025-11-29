@@ -76,19 +76,19 @@ export default function RegistrationPage() {
       {
         title: "Fill Personal Details and Pick Registration Type",
         description: "Start off by filling your personal details and picking the registration type (Individual/Community/Family)",
-        image: "/images/tutorial/tut1.jpg",
+        image: "/images/tutorial/tut1.png",
         tip: "Prepare ID"
       },
       {
         title: "Choose Race Distance, and Jersey Sizes",
         description: 'Choose the race distance, jersey sizes and click "Add Category To Cart" button to save the order and to add more orders',
-        image: "/images/tutorial/tut2.jpg",
+        image: "/images/tutorial/tut2.png",
         tip: "Make sure that the jersey quantity is the same as the participant"
       },
       {
         title: "Check Cart",
         description: "Check the cart, make sure it is the same with the order placed",
-        image: "/images/tutorial/tut4.jpg",
+        image: "/images/tutorial/tut3.png",
         tip: "Make sure that the total price is correct and prepare the proof of payment"
       },
       // Upload step moved to confirmation page
