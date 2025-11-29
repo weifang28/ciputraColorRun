@@ -221,7 +221,7 @@ export default function Home() {
 							<h2 className="text-2xl md:text-4xl font-bold mb-4 md:mb-6 unified-gradient-title">
 								About Ciputra Color Run
 							</h2>
-							<p className="text-base md:text-2xl text-[#1F6251] mb-3 md:mb-4 leading-relaxed">
+							<p className="text-base md:text-xl text-[#1F6251] mb-3 md:mb-4 leading-relaxed">
 								Ciputra Color Run is the most vibrant celebration of health and
 								happiness in Surabaya. Proudly organized by the Student Council
 								of Universitas Ciputra, this annual Fun Run takes you through
