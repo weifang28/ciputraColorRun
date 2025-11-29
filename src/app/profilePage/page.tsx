@@ -45,113 +45,108 @@ export default function App() {
   // --- GET User Data on Mount ---
   useEffect(() => {
     async function fetchUserAndPurchases() {
-      if (!MOCK_ACCESS_CODE) {
-        setError("Access code is not set.");
-        setIsLoading(false);
-        return;
-      }
       try {
-        // 1) fetch user (existing behavior)
-        const resUser = await fetch(`/api/user?accessCode=${encodeURIComponent(MOCK_ACCESS_CODE)}`);
-        if (!resUser.ok) {
-          const errorData = await resUser.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to fetch user: ${resUser.statusText}`);
+        const userRes = await fetch('/api/user', { credentials: 'include' });
+        if (!userRes.ok) {
+          if (userRes.status === 401) {
+            setError('Please log in to view your profile');
+          } else {
+            const errData = await userRes.json().catch(() => ({}));
+            setError(errData?.error || 'Failed to load user data');
+          }
+          setIsLoading(false);
+          return;
         }
-        const { user } = await resUser.json();
-        setUserData(user);
+        const userData = await userRes.json();
+        setUserData(userData.user);
 
-        // 2) fetch registrations/purchases (server now accepts ?accessCode= for dev)
-        const res = await fetch(`/api/profile/purchases?accessCode=${encodeURIComponent(MOCK_ACCESS_CODE)}`);
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => ({}));
-          throw new Error(errBody.error || `Failed to fetch purchases: ${res.statusText}`);
-        }
-        const { registrations } = await res.json();
+        const purchaseRes = await fetch('/api/profile/purchases', { credentials: 'include' });
+        if (!purchaseRes.ok) throw new Error('Failed to load purchases');
+        
+        const purchaseData = await purchaseRes.json();
+        const registrations = purchaseData?.registrations || [];
 
-        // Split each registration into one PurchaseData per category.
         const mapped: PurchaseData[] = [];
-
-        (registrations || []).forEach((reg: any) => {
+        for (const reg of registrations) {
           const participants = reg.participants || [];
-          // group participants by categoryId
+          if (participants.length === 0) continue;
+
+          // ADDED: Get payment status
+          const paymentStatus = reg.paymentStatus || 'pending';
+          const isConfirmed = paymentStatus === 'confirmed';
+
           const byCat: Record<number, any[]> = {};
           participants.forEach((p: any) => {
-            const cid = Number(p.category?.id ?? 0);
-            byCat[cid] = byCat[cid] || [];
+            const cid = Number(p.categoryId) || 0;
+            if (!byCat[cid]) byCat[cid] = [];
             byCat[cid].push(p);
           });
 
-          const totalAmountAll = Number(reg.totalAmount ?? 0);
-          const totalParts = participants.length || 1;
-
-          // First try to compute per-category totals from explicit per-participant prices (if present)
           const explicitPerParticipant = participants.every((p: any) => p.price != null || p.unitPrice != null);
 
-          // accumulate computed amounts to fix rounding remainder later
           let accumulated = 0;
           const catEntries = Object.entries(byCat);
 
           catEntries.forEach(([catIdStr, parts], idx) => {
             const catId = Number(catIdStr);
             const qrForCat = Array.isArray(reg.qrCodes) ? reg.qrCodes.find((q: any) => Number(q.categoryId) === catId) : null;
-            const qrCodeData = qrForCat?.qrCodeData ?? null;
+            // CHANGED: Only provide QR code if payment is confirmed
+            const qrCodeData = isConfirmed ? (qrForCat?.qrCodeData ?? null) : null;
 
-            // jersey aggregation
             const sizesMap: Record<string, number> = {};
             parts.forEach((p: any) => {
               const size = p.jersey?.size || 'M';
               sizesMap[size] = (sizesMap[size] || 0) + 1;
             });
-            const jerseySizes = Object.entries(sizesMap).map(([size, count]) => ({ size, count }));
 
-            const categoryLabel = parts[0]?.category?.name ?? (reg.registrationType === 'family' ? 'Family Bundle' : 'Community');
+            const categoryName = parts[0]?.category?.name || 'Unknown';
+            const countParticipants = parts.length;
 
-            let totalPriceForCat = 0;
-
+            let itemPrice = 0;
             if (explicitPerParticipant) {
-              // sum explicit per-participant prices (prefer p.price then p.unitPrice)
-              totalPriceForCat = parts.reduce((s: number, p: any) => s + Number(p.price ?? p.unitPrice ?? 0), 0);
+              itemPrice = parts.reduce((sum: number, p: any) => {
+                const pPrice = Number(p.price ?? p.unitPrice ?? 0);
+                return sum + pPrice;
+              }, 0);
             } else {
-              // fallback: proportional share by headcount
-              // compute raw share (not rounded) and round to integer; last category absorbs remainder
-              const rawShare = (totalAmountAll * parts.length) / totalParts;
+              const regTotal = Number(reg.totalAmount || 0);
               if (idx === catEntries.length - 1) {
-                // last group: give remaining amount to ensure sum matches totalAmountAll
-                totalPriceForCat = totalAmountAll - accumulated;
+                itemPrice = regTotal - accumulated;
               } else {
-                totalPriceForCat = Math.round(rawShare);
+                itemPrice = Math.round((regTotal / participants.length) * countParticipants);
               }
+              accumulated += itemPrice;
             }
 
-            accumulated += totalPriceForCat;
-
-            // decide shape
-            if (parts.length === 1 && reg.registrationType === 'individual') {
+            if (countParticipants === 1) {
               const p = parts[0];
               mapped.push({
                 type: 'individual',
-                category: p.category?.name || categoryLabel,
+                category: categoryName,
                 jerseySize: p.jersey?.size || 'M',
-                price: totalPriceForCat,
+                price: itemPrice,
                 qrCodeData,
-              } as PurchaseData);
+                paymentStatus, // ADDED
+              } as any);
             } else {
+              const jerseySizes = Object.entries(sizesMap).map(([size, count]) => ({ size, count }));
               mapped.push({
                 type: 'community',
-                category: categoryLabel,
-                participantCount: parts.length,
+                category: categoryName,
+                participantCount: countParticipants,
                 jerseySizes,
-                totalPrice: totalPriceForCat,
+                totalPrice: itemPrice,
                 qrCodeData,
-              } as PurchaseData);
+                paymentStatus, // ADDED
+              } as any);
             }
           });
-        });
+        }
 
         setPurchases(mapped);
       } catch (err: any) {
-        console.error("Fetch User/Purchases Error:", err);
-        setError(err.message || 'Failed to load profile or purchases.');
+        console.error('Error fetching profile/purchases:', err);
+        setError(err?.message || 'An error occurred while loading your profile');
       } finally {
         setIsLoading(false);
       }

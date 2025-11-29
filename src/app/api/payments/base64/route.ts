@@ -90,13 +90,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
     }
 
+    // CHANGED: Find existing user by full name - reuse if exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        name: {
+          equals: fullName,
+          mode: 'insensitive'
+        }
+      }
+    });
+
     const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
-    console.log("[payments/base64] Using pre-uploaded proof:", proofUrl);
-    if (idCardUrl) {
-      console.log("[payments/base64] Using pre-uploaded ID card:", idCardUrl);
-    }
-
     let cartItems: any[] = [];
     if (items) {
       try {
@@ -110,26 +115,33 @@ export async function POST(req: Request) {
     const jerseyMap = new Map(jerseyOptions.map((j) => [j.size, j.id]));
     const defaultJerseyId = jerseyOptions[0]?.id ?? 1;
 
-    const accessCode = await generateAccessCode(fullName || "user");
+    const accessCode = existingUser?.accessCode || await generateAccessCode(fullName || "user");
 
     console.log("[payments/base64] Starting transaction...");
     const result = await prisma.$transaction(async (tx) => {
-      let user = email ? await tx.user.findUnique({ where: { email } }) : null;
-
-      const userData: any = {
-        birthDate: birthDate ? new Date(birthDate) : undefined,
-        gender: gender || undefined,
-        currentAddress: currentAddress || undefined,
-        nationality: nationality || undefined,
-        emergencyPhone: emergencyPhone || undefined,
-        medicalHistory: medicalHistory || undefined,
-      };
-
-      if (medicationAllergy !== undefined) {
-        userData.medicationAllergy = medicationAllergy;
-      }
-
-      if (!user) {
+      let user;
+      
+      if (existingUser) {
+        // REUSE existing user and update their information
+        console.log("[payments/base64] Reusing existing user:", existingUser.id);
+        user = await tx.user.update({
+          where: { id: existingUser.id },
+          data: {
+            email: email || existingUser.email,
+            phone: phone || existingUser.phone,
+            idCardPhoto: idCardUrl || existingUser.idCardPhoto,
+            birthDate: birthDate ? new Date(birthDate) : existingUser.birthDate,
+            gender: gender || existingUser.gender,
+            currentAddress: currentAddress || existingUser.currentAddress,
+            nationality: nationality || existingUser.nationality,
+            emergencyPhone: emergencyPhone || existingUser.emergencyPhone,
+            medicalHistory: medicalHistory || existingUser.medicalHistory,
+            medicationAllergy: medicationAllergy || existingUser.medicationAllergy,
+          },
+        });
+      } else {
+        // CREATE new user if name doesn't exist
+        console.log("[payments/base64] Creating new user with name:", fullName);
         user = await tx.user.create({
           data: {
             name: fullName,
@@ -138,15 +150,13 @@ export async function POST(req: Request) {
             accessCode,
             role: "user",
             idCardPhoto: idCardUrl || undefined,
-            ...userData,
-          },
-        });
-      } else {
-        await tx.user.update({
-          where: { id: user.id },
-          data: {
-            idCardPhoto: idCardUrl || user.idCardPhoto,
-            ...userData,
+            birthDate: birthDate ? new Date(birthDate) : undefined,
+            gender: gender || undefined,
+            currentAddress: currentAddress || undefined,
+            nationality: nationality || undefined,
+            emergencyPhone: emergencyPhone || undefined,
+            medicalHistory: medicalHistory || undefined,
+            medicationAllergy: medicationAllergy || undefined,
           },
         });
       }
@@ -281,10 +291,6 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error("[payments/base64] Error:", err?.message || err);
-
-    if (err?.code === "P2002") {
-      return NextResponse.json({ error: "A registration with this email already exists." }, { status: 409 });
-    }
 
     if (err?.code === "P6005" || err?.message?.includes("15000ms")) {
       return NextResponse.json({ error: "Server is busy. Please try again." }, { status: 503 });

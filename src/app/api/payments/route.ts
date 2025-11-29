@@ -124,40 +124,47 @@ async function sendRegistrationEmail(email: string | undefined, name: string | u
 }
 
 export async function POST(req: Request) {
-  console.log("[payments] POST request received");
-  
-  let proofPath: string | undefined;
-  let idCardPhotoPath: string | undefined;
-  
+  console.log("[payments] POST endpoint called");
+
   try {
-    console.log("[payments] Step 1: Parsing form data...");
-    const form = await req.formData();
-    
-    const proofFile = form.get("proof") as File | null;
-    const idCardPhotoFile = form.get("idCardPhoto") as File | null;
-    const cartItemsJson = (form.get("items") as string) || (form.get("cartItems") as string) || undefined;
-    const amountStr = (form.get("amount") as string) || undefined;
-    
-    const fullName = (form.get("fullName") as string) || undefined;
-    const email = (form.get("email") as string) || undefined;
-    const phone = (form.get("phone") as string) || undefined;
-    const birthDate = (form.get("birthDate") as string) || undefined;
-    const gender = (form.get("gender") as string) || undefined;
-    const currentAddress = (form.get("currentAddress") as string) || undefined;
-    const nationality = (form.get("nationality") as string) || undefined;
-    const emergencyPhone = (form.get("emergencyPhone") as string) || undefined;
-    const medicalHistory = (form.get("medicalHistory") as string) || undefined;
-    const medicationAllergy = (form.get("medicationAllergy") as string) || undefined;
-    const registrationType = (form.get("registrationType") as string) || "individual";
-    const proofSenderName = (form.get("proofSenderName") as string) || undefined;
-    const groupName = (form.get("groupName") as string) || undefined;
+    const formData = await req.formData();
+
+    // Extract fields
+    const fullName = String(formData.get("fullName") || "");
+    const email = String(formData.get("email") || "");
+    const phone = String(formData.get("phone") || "");
+    const birthDate = String(formData.get("birthDate") || "");
+    const gender = String(formData.get("gender") || "");
+    const currentAddress = String(formData.get("currentAddress") || "");
+    const nationality = String(formData.get("nationality") || "");
+    const emergencyPhone = String(formData.get("emergencyPhone") || "");
+    const medicalHistory = String(formData.get("medicalHistory") || "");
+    const medicationAllergy = String(formData.get("medicationAllergy") || "");
+    const registrationType = String(formData.get("registrationType") || "individual");
+    const amount = Number(formData.get("amount") || 0);
+    const proofSenderName = String(formData.get("proofSenderName") || "").trim();
+    const groupName = String(formData.get("groupName") || "").trim();
+
+    // CHANGED: Find existing user by full name (case-insensitive) - reuse if exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        name: {
+          equals: fullName,
+          mode: 'insensitive'
+        }
+      }
+    });
+
+    let proofPath: string | undefined;
+    let idCardPhotoPath: string | undefined;
+
+    // File handling and validation
+    const proofFile = formData.get("proof") as File | null;
+    const idCardPhotoFile = formData.get("idCardPhoto") as File | null;
 
     if (!proofFile) {
       return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
     }
-
-    const amount = amountStr ? Number(amountStr) : undefined;
-    const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     // Save proof image locally
     console.log("[payments] Step 2: Saving proof image locally...");
@@ -190,30 +197,36 @@ export async function POST(req: Request) {
     const jerseyMap = new Map(jerseyOptions.map(j => [j.size, j.id]));
     const defaultJerseyId = jerseyOptions[0]?.id ?? 1;
 
-    // Generate access code
-    console.log("[payments] Step 6: Generating access code...");
-    const accessCode = await generateAccessCode(fullName || "user");
+    const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const accessCode = existingUser?.accessCode || await generateAccessCode(fullName);
 
     // Database transaction
     console.log("[payments] Step 7: Starting database transaction...");
     
     const result = await prisma.$transaction(async (tx) => {
-      let user = email ? await tx.user.findUnique({ where: { email } }) : null;
-
-      const userData: any = {
-        birthDate: birthDate ? new Date(birthDate) : undefined,
-        gender: gender || undefined,
-        currentAddress: currentAddress || undefined,
-        nationality: nationality || undefined,
-        emergencyPhone: emergencyPhone || undefined,
-        medicalHistory: medicalHistory || undefined,
-      };
-
-      if (medicationAllergy !== undefined) {
-        userData.medicationAllergy = medicationAllergy;
-      }
-
-      if (!user) {
+      let user;
+      
+      if (existingUser) {
+        // REUSE existing user and update their information
+        console.log("[payments] Reusing existing user:", existingUser.id);
+        user = await tx.user.update({
+          where: { id: existingUser.id },
+          data: {
+            email: email || existingUser.email,
+            phone: phone || existingUser.phone,
+            idCardPhoto: idCardPhotoPath || existingUser.idCardPhoto,
+            birthDate: birthDate ? new Date(birthDate) : existingUser.birthDate,
+            gender: gender || existingUser.gender,
+            currentAddress: currentAddress || existingUser.currentAddress,
+            nationality: nationality || existingUser.nationality,
+            emergencyPhone: emergencyPhone || existingUser.emergencyPhone,
+            medicalHistory: medicalHistory || existingUser.medicalHistory,
+            medicationAllergy: medicationAllergy || existingUser.medicationAllergy,
+          },
+        });
+      } else {
+        // CREATE new user if name doesn't exist
+        console.log("[payments] Creating new user with name:", fullName);
         user = await tx.user.create({
           data: {
             name: fullName,
@@ -222,20 +235,17 @@ export async function POST(req: Request) {
             accessCode,
             role: "user",
             idCardPhoto: idCardPhotoPath || undefined,
-            ...userData,
+            birthDate: birthDate ? new Date(birthDate) : undefined,
+            gender: gender || undefined,
+            currentAddress: currentAddress || undefined,
+            nationality: nationality || undefined,
+            emergencyPhone: emergencyPhone || undefined,
+            medicalHistory: medicalHistory || undefined,
+            medicationAllergy: medicationAllergy || undefined,
           },
         });
-        console.log("[payments] Created user:", user.id);
-      } else {
-        await tx.user.update({
-          where: { id: user.id },
-          data: {
-            idCardPhoto: idCardPhotoPath || user.idCardPhoto,
-            ...userData,
-          },
-        });
-        console.log("[payments] Updated user:", user.id);
       }
+      console.log("[payments] User ID:", user.id);
 
       const registration = await tx.registration.create({
         data: {
@@ -375,30 +385,10 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error("[payments] POST error:", err?.message || err);
     
-    if (err?.code === 'P2002') {
-      return NextResponse.json(
-        { error: "A registration with this email already exists." },
-        { status: 409 }
-      );
-    }
-    
-    if (err?.code === 'P6005' || err?.message?.includes('15000ms')) {
-      return NextResponse.json(
-        { error: "Server is busy. Please try again in a moment." },
-        { status: 503 }
-      );
+    if (err?.code === 'P6005' || err?.message?.includes("15000ms")) {
+      return NextResponse.json({ error: "Server is busy. Please try again." }, { status: 503 });
     }
 
-    if (err?.message?.includes('Unknown argument')) {
-      return NextResponse.json(
-        { error: "Server configuration error. Please contact support." },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: "An unexpected error occurred. Please try again." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err?.message || "An unexpected error occurred. Please try again." }, { status: 500 });
   }
 }

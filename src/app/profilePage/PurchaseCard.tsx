@@ -17,6 +17,7 @@ interface CommunityPurchase {
   participantCount: number;
   jerseySizes: JerseySize[];
   totalPrice: number;
+  paymentStatus?: string; // ADDED
 }
 
 interface IndividualPurchase {
@@ -24,13 +25,14 @@ interface IndividualPurchase {
   category: string;
   jerseySize: string;
   price: number;
+  paymentStatus?: string; // ADDED
 }
 
 type PurchaseData = CommunityPurchase | IndividualPurchase;
 
 interface PurchaseCardProps {
   purchase: PurchaseData;
-  qrCodeData: string | null; // QR payload (string) or null
+  qrCodeData: string | null;
 }
 
 // Format number to Indonesian Rupiah
@@ -40,18 +42,23 @@ function formatRupiah(amount: number): string {
 
 export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
   const [qrImage, setQrImage] = React.useState<string | null>(null);
+  
+  // ADDED: Get payment status
+  const paymentStatus = purchase.paymentStatus || 'pending';
+  const isConfirmed = paymentStatus === 'confirmed';
+  const isPending = paymentStatus === 'pending';
+  const isDeclined = paymentStatus === 'declined';
 
   React.useEffect(() => {
     let mounted = true;
     async function gen() {
-      if (!qrCodeData) {
+      // CHANGED: Only generate QR if confirmed and has data
+      if (!qrCodeData || !isConfirmed) {
         if (mounted) setQrImage(null);
         return;
       }
 
       try {
-        // If qrCodeData already looks like a full URL, use it.
-        // Otherwise build absolute claim URL -> /claim/[token]
         const payload =
           typeof qrCodeData === "string" && qrCodeData.startsWith("http")
             ? qrCodeData
@@ -73,24 +80,51 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
     }
     gen();
     return () => { mounted = false; };
-  }, [qrCodeData]);
+  }, [qrCodeData, isConfirmed]);
 
   return (
     <Card className="overflow-hidden bg-white/70 backdrop-blur-xl border-white/90 shadow-2xl relative">
-      {/* Gradient top accent - colorful gradient */}
-      <div className="absoluLeft Column: Purchase Detailste top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#94DCAD] via-[#4EF9CD] to-[#73E9DD]"></div>
+      {/* Gradient top accent */}
+      <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#94DCAD] via-[#4EF9CD] to-[#73E9DD]"></div>
       
-      {/* Category Header - Positioned at top edge */}
+      {/* Category Header */}
       <div className="px-8 pt-6 pb-4">
         <div className="inline-block px-6 py-2 rounded-full bg-gradient-to-r from-[#FFDFC0]/60 to-[#FFF1C5]/60 border border-[#FFF1C5]/80">
           <p className="text-sm text-[#682950]">
             {purchase.type === 'community' ? 'Community' : 'Individual'} – {purchase.category}
           </p>
         </div>
+        
+        {/* ADDED: Payment Status Badge */}
+        <div className="mt-3">
+          {isPending && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 border border-amber-300">
+              <svg className="w-4 h-4 text-amber-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-semibold text-amber-800">Awaiting Verification</span>
+            </div>
+          )}
+          {isConfirmed && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 border border-emerald-300">
+              <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-semibold text-emerald-800">Payment Confirmed</span>
+            </div>
+          )}
+          {isDeclined && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-100 border border-red-300">
+              <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-semibold text-red-800">Payment Declined</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="px-8 pb-8">
-        {/* Two Column Layout: Details on Left, QR on Right */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column: Purchase Details */}
           <div className="space-y-6 mb-8 lg:mb-0">
@@ -174,7 +208,28 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
             
             <div className="w-full aspect-square relative overflow-hidden bg-gradient-to-br from-[#FFF1C5]/50 to-[#FFDFC0]/50 rounded-3xl border-4 border-white shadow-2xl transition-all hover:shadow-xl">
               <div className="absolute inset-0 flex items-center justify-center p-4">
-                {qrImage ? (
+                {!isConfirmed ? (
+                  // CHANGED: Show waiting message when not confirmed
+                  <div className="relative z-10 flex flex-col items-center gap-4 text-center px-6">
+                    <svg className="w-24 h-24 text-amber-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <p className="text-lg font-bold text-[#682950] mb-2">
+                        {isPending && "Awaiting Verification"}
+                        {isDeclined && "Payment Declined"}
+                      </p>
+                      <p className="text-sm text-[#682950]/70">
+                        {isPending && "Your QR code will appear here once your payment is verified by our admin (usually within 48 hours)."}
+                         {isDeclined && "Payment Declined"}
+                      </p>
+                      <p className="text-sm text-[#682950]/70">
+                        {isPending && "Your QR code will appear here once your payment is verified by our admin (usually within 48 hours)."}
+                        {isDeclined && "Please contact support or submit a new payment."}
+                      </p>
+                    </div>
+                  </div>
+                ) : qrImage ? (
                   <img src={qrImage} alt="QR Code" className="w-full h-full object-contain" />
                 ) : (
                   <div className="relative z-10 flex flex-col items-center gap-3">

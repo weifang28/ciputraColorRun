@@ -63,34 +63,17 @@ export async function PUT(req: Request) {
       );
     }
     
-    const existingUserWithEmail = await prisma.user.findFirst({
-      where: { email: email, NOT: { accessCode: accessCode } },
-    });
-    
-    if (existingUserWithEmail) {
-      return NextResponse.json(
-        { error: "Email already in use by another account." },
-        { status: 409 }
-      );
-    }
-    
+    // Allow updating email and phone - no uniqueness check needed
     const updatedUser = await prisma.user.update({
       where: { accessCode },
       data: { email, phone },
     });
 
     return NextResponse.json({ user: updatedUser });
-
-  } catch (err: unknown) {
-    console.error("PUT /api/user error:", err);
-    
-    let errorMessage = "Internal server error";
-    if (err instanceof Error) {
-      errorMessage = err.message;
-    }
-    
+  } catch (err: any) {
+    console.error('PUT /api/user error:', err);
     return NextResponse.json(
-      { error: errorMessage },
+      { error: err?.message || 'Failed to update user' },
       { status: 500 }
     );
   }
