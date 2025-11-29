@@ -1499,7 +1499,6 @@ export default function RegistrationPage() {
                                     <strong>Cleanliness: </strong>Participants must maintain cleanliness throughout the event area.
                                 </li>
                                 <li>
-                                <li>
                                     <strong>Prizes/Doorprizes: </strong>Prizes are valid only for officially registered participants (committee members are excluded)
                                 </li>
                                 <li>
