@@ -1487,9 +1487,12 @@ export default function RegistrationPage() {
                                 <strong>Force Majeure: </strong>
                                 If the event is forcefully canceled due to conditions beyond the organizer's control (such as heavy rain, storms, natural disasters, demonstrations, government policies), the organizer is <strong>not obligated to refund the registration fee.</strong>
                               </li>
-                            </ol>
-                            <strong>Changes of schedule/location:</strong>
+                              <li>
+                                <strong>Changes of schedule/location: </strong>
                             If there are changes to the event date or location, purchased tickets remain valid for the new schedule or location. Participants are not entitled to a refund.
+                              </li>
+                            </ol>
+                            
                             <h2 className = "mt-4 font-bold">SECTION 4: RACE PACK CLAIM</h2>
                             <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
                                 <li>
