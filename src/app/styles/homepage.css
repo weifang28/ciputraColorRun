@@ -2594,3 +2594,83 @@ ol[type="a"] {
 .terms-modal .terms-content ol li {
   counter-reset: none;
 }
+
+.terms-modal .terms-content > ol,
+.terms-modal .terms-content .terms-ol-numbered {
+  list-style-type: decimal !important;
+  list-style-position: outside !important;
+  margin: 0.5rem 0 !important;
+  padding-left: 1.75rem !important;
+}
+
+.terms-modal .terms-content > ol > li,
+.terms-modal .terms-content .terms-ol-numbered > li {
+  display: list-item !important;
+  list-style-type: decimal !important;
+  margin: 0.5rem 0 !important;
+  padding-left: 0.25rem !important;
+}
+
+/* LEVEL 2: Nested roman numerals (i, ii, iii...) */
+.terms-modal .terms-content > ol > li > ol,
+.terms-modal .terms-content .terms-ol-numbered > li > ol,
+.terms-modal .terms-content .terms-ol-roman {
+  list-style-type: lower-roman !important;
+  list-style-position: outside !important;
+  margin: 0.25rem 0 !important;
+  padding-left: 1.5rem !important;
+}
+
+.terms-modal .terms-content > ol > li > ol > li,
+.terms-modal .terms-content .terms-ol-numbered > li > ol > li,
+.terms-modal .terms-content .terms-ol-roman > li {
+  display: list-item !important;
+  list-style-type: lower-roman !important;
+  margin: 0.25rem 0 !important;
+  padding-left: 0 !important;
+}
+
+/* LEVEL 3: Nested alphabetic (a, b, c, d...) */
+.terms-modal .terms-content > ol > li > ol > li > ol,
+.terms-modal .terms-content .terms-ol-numbered > li > ol > li > ol,
+.terms-modal .terms-content .terms-ol-roman > li > ol,
+.terms-modal .terms-content .terms-ol-alpha {
+  list-style-type: lower-alpha !important;
+  list-style-position: outside !important;
+  margin: 0.25rem 0 !important;
+  padding-left: 1.5rem !important;
+}
+
+.terms-modal .terms-content > ol > li > ol > li > ol > li,
+.terms-modal .terms-content .terms-ol-numbered > li > ol > li > ol > li,
+.terms-modal .terms-content .terms-ol-roman > li > ol > li,
+.terms-modal .terms-content .terms-ol-alpha > li {
+  display: list-item !important;
+  list-style-type: lower-alpha !important;
+  margin: 0.25rem 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Marker styling for all levels */
+.terms-modal .terms-content ol li::marker {
+  color: #1F6251 !important;
+  font-weight: 700 !important;
+}
+
+/* IMPORTANT: Don't use counter-reset - let browser handle native counters */
+.terms-modal .terms-content ol {
+  list-style-position: outside !important;
+}
+
+/* Ensure all list items use display: list-item */
+.terms-modal .terms-content ol li {
+  display: list-item !important;
+}
+
+/* Remove old conflicting counter rules */
+.terms-ol-numbered,
+.terms-ol-roman,
+.terms-ol-alpha {
+  counter-reset: none !important;
+}
+
