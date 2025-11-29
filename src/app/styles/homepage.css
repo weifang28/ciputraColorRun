@@ -2528,3 +2528,69 @@ label[for="idCardPhoto"]:focus-within {
 ol[type="a"] {
   list-style-type: lower-alpha !important;
 }
+
+.terms-modal .terms-content .terms-ol-numbered {
+  list-style: decimal !important;
+  list-style-position: outside !important;
+  counter-reset: section-counter !important;
+  margin: 0.5rem 0 !important;
+  padding-left: 1.75rem !important;
+}
+
+.terms-modal .terms-content .terms-ol-numbered > li {
+  display: list-item !important;
+  list-style-type: decimal !important;
+  counter-increment: section-counter !important;
+  margin: 0.5rem 0 !important;
+  padding-left: 0.25rem !important;
+}
+
+.terms-modal .terms-content .terms-ol-numbered > li::marker {
+  content: counter(section-counter) ". " !important;
+  color: #1F6251 !important;
+  font-weight: 700 !important;
+}
+
+/* Nested roman numerals (i, ii, iii) */
+.terms-modal .terms-content .terms-ol-roman {
+  list-style: lower-roman !important;
+  list-style-position: outside !important;
+  margin: 0.25rem 0 !important;
+  padding-left: 1.5rem !important;
+}
+
+.terms-modal .terms-content .terms-ol-roman > li {
+  display: list-item !important;
+  list-style-type: lower-roman !important;
+  margin: 0.25rem 0 !important;
+}
+
+.terms-modal .terms-content .terms-ol-roman > li::marker {
+  color: #1F6251 !important;
+  font-weight: 600 !important;
+}
+
+/* Alphabetic lists (a, b, c) - keep existing rules */
+.terms-modal .terms-content .terms-ol-alpha {
+  list-style: lower-alpha !important;
+  list-style-position: outside !important;
+  margin: 0.25rem 0 !important;
+  padding-left: 1.5rem !important;
+}
+
+.terms-modal .terms-content .terms-ol-alpha > li {
+  display: list-item !important;
+  list-style-type: lower-alpha !important;
+  margin: 0.25rem 0 !important;
+}
+
+.terms-modal .terms-content .terms-ol-alpha > li::marker {
+  color: #1F6251 !important;
+  font-weight: 600 !important;
+}
+
+/* Remove any conflicting global resets */
+.terms-modal .terms-content ol,
+.terms-modal .terms-content ol li {
+  counter-reset: none;
+}

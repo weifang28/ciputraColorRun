@@ -1324,20 +1324,25 @@ export default function RegistrationPage() {
                             </ul>
 
                             <h2 className="mt-4 font-bold">SECTION 2: REGISTRATION & PARTICIPANT CATEGORIES</h2>
-                            <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
+                            {/* Remove type="1" and use a custom class to force decimal numbering */}
+                            <ol className="pl-6 text-sm space-y-2 terms-ol-numbered">
                               <li>
                                 <strong>Identification Card Definition:</strong>
-                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                <ol className="pl-6 mt-1 space-y-1 terms-ol-roman">
                                   <li>
                                     Identification Card as referred to in these terms and conditions is an official personal identification document issued by an authorized agency and is still valid.
                                   </li>
                                   <li>
                                     Documents that can be used for registration, data verification, and race pack collection include:
-                                    {/* Use lettered list specifically for the Adult Indonesian Citizen section */}
-                                    <ol type="a" className="pl-6 mt-1 space-y-1 terms-ol-alpha">
-                                      <li><strong>Adult Indonesian Citizen:</strong> Kartu Tanda Penduduk (KTP), Surat Izin Mengemudi (SIM), Identitas Kependudukan Digital (IKD), atau kartu pengenal resmi lainnya yang diterbitkan oleh Pemerintah Republik Indonesia.</li>
-                                      <li><strong>Child Participant (under 17 years old):</strong> Kartu Identitas Anak (KIA), Akta Kelahiran, Kartu Pelajar, atau dokumen resmi lainnya.</li>
-                                      <li><strong>Foreign Citizen (WNA):</strong> Paspor, Kartu Izin Tinggal Terbatas (KITAS), Kartu Izin Tinggal Tetap (KITAP), atau dokumen identitas resmi yang diakui secara internasional.</li>
+                                    {/* Use alphabetic list for documents */}
+                                    <ol
+                                      className="pl-6 mt-1 space-y-1 terms-ol-alpha"
+                                      style={{ listStyleType: "lower-alpha" }}
+                                    >
+                                      <li><strong>WNI Dewasa:</strong> Kartu Tanda Penduduk (KTP), Surat Izin Mengemudi (SIM), Identitas Kependudukan Digital (IKD), atau kartu pengenal resmi lainnya yang diterbitkan oleh Pemerintah Republik Indonesia.</li>
+                                      <li><strong>Peserta Anak (di bawah 17 tahun):</strong> Kartu Identitas Anak (KIA), Akta Kelahiran, Kartu Pelajar, atau dokumen resmi lainnya.</li>
+                                      <li><strong>Warga Negara Asing (WNA):</strong> Paspor, Kartu Izin Tinggal Terbatas (KITAS), Kartu Izin Tinggal Tetap (KITAP), atau dokumen identitas resmi yang diakui secara internasional.</li>
+                                      <li><strong>Lainnya:</strong> Dokumen identitas resmi lain yang relevan dan dapat diterima oleh panitia.</li>
                                     </ol>
                                   </li>
                                 </ol>
@@ -1345,7 +1350,7 @@ export default function RegistrationPage() {
 
                               <li>
                                 <strong>Participants:</strong>
-                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                <ol className="pl-6 mt-1 space-y-1 terms-ol-roman">
                                   <li>This event is open to the General Public, Indonesian Citizens (WNI), and Foreign Citizens (WNA).</li>
                                   <li>Incorrect data entry that results in discrepancies during verification may lead to registration cancellation.</li>
                                   <li>Participants under the age of 13 must be accompanied by a guardian who is at least 17 years old throughout the entire event, including during race pack collection and while on the event premises. The guardian is fully responsible for the safety, security, and actions of the participant during the event.</li>
@@ -1353,20 +1358,20 @@ export default function RegistrationPage() {
                               </li>
                               <li>
                                 <strong>Registration Period: </strong>
-                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                <ol className="pl-6 mt-1 space-y-1 terms-ol-roman">
                                   <li> Registration is opened from 1st December until the maximum quota has been fulfilled.</li>
                                 </ol>
                               </li>
                               <li>
                                 <strong>Registration Platform: </strong>
-                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                <ol className="pl-6 mt-1 space-y-1 terms-ol-roman">
                                   <li>Participants can register through the official Ciputra Color Run 2026 website at <a href="https://ciputracolorrun.com" className="text-blue-600 underline">https://ciputracolorrun.com</a>.</li>
                                   <li>Event organizers are not responsible for any consequences resulting from purchases made outside the official platform.</li>
                                 </ol>
                               </li>
                               <li>
                                 <strong>Categories & Pricing: </strong>
-                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                <ol className="pl-6 mt-1 space-y-1 terms-ol-roman">
                                     <li>Registration fee pendaftaran dibagi berdasarkan kategori jarak tempuh sebagai berikut:
                                         <ol type = "a" className="pl-6 mt-1 space-y-1 terms-ol-alpha">
                                             <li>3 KM: Rp 130.000,- (Early Bird) | Rp 150.000,- (Normal Price)</li>
@@ -1382,7 +1387,7 @@ export default function RegistrationPage() {
                               </li>
                               <li>
                                 <strong>Data Accuracy: </strong>
-                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                <ol className="pl-6 mt-1 space-y-1 terms-ol-roman">
                                     <li>
                                         Participants are required to fill in the registration data with accurate information (name, date of birth, email, and phone number).
                                     </li>
