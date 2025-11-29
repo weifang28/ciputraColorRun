@@ -221,13 +221,13 @@ export default function Home() {
 							<h2 className="text-2xl md:text-4xl font-bold mb-4 md:mb-6 unified-gradient-title">
 								About Ciputra Color Run
 							</h2>
-							<p className="text-base md:text-lg text-[#1F6251] mb-3 md:mb-4 leading-relaxed">
+							<p className="text-base md:text-2xl text-[#1F6251] mb-3 md:mb-4 leading-relaxed">
 								Ciputra Color Run is the most vibrant celebration of health and
 								happiness in Surabaya. Proudly organized by the Student Council
 								of Universitas Ciputra, this annual Fun Run takes you through
 								CitraLand and ends with a twist.
 							</p>
-							<p className="text-sm md:text-base  text-[#1F6251] mb-4 md:mb-6 leading-relaxed">
+							<p className="text-sm md:text-xl text-[#1F6251] mb-4 md:mb-6 leading-relaxed">
 								The finish line is just the beginning. Get ready for our
 							
 								celebrate under a shower of colorful powder. <br />
@@ -568,7 +568,7 @@ export default function Home() {
 									<strong>What to Bring:</strong> Valid ID card (KTP/Birth Certificate/Passport) and your registration QR Code.
 								</li>
 							</ul>
-							<strong className="mt-4 text-sm text-[#52605f]">
+							<strong className="mt-4 text-[#52605f]">
 								Representative Collection
 							</strong>
 							<ul className="claim-list">
@@ -621,7 +621,7 @@ export default function Home() {
                                 </div>
 							</div>
 							<p className="mt-4 text-sm text-[#52605f]">
-								Assembly point and route will be announced later via registered e-mail and event’s homepage. Additionally follow our Instagram <a className = "underline font-bold" href = "https://instagram.com/ciputrarun.uc">@ciputrarun.uc</a> as well for additional information.
+								Assembly point and route will be announced later via registered e-mail and event’s homepage. More information on our Instagram <a className = "underline font-bold" href = "https://instagram.com/ciputrarun.uc">@ciputrarun.uc</a> as well for additional information.
 							</p>
 						</div>
 					</div>

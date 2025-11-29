@@ -105,9 +105,9 @@
     margin-top: 2rem; /* reduced gap from countdown timer */
     background: linear-gradient(
       90deg,
-      #70b1e2 0%,
-      #e0a0a1 50%,
-      #d1e6d3 74%
+      #6f22be 0%,
+      #8a3391 50%,
+      #a52d5d 74%
     );
     box-shadow: 0 10px 30px rgba(0,0,0,0.12);
     transition: transform 220ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms ease;
@@ -134,12 +134,12 @@
 }
 
 /* Tablet adjustments (keep the larger oval but moderate size) */
-@media (max-width: 1024px) {
+@media (max-width: 1024px) and (min-width: 641px) {
   .home_register_button {
     font-size: 1.6rem;
     padding: 1rem 2.2rem;
     min-height: 60px;
-    border-radius: 999px;
+    border-radius: 999px !important; /* Full pill shape */
     box-shadow: 0 8px 24px rgba(0,0,0,0.10);
   }
 }
@@ -544,7 +544,7 @@
     background: linear-gradient(90deg, rgba(160,212,172,0.72) 0%, rgba(226,150,156,0.72) 100%);
   }
   .about-right h2, .about-right p {
-    color: rgba(255,255,255,0.98);
+    color: #1F6251 !important;
     text-shadow: 0 8px 20px rgba(0,0,0,0.36);
   }
 }
@@ -554,7 +554,7 @@
     background: linear-gradient(90deg, rgba(160,212,172,0.86) 0%, rgba(226,150,156,0.86) 100%);
   }
   .about-right h2, .about-right p {
-    color: rgba(255,255,255,0.99);
+    color: #1F6251 !important;
     text-shadow: 0 10px 28px rgba(0,0,0,0.46);
   }
 }
@@ -1638,7 +1638,7 @@
 }
 
 /* Tablet: keep 3 columns on mid-sized screens (phones/tablets in landscape) */
-@media (min-width: 821px) and (max-width: 1024px) {
+@media (min-width: 931px) and (max-width: 1024px) {
   .benefits-grid {
     grid-template-columns: repeat(3, 1fr) !important;
     gap: 1rem;
@@ -1685,7 +1685,7 @@
 }
 
 /* Tablet portrait and smaller landscape: single column to prevent overflow */
-@media (max-width: 820px) {
+@media (max-width: 930px) {
   .benefits-grid {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;
@@ -2052,6 +2052,7 @@ main {
 .venue-map-top {
   display: flex;
   justify-content: space-between;
+ 
   align-items: center;
   padding: 10px 14px;
   gap: 12px;

@@ -7,7 +7,7 @@ const DEFAULT_IMAGES = [
   "/homepage/about/about2JPG.jpg",
   "/homepage/about/about3JPG.jpg",
   "/homepage/about/about4JPG.jpg",
-  "/hHomepage/about/about5JPG.jpg",
+  "/homepage/about/about5JPG.jpg",
   "/homepage/about/about6JPG.jpg",
   "/homepage/about/about7JPG.jpg",
 ];
