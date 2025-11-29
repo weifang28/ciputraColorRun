@@ -1299,14 +1299,14 @@ export default function RegistrationPage() {
             {/* Terms and Conditions Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col terms-modal">
                         <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4">
                             <h3 className="text-2xl font-bold text-white text-center">
                                 Terms & Conditions
                             </h3>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 text-gray-700">
+                        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 text-gray-700 terms-content">
                             <h1 className="text-lg md:text-xl font-extrabold text-gray-900">
                               TERMS AND CONDITIONS FOR PARTICIPANTS OF CIPUTRA COLOR RUN 2026
                             </h1>
@@ -1315,7 +1315,7 @@ export default function RegistrationPage() {
                               <strong>By registering as a participant in Ciputra Color Run 2026, the participant fully accepts and agrees to comply with the rules and conditions below.</strong>
                             </p>
 
-                            <h2 className="mt-4 font-bold">PART 1: GENERAL EVENT INFORMATION</h2>
+                            <h2 className="mt-4 font-bold">SECTION 1: GENERAL EVENT INFORMATION</h2>
                             <ul className="list-disc pl-6 text-sm">
                               <li><strong>Event Name:</strong> Ciputra Color Run 2026</li>
                               <li><strong>Event Date:</strong> April 12, 2026</li>
@@ -1323,31 +1323,314 @@ export default function RegistrationPage() {
                               <li><strong>Event Location:</strong> Ciputra University Surabaya</li>
                             </ul>
 
-                            <h2 className="mt-4 font-bold">PART 2: REGISTRATION & PARTICIPANT CATEGORIES</h2>
-                            <ol className="list-decimal pl-6 text-sm space-y-2">
+                            <h2 className="mt-4 font-bold">SECTION 2: REGISTRATION & PARTICIPANT CATEGORIES</h2>
+                            <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
                               <li>
                                 <strong>Identification Card Definition:</strong>
-                                <ol className="list-lower-alpha pl-6 mt-1">
-                                  <li>a. Identification Card as referred to in these terms and conditions is an official personal identification document issued by an authorized agency and is still valid.</li>
-                                  <li>b. Documents that can be used for registration, data verification, and race pack collection include:
-                                    <ol className="list-decimal pl-6 mt-1">
-                                      <li><strong>Adult Indonesian Citizen:</strong> ID Card, Driver's License (SIM), Digital Population Identity (IKD), or other official identification cards issued by the Government of the Republic of Indonesia.</li>
-                                      <li><strong>Child Participants (under 17 years old):</strong> Kartu Identitas Anak (KIA), Birth Certificate, Student Card, or other official documents.</li>
-                                      <li><strong>Foreign Citizens (WNA):</strong> Passport, Kartu Izin Tinggal Terbatas (KITAS), Kartu Izin Tinggal Tetap (KITAP), or official identification documents recognized internationally.</li>
+                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                  <li>
+                                    Identification Card as referred to in these terms and conditions is an official personal identification document issued by an authorized agency and is still valid.
+                                  </li>
+                                  <li>
+                                    Documents that can be used for registration, data verification, and race pack collection include:
+                                    {/* Use lettered list specifically for the Adult Indonesian Citizen section */}
+                                    <ol type="a" className="pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                      <li><strong>Adult Indonesian Citizen:</strong> Kartu Tanda Penduduk (KTP), Surat Izin Mengemudi (SIM), Identitas Kependudukan Digital (IKD), atau kartu pengenal resmi lainnya yang diterbitkan oleh Pemerintah Republik Indonesia.</li>
+                                      <li><strong>Child Participant (under 17 years old):</strong> Kartu Identitas Anak (KIA), Akta Kelahiran, Kartu Pelajar, atau dokumen resmi lainnya.</li>
+                                      <li><strong>Foreign Citizen (WNA):</strong> Paspor, Kartu Izin Tinggal Terbatas (KITAS), Kartu Izin Tinggal Tetap (KITAP), atau dokumen identitas resmi yang diakui secara internasional.</li>
                                     </ol>
                                   </li>
                                 </ol>
                               </li>
+
                               <li>
-                                <strong>Peserta:</strong>
-                                <ol className="list-lower-alpha pl-6 mt-1">
-                                  <li>Acara ini terbuka untuk Umum, Warga Negara Indonesia (WNI), dan Warga Negara Asing (WNA).</li>
-                                  <li>Kesalahan pengisian data yang mengakibatkan ketidaksesuaian saat verifikasi dapat menyebabkan pembatalan pendaftaran.</li>
-                                 <li>Peserta di bawah umur 13 tahun wajib didampingi oleh pendamping berusia minimal 17 tahun saat mengikuti seluruh rangkaian acara, termasuk saat pengambilan race pack dan selama berada di area event. Pendamping bertanggung jawab penuh atas keamanan, keselamatan, serta tindakan peserta selama acara berlangsung.</li>
+                                <strong>Participants:</strong>
+                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                  <li>This event is open to the General Public, Indonesian Citizens (WNI), and Foreign Citizens (WNA).</li>
+                                  <li>Incorrect data entry that results in discrepancies during verification may lead to registration cancellation.</li>
+                                  <li>Participants under the age of 13 must be accompanied by a guardian who is at least 17 years old throughout the entire event, including during race pack collection and while on the event premises. The guardian is fully responsible for the safety, security, and actions of the participant during the event.</li>
                                 </ol>
                               </li>
+                              <li>
+                                <strong>Registration Period: </strong>
+                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                  <li> Registration is opened from 1st December until the maximum quota has been fulfilled.</li>
+                                </ol>
+                              </li>
+                              <li>
+                                <strong>Registration Platform: </strong>
+                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                  <li>Participants can register through the official Ciputra Color Run 2026 website at <a href="https://ciputracolorrun.com" className="text-blue-600 underline">https://ciputracolorrun.com</a>.</li>
+                                  <li>Event organizers are not responsible for any consequences resulting from purchases made outside the official platform.</li>
+                                </ol>
+                              </li>
+                              <li>
+                                <strong>Categories & Pricing: </strong>
+                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                    <li>Registration fee pendaftaran dibagi berdasarkan kategori jarak tempuh sebagai berikut:
+                                        <ol type = "a" className="pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                            <li>3 KM: Rp 130.000,- (Early Bird) | Rp 150.000,- (Normal Price)</li>
+                                            <li>5 KM: Rp 180.000,- (Early Bird) | Rp 200.000,- (Normal Price)</li>
+                                            <li>10 KM: Rp 220.000,- (Early Bird) | Rp 250.000,- (Normal Price)</li>
+                                        </ol>
+                                    </li>
+                                </ol>
+                              </li>
+                              <li>
+                                <strong>Registration Status: </strong>
+                                 Registration will be declared successful and valid after the participant has made full payment. The organizer will send a confirmation email as proof of ticket purchase.
+                              </li>
+                              <li>
+                                <strong>Data Accuracy: </strong>
+                                <ol type="i" className="pl-6 mt-1 space-y-1">
+                                    <li>
+                                        Participants are required to fill in the registration data with accurate information (name, date of birth, email, and phone number).
+                                    </li>
+                                    <li>
+                                        Errors in data entry that result in the cancellation of results or prizes are entirely the responsibility of the participants.
+                                    </li>
+                                </ol>
+                              </li>
+                              <li>
+                                <strong>Quota: </strong>
+                                The organizer reserves the right to close ticket sales if the quota has been met without prior notice.
+                              </li>
+                              <li>
+                                <strong>Ticket Transfer: </strong>
+                                Reselling tickets is prohibited.
+                              </li>
+                              <li>
+                                <strong>Category Changes: </strong>
+                                Participants are not allowed to change the distance category.
+                              </li>
                             </ol>
-                             </div>
+                            <h2 className="mt-4 font-bold">SECTION 3: CANCELLATION & REFUND POLICY</h2>
+                            <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
+                              <li>
+                                <strong>Final: </strong>
+                                Registration that has been successful is final and cannot be canceled.
+                                </li>
+                                <li>
+                                <strong>Non-Refundable: </strong>
+                                Registration fees that have been paid are <strong>non-refundable</strong> for any reason, including if the participant does not attend the event.
+                              </li>
+                              <li>
+                                <strong>Force Majeure: </strong>
+                                If the event is forcefully canceled due to conditions beyond the organizer's control (such as heavy rain, storms, natural disasters, demonstrations, government policies), the organizer is <strong>not obligated to refund the registration fee.</strong>
+                              </li>
+                            </ol>
+                            <strong>Changes of schedule/location:</strong>
+                            If there are changes to the event date or location, purchased tickets remain valid for the new schedule or location. Participants are not entitled to a refund.
+                            <h2 className = "mt-4 font-bold">SECTION 4: RACE PACK CLAIM</h2>
+                            <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
+                                <li>
+                                    <strong>Race Pack Contents: </strong>
+                                    Every registered participant is entitled to a Race Pack, which includes a Running Jersey and a Bib Number. 
+                                </li>
+                                <li>
+                                    <strong>Collection Schedule:</strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            <strong>Date: </strong>9-11 April 2026
+                                        </li>
+                                        <li>
+                                            <strong>Location: </strong>Corepreneur, 1st Floor UC Tower, Universitas Ciputra Surabaya
+                                        </li>
+                                        <li>
+                                             <strong>Operational Hours: </strong>To be announced (TBA)
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Late Collection (Race Day)</strong>
+                                    Participants unable to collect during the main schedule are permitted to collect on the event day (April 12, 2026) at the event location, no later than 05:00 WIB.
+                                </li>
+                                <li>
+                                    <strong>Collection Requirements: </strong>
+                                    <ol type="a" className="pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            <strong>Self Collection: </strong>Participants must present the purchase QR Code (print or digital) and a valid Identity Card (ID Card)
+                                        </li>
+                                        <li>
+                                            <strong>Collection via Representative: </strong>
+                                            Collection may be delegated provided the Representative (Proxy) brings:
+                                            <ol type="i" className="pl-6 mt-1 space-y-1">
+                                                <li>The QR Code from the registrant’s account.</li>
+                                                <li>A Power of Attorney (Surat Kuasa) signed by the participant (Grantor).</li>
+                                                <li>A photocopy of the Participant's ID Card.</li>
+                                                <li>The Representative must show their original ID Card, which matches the name on the Power of Attorney</li>
+                                            </ol>
+                                        </li>
+                                    </ol> 
+                                </li>
+                                <li>
+                                    <strong>Jersey Sizes: </strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>Jersey sizes are provided according to the selection made during registration.</li>
+                                        <li>Size exchanges are not permitted.</li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Lateness: </strong>
+                                    The Organizer is not responsible for a participant's failure to collect the Race Pack outside the scheduled times and provisions.
+                                </li>
+                            </ol>
+                            <h2 className="mt-4 font-bold">SECTION 5: EVENT DAY REGULATIONS</h2>
+                            <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
+                                <li>
+                                    <strong>Route: </strong>Participants are required to run on the designated route and comply with safety standards and traffic regulations.
+                                </li>
+                                <li>
+                                    <strong>Prohibited Items on Route: </strong>Participants are prohibited from bringing pets, bicycles, roller skates, skateboards, or other wheeled objects onto the running course.
+                                </li>
+                                <li>
+                                    <strong>Lateness and Cut-Off Time (COT): </strong>Late participants are allowed to start, but no extra time will be given. The Cut-Off Time for completing the run remains absolute according to the schedule.
+                                </li>
+                                <li>
+                                    <strong>Disqualification: </strong>The Organizer reserves the right to disqualify participants who behave inappropriately, disturb others, or fail to comply with established rules.
+                                </li>
+                                <li>
+                                    <strong>Facilities: </strong>Water Stations will be provided at several points along the route.
+                                </li>
+                                <li>
+                                    <strong>Personal Belongings: </strong>Participants may carry personal items (phones, wallets, keys, meds), <strong>but all risks of security, damage, or loss outside the Drop Bag area are the participant's sole responsibility.</strong>
+                                </li>
+                                <li>
+                                    <strong>Cleanliness: </strong>Participants must maintain cleanliness throughout the event area.
+                                </li>
+                                <li>
+                                <li>
+                                    <strong>Prizes/Doorprizes: </strong>Prizes are valid only for officially registered participants (committee members are excluded)
+                                </li>
+                                <li>
+                                    <strong>Baggage Deposit Service (Drop Bag): </strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            <strong>Identification Mechanism: </strong>
+                                            <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                                <li>
+                                                    The organizer will provide baggage services using numbered stickers.
+                                                </li>
+                                                <li>
+                                                    The stickers are matched to the Bib Number of the participants when claiming the baggage back.
+                                                </li>
+                                            </ol>
+                                        </li>
+                                        <li>
+                                            <strong>Valuables: </strong>
+                                            <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                                <li>
+                                                    Valuables (phones, wallets, keys, etc.) may be deposited only if placed inside a sealed bag or container before being placed in the box.
+                                                </li>
+                                                <li>
+                                                    Loose, unwrapped items are not accepted .
+                                                </li>
+                                            </ol>
+                                        </li>
+                                        <li>
+                                            <strong>Prohibited Items: </strong>
+                                            The Organizer reserves the right to refuse items that pose a risk or liability, including:
+                                            <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                                <li>
+                                                    Items with strong odors (e.g. Durian, Items with a strong smell, etc.)
+                                                </li>
+                                                <li>
+                                                    Pets
+                                                </li>
+                                                <li>
+                                                    Sharp objects, weapons, or explosives
+                                                </li>
+                                                <li>
+                                                    Consumables prone to leaking or rotting
+                                                </li>
+                                            </ol>
+                                        </li>
+                                        <li>
+                                            <strong>Liability Limits: </strong>
+                                            <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                                <li>
+                                                    The Organizer is responsible only for items officially deposited at the Drop Bag Counter.
+                                                </li> 
+                                            </ol> 
+                                        </li>
+                                        <li>
+                                            <strong>Unclaimed Items: </strong>
+                                            Jika terdapat barang yang tidak diambil hingga acara berakhir, panitia akan melakukan identifikasi pemilik melalui Nomor Bib dan menghubungi peserta melalui nomor WhatsApp yang terdaftar untuk konfirmasi.
+                                        </li>
+                                        <li>
+                                            <strong>Claim Limits: </strong>
+                                            Peserta yang telah dikonfirmasi sebagai pemilik barang diberikan batas waktu maksimal 7 (tujuh) hari setelah hari acara untuk mengambil barang tertinggal tersebut di lokasi yang ditentukan.
+                                        </li>
+                                        <li>
+                                            <strong>Unclaimed Items Condition: </strong>
+                                            <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                                <li>
+                                                    Security guarantees apply only on the event day.
+                                                </li>
+                                                <li>
+                                                    The Organizer is <strong>not liable</strong> for deterioration or damage to items collected after the event day.
+                                                </li>
+                                            </ol>
+                                        </li>
+                                    </ol>
+                                </li>     
+                            </ol>
+                            <h2 className="mt-4 font-bold">SECTION 6: HEALTH, SAFETY & LIABILITY WAIVER</h2>
+                            <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
+                                <li>
+                                    <strong>Participant Risk: </strong>
+                                    By registering, the participant acknowledges that this activity carries risks (including injury, loss, or life-threatening risks).
+                                </li>
+                                <li>
+                                    <strong>Health Condition: </strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            Participants are full responsible for their own health
+                                        </li>
+                                        <li>
+                                            Participants must ensure they are physically fit to participate
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Medical Services: </strong>
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                            Basic safety and medical services are provided.
+                                        </li>
+                                        <li>
+                                           Medical staff reserve the right to stop a participant if they are deemed medically unfit to continue.
+                                        </li>
+                                        <li>
+                                            Only generic medications are provided by the organizers
+                                        </li>
+                                    </ol>
+                                </li>
+                                <li>
+                                    <strong>Liability Waiver: </strong>The organizer is <strong>NOT </strong> responsible for:
+                                    <ol type = "a" className = "pl-6 mt-1 space-y-1 terms-ol-alpha">
+                                        <li>
+                                           Accidents and/or death experienced by participants during the event.
+                                        </li>
+                                        <li>
+                                           Injuries, illnesses, or congenital diseases if the participant failed to declare them in the medical history Google Form.
+                                        </li>
+                                        <li>
+                                           The Organizer is only responsible for first aid for declared conditions.
+                                        </li>
+                                        <li>
+                                            Drug allergies if not declared in the Google Form.
+                                        </li>
+                                        <li>
+                                            Loss or theft of personal belongings.
+                                        </li>
+                                        <li>
+                                            Participant Lateness
+                                        </li>
+                                    </ol>
+                                </li>
+                            </ol>
+                        </div>
 
                         <div className="border-t border-gray-200 px-6 py-4 space-y-4">
                             <label className="flex items-start gap-3 cursor-pointer">

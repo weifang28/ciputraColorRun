@@ -2191,6 +2191,34 @@ label[for="idCardPhoto"]:focus-within {
   line-height: 1.12;
 }
 
+.terms-modal .terms-content ol {
+  list-style-type: disc; /* default to disc for top-level lists */
+  list-style-position: outside;
+  margin-left: 1rem;
+  padding-left: 1.25rem;
+}
+
+/* nested inside top-level ol -> roman i, ii, iii */
+.terms-modal .terms-content ol ol {
+  list-style-type: lower-roman; /* i, ii, iii */
+  margin-left: 0.5rem;
+  padding-left: 1rem;
+}
+
+/* deeper nesting: use lower-alpha again for 3rd level if needed */
+.terms-modal .terms-content ol ol ol {
+  list-style-type: lower-alpha;
+  margin-left: 0.5rem;
+  padding-left: 1rem;
+}
+
+/* make sure list markers are visible if some global rule hides them */
+.terms-modal .terms-content ol,
+.terms-modal .terms-content ol li {
+  counter-reset: none !important;
+  list-style-position: outside !important;
+}
+
 /* Desktop: two-column timeline with subtle vertical line and markers */
 @media (min-width: 900px) {
   /* Horizontal timeline: list becomes a centered flex row */
@@ -2444,4 +2472,59 @@ label[for="idCardPhoto"]:focus-within {
     background-clip: text !important;
     -webkit-background-clip: text !important;
   }
+}
+
+.terms-modal .terms-content .terms-ol-decimal {
+  list-style-type: decimal !important; /* 1., 2., 3. */
+  list-style-position: outside !important;
+  padding-left: 1.5rem !important;
+  margin: 0.25rem 0 0.75rem 0 !important;
+}
+
+.terms-modal .terms-content .terms-ol-decimal > li {
+  display: list-item !important;
+  margin: 0.35rem 0 !important;
+}
+
+.terms-modal .terms-content .terms-ol-decimal ol {
+  list-style-type: lower-roman !important; /* i, ii, iii */
+  padding-left: 1.25rem !important;
+}
+
+.terms-modal .terms-content .terms-ol-decimal li::marker {
+  color: #1F6251 !important;
+  font-weight: 700;
+}
+.terms-modal .terms-content .terms-ol-alpha {
+  list-style-type: lower-alpha !important; /* a, b, c */
+  list-style-position: outside !important;
+  margin: 0.25rem 0 0.75rem 0 !important;
+  padding-left: 1.25rem !important;
+}
+.terms-modal .terms-content .terms-ol-alpha > li {
+  display: list-item !important;
+  margin: 0.35rem 0 !important;
+}
+
+.terms-ol-alpha {
+  list-style-type: lower-alpha !important; /* a, b, c */
+  list-style-position: outside !important;
+  margin: 0.25rem 0 0.75rem 0 !important;
+  padding-left: 1.25rem !important;
+}
+
+.terms-ol-alpha > li,
+.terms-ol-alpha li {
+  display: list-item !important;
+  margin: 0.35rem 0 !important;
+}
+
+.terms-ol-alpha li::marker {
+  color: #1F6251 !important;
+  font-weight: 700;
+}
+
+/* Safety: prefer explicit rule for ol[type="a"] as fallback */
+ol[type="a"] {
+  list-style-type: lower-alpha !important;
 }
