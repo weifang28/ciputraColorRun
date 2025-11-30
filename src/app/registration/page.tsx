@@ -1251,6 +1251,11 @@ export default function RegistrationPage() {
                                 rows={3}
                                 required
                             />
+                            {(type === "community" || type === "family") && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Medical History (Any member in the community that has a past medical history should be written down )
+                                </p>
+                            )}
                         </div>
                         
                         <div className="grid gap-3">
@@ -1263,6 +1268,11 @@ export default function RegistrationPage() {
                                 rows={3}
                                 required
                             />
+                            {(type === "community" || type === "family") && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Medication Allergy (Any member in the community that has medication allergies should be written down )
+                                </p>
+                            )}
                         </div>
 
                         {/* Registration Type - IMPROVED RADIO BUTTONS */}
@@ -1600,7 +1610,7 @@ export default function RegistrationPage() {
                                                                 aria-label={`Count for size ${size}`}
                                                             />
                                                         </div>
-                                                                                                       );
+                                                    );
                                                 })}
                                             </div>
                                         </div>
@@ -2515,13 +2525,13 @@ export default function RegistrationPage() {
                                            Accidents and/or death experienced by participants during the event.
                                         </li>
                                         <li>
-                                           Injuries, illnesses, or congenital diseases if the participant failed to declare them in the medical history Google Form.
+                                           Injuries, illnesses, or congenital diseases if the participant failed to declare them in the medical history field.
                                         </li>
                                         <li>
                                            The Organizer is only responsible for first aid for declared conditions.
                                         </li>
                                         <li>
-                                            Drug allergies if not declared in the Google Form.
+                                            Drug allergies if not declared in the medication allergy field.
                                         </li>
                                         <li>
                                             Loss or theft of personal belongings.
