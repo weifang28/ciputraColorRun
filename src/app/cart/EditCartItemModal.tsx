@@ -23,7 +23,7 @@ export default function EditCartItemModal({
   // initialise localJerseys and keep it in sync whenever the item or sizes change
   const [localJerseys, setLocalJerseys] = useState<Record<string, number>>(() => {
     const base: Record<string, number> = {};
-    sizes.forEach((s) => (base[s] = Number(item.jerseys?.[s] || 0)));
+    sizes.forEach((s) => (base[s] = Number(item.jerseys?.[s] ?? 0)));
     return base;
   });
 
