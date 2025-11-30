@@ -468,7 +468,7 @@ export default function Home() {
 							</div>
 							<h4 className="benefit-title">Color War</h4>
 							<p className="benefit-description">
-								Immerse yourself in the euphoria of our signature Color War using safe, non-toxic powder. (Note: This part is fully optional if you prefer to stay clean!)
+								Immerse yourself in the euphoria of our signature Color War.
 							</p>
 						</div>
 						

@@ -1,10 +1,12 @@
 "use client";
 
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
-import { useState, useEffect, useMemo, useRef } from "react";
+import "../styles/homepage.css"
 import { showToast } from "../../lib/toast";
 import TutorialModal from "../components/TutorialModal";
+
 
 interface Category {
     id: number;
@@ -22,108 +24,46 @@ interface Category {
     bundlePrice?: string;
     bundleSize?: number;
     earlyBirdCapacity?: number;
-    earlyBirdRemaining?: number | null;
-}
-
-// NEW: Interface for jersey option
-interface JerseyOption {
-    id: number;
-    size: string;
-    type: string;
-    price: string;
-    isExtraSize: boolean;
-    description: string | null;
+    earlyBirdRemaining?: number | null; // added by API
 }
 
 export default function RegistrationPage() {
     const router = useRouter();
     const { addItem, items, setUserDetails } = useCart();
     const [currentUser, setCurrentUser] = useState<any | null>(null);
-    
+    const [existingIdCardPhotoUrl, setExistingIdCardPhotoUrl] = useState<string | null>(null);
+
     const [type, setType] = useState<"individual" | "community" | "family">("individual");
-    // NEW: keep a separate registrationType state (used across the file)
-    const [registrationType, setRegistrationType] = useState<"individual" | "community" | "family">("individual");
     
     const [loading, setLoading] = useState(true);
+    // categories loaded from server
     const [categories, setCategories] = useState<Category[]>([]);
-    const [jerseyOptions, setJerseyOptions] = useState<JerseyOption[]>([]); // NEW
     const [categoryId, setCategoryId] = useState<number | null>(null);
     const [participants, setParticipants] = useState<number | "">("");
+    const [jerseys, setJerseys] = useState<Record<string, number | "">>({
+        XS: "", S: "", M: "", L: "", XL: "", XXL: "",
+        "XS - KIDS": "", "S - KIDS": "", "M - KIDS": "", "L - KIDS": "", "XL - KIDS": "",
+    });
     const [selectedJerseySize, setSelectedJerseySize] = useState("M");
     const [useEarlyBird, setUseEarlyBird] = useState(false);
 
-    // --- NEW: helper to restore session-backed personal fields immediately on mount ---
-    function loadSessionPersonalData() {
-        if (typeof window === "undefined") return;
-        try {
-            const regFull = sessionStorage.getItem("reg_fullName");
-            if (!regFull) return; // nothing to restore
-
-            setFullName(regFull || "");
-            setEmail(sessionStorage.getItem("reg_email") || "");
-            setPhone(sessionStorage.getItem("reg_phone") || "");
-            setEmergencyPhone(sessionStorage.getItem("reg_emergencyPhone") || "");
-            setBirthDate(sessionStorage.getItem("reg_birthDate") || "");
-            setGender((sessionStorage.getItem("reg_gender") as "male" | "female") || "male");
-            setCurrentAddress(sessionStorage.getItem("reg_currentAddress") || "");
-            setNationality((sessionStorage.getItem("reg_nationality") as "WNI" | "WNA") || "WNI");
-            setMedicalHistory(sessionStorage.getItem("reg_medicalHistory") || "");
-            setMedicationAllergy(sessionStorage.getItem("reg_medicationAllergy") || "");
-            setGroupName(sessionStorage.getItem("reg_groupName") || "");
-            setIdCardPhotoName(sessionStorage.getItem("reg_idCardPhotoName") || null);
-            setExistingIdCardPhotoUrl(sessionStorage.getItem("reg_existingIdCardPhotoUrl") || null);
-        } catch (e) {
-            // ignore parse errors
-        }
-    }
-
-    
-
-    // --- Replace selected personal states with session-backed states ---
-    const [fullName, setFullName] = useSessionState<string>("reg_fullName", "");
-    const [email, setEmail] = useSessionState<string>("reg_email", "");
-    const [phone, setPhone] = useSessionState<string>("reg_phone", "");
-    const [emergencyPhone, setEmergencyPhone] = useSessionState<string>("reg_emergencyPhone", "");
-    const [birthDate, setBirthDate] = useSessionState<string>("reg_birthDate", "");
-    const [gender, setGender] = useSessionState<"male" | "female">("reg_gender", "male");
-    const [currentAddress, setCurrentAddress] = useSessionState<string>("reg_currentAddress", "");
-    const [nationality, setNationality] = useSessionState<"WNI" | "WNA">("reg_nationality", "WNI");
-    const [medicalHistory, setMedicalHistory] = useSessionState<string>("reg_medicalHistory", "");
-    const [medicationAllergy, setMedicationAllergy] = useSessionState<string>("reg_medicationAllergy", "");
-    const [groupName, setGroupName] = useSessionState<string>("reg_groupName", "");
-    const [idCardPhotoName, setIdCardPhotoName] = useSessionState<string | null>("reg_idCardPhotoName", null);
-
-    // Keep idCard photo File in memory only (cannot store File in sessionStorage)
+    // Personal details
+    const [fullName, setFullName] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+    const [emergencyPhone, setEmergencyPhone] = useState("");
+    const [birthDate, setBirthDate] = useState("");
+    const [gender, setGender] = useState<"male" | "female">("male");
+    const [currentAddress, setCurrentAddress] = useState("");
+    const [nationality, setNationality] = useState<"WNI" | "WNA">("WNI");
+    const [medicalHistory, setMedicalHistory] = useState("");
+    const [medicationAllergy, setMedicationAllergy] = useState(""); // NEW
     const [idCardPhoto, setIdCardPhoto] = useState<File | null>(null);
-    const [existingIdCardPhotoUrl, setExistingIdCardPhotoUrl] = useSessionState<string | null>("reg_existingIdCardPhotoUrl", null);
+    const [idCardPhotoName, setIdCardPhotoName] = useState<string | null>(null);
+    const [registrationType, setRegistrationType] = useState<"individual" | "community" | "family">("individual");
 
-    // --- NEW: immediate-save effect for personal fields (real-time save) ---
-    useEffect(() => {
-        try {
-            sessionStorage.setItem("reg_fullName", fullName || "");
-            sessionStorage.setItem("reg_email", email || "");
-            sessionStorage.setItem("reg_phone", phone || "");
-            sessionStorage.setItem("reg_emergencyPhone", emergencyPhone || "");
-            sessionStorage.setItem("reg_birthDate", birthDate || "");
-            sessionStorage.setItem("reg_gender", gender || "male");
-            sessionStorage.setItem("reg_currentAddress", currentAddress || "");
-            sessionStorage.setItem("reg_nationality", nationality || "WNI");
-            sessionStorage.setItem("reg_medicalHistory", medicalHistory || "");
-            sessionStorage.setItem("reg_medicationAllergy", medicationAllergy || "");
-            sessionStorage.setItem("reg_groupName", groupName || "");
-            sessionStorage.setItem("reg_idCardPhotoName", idCardPhotoName || "");
-            sessionStorage.setItem("reg_existingIdCardPhotoUrl", existingIdCardPhotoUrl || "");
-        } catch (e) {
-            // ignore quota errors
-        }
-    }, [
-        fullName, email, phone, emergencyPhone, birthDate, gender,
-        currentAddress, nationality, medicalHistory, medicationAllergy,
-        groupName, idCardPhotoName, existingIdCardPhotoUrl
-    ]);
-
-    // Jerseys: use local state (do NOT persist full jersey map to session to avoid backend overwrite)
-    const [jerseys, setJerseys] = useState<Record<string, number | "">>({});
+    // Group/Community name state
+    const [groupName, setGroupName] = useState("");
 
     // modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -131,9 +71,6 @@ export default function RegistrationPage() {
 
     // Tutorial modal state
     const [showTutorial, setShowTutorial] = useState(true); // show immediately
-
-    // Size chart state - simplified since we're showing both at once
-    const [showSizeChart, setShowSizeChart] = useState(false);
 
     // Tutorial steps - you can add/edit these easily
     const tutorialSteps = [
@@ -163,10 +100,7 @@ export default function RegistrationPage() {
             (window as any).AOS.refresh();
         }
 
-        // Restore any session personal data immediately (this runs before the async user fetch)
-        loadSessionPersonalData();
-
-        // Load current user - but DO NOT overwrite session personal fields if session exists
+        // Try to load current logged-in user profile to prefill form
         (async () => {
             try {
                 const resUser = await fetch("/api/user");
@@ -175,183 +109,62 @@ export default function RegistrationPage() {
                     const user = body?.user;
                     if (user) {
                         setCurrentUser(user);
-
-                        // If there's already session personal data, prefer session (user likely editing as guest)
-                        const hasSessionFull = typeof window !== 'undefined' && Boolean(sessionStorage.getItem("reg_fullName"));
-                        if (!hasSessionFull) {
-                            // No session -> populate from server user
-                            setFullName(user.name || "");
-                            setEmail(user.email || "");
-                            setPhone(user.phone || "");
-                            setEmergencyPhone(user.emergencyPhone || "");
-                            setBirthDate(user.birthDate ? new Date(user.birthDate).toISOString().slice(0,10) : "");
-                            setGender(user.gender || "male");
-                            setCurrentAddress(user.currentAddress || "");
-                            setNationality(user.nationality || "WNI");
-                            setMedicalHistory(user.medicalHistory || "");
-                            setMedicationAllergy(user.medicationAllergy || "");
-                            if (user.idCardPhoto) {
-                                setExistingIdCardPhotoUrl(user.idCardPhoto);
-                                try {
-                                    const parts = String(user.idCardPhoto).split("/");
-                                    setIdCardPhotoName(parts[parts.length - 1] || "Uploaded ID");
-                                } catch { /* ignore */ }
-                            }
-                        } else {
-                            // If session exists, keep session values; still set existingIdCardPhotoUrl if missing
-                            if (!existingIdCardPhotoUrl && user.idCardPhoto) {
-                                setExistingIdCardPhotoUrl(user.idCardPhoto);
-                            }
+                        // Prefill form fields from user record (do not override while typing later)
+                        setFullName(user.name || "");
+                        setEmail(user.email || "");
+                        setPhone(user.phone || "");
+                        setEmergencyPhone(user.emergencyPhone || "");
+                        setBirthDate(user.birthDate ? new Date(user.birthDate).toISOString().slice(0,10) : "");
+                        setGender(user.gender || "male");
+                        setCurrentAddress(user.currentAddress || "");
+                        setNationality(user.nationality || "WNI");
+                        setMedicalHistory(user.medicalHistory || "");
+                        setMedicationAllergy(user.medicationAllergy || ""); // NEW
+                        if (user.idCardPhoto) {
+                            setExistingIdCardPhotoUrl(user.idCardPhoto);
+                            // show filename if available
+                            try {
+                                const parts = String(user.idCardPhoto).split("/");
+                                setIdCardPhotoName(parts[parts.length - 1] || "Uploaded ID");
+                            } catch { /* ignore */ }
                         }
-                    } else {
-                        // Not logged in -> keep session restore done earlier
                     }
-                } else {
-                    // Not logged in -> session restore done earlier
                 }
             } catch (err) {
-                // silent fail
+                // silent fail — not logged in or endpoint unavailable
+                // console.debug("No current user", err);
             }
         })();
 
-        // Fetch categories
+        // Fetch categories - always fetch fresh data on mount
         (async () => {
             try {
                 const res = await fetch(`/api/categories`, {
                     cache: 'no-store',
-                    headers: { 'Cache-Control': 'no-cache' }
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                    }
                 });
                 if (!res.ok) throw new Error("Failed to load categories");
                 const data = await res.json();
                 setCategories(data);
                 if (data.length > 0) setCategoryId(data[0].id);
+                
+                console.log('[Registration] Loaded categories with early bird:', 
+                    data.map((c: any) => ({ 
+                        name: c.name, 
+                        capacity: c.earlyBirdCapacity, 
+                        remaining: c.earlyBirdRemaining 
+                    }))
+                );
             } catch (err) {
                 console.error("Failed to load categories:", err);
                 showToast("Failed to load categories. Please refresh the page.", "error");
-            }
-        })();
-
-        // NEW: Fetch jersey options
-        (async () => {
-            try {
-                const res = await fetch(`/api/jerseys`, {
-                    cache: 'no-store',
-                    headers: { 'Cache-Control': 'no-cache' }
-                });
-                if (!res.ok) throw new Error("Failed to load jersey options");
-                const data = await res.json();
-                setJerseyOptions(data);
-
-                // Build default map for all sizes returned by server
-                const initialJerseys: Record<string, number | ""> = {};
-                data.forEach((jersey: JerseyOption) => {
-                    initialJerseys[jersey.size] = "";
-                });
-
-                // Prefer any saved session jerseys (reg_jerseys) or reg_formData.jerseys,
-                // but ensure we include all newly-introduced sizes from the server.
-                let merged: Record<string, number | ""> = { ...initialJerseys };
-
-                try {
-                    const savedFormData = sessionStorage.getItem("reg_formData");
-                    if (savedFormData) {
-                        const formData = JSON.parse(savedFormData);
-                        if (formData && formData.jerseys && typeof formData.jerseys === "object") {
-                            Object.entries(formData.jerseys).forEach(([k, v]) => {
-                                if (k in merged) merged[k] = v;
-                                else merged[k] = v; // keep any unexpected keys
-                            });
-                        }
-                    }
-                } catch (e) {
-                    // ignore parsing errors
-                }
-
-                // If not present in reg_formData, try dedicated reg_jerseys key
-                try {
-                    const saved = sessionStorage.getItem("reg_jerseys");
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        if (parsed && typeof parsed === "object") {
-                            Object.entries(parsed).forEach(([k, v]) => {
-                                merged[k] = v;
-                            });
-                        }
-                    }
-                } catch (e) {
-                    // ignore
-                }
-
-                // Finally set jerseys without overwriting with empty defaults
-                setJerseys(merged);
-            } catch (err) {
-                console.error("Failed to load jersey options:", err);
-                showToast("Failed to load jersey sizes. Please refresh the page.", "error");
             } finally {
                 setLoading(false);
             }
         })();
-    }, []);
-
-    // Add this useEffect to save form data to session on every change
-    useEffect(() => {
-        // Save all form data to sessionStorage whenever any field changes
-        try {
-            const formData = {
-                fullName,
-                email,
-                phone,
-                emergencyPhone,
-                birthDate,
-                gender,
-                currentAddress,
-                nationality,
-                medicalHistory,
-                medicationAllergy,
-                groupName,
-                idCardPhotoName,
-                existingIdCardPhotoUrl,
-                // registration UI state
-                type,
-                registrationType,
-                categoryId,
-                participants,
-                selectedJerseySize,
-                jerseys, // store raw jersey map (numbers or "")
-            };
-            // JSON backup
-            sessionStorage.setItem("reg_formData", JSON.stringify(formData));
-
-            // Also write individual keys used by other pages/confirm step
-            sessionStorage.setItem("reg_fullName", fullName || "");
-            sessionStorage.setItem("reg_email", email || "");
-            sessionStorage.setItem("reg_phone", phone || "");
-            sessionStorage.setItem("reg_emergencyPhone", emergencyPhone || "");
-            sessionStorage.setItem("reg_birthDate", birthDate || "");
-            sessionStorage.setItem("reg_gender", gender || "male");
-            sessionStorage.setItem("reg_currentAddress", currentAddress || "");
-            sessionStorage.setItem("reg_nationality", nationality || "WNI");
-            sessionStorage.setItem("reg_medicalHistory", medicalHistory || "");
-            sessionStorage.setItem("reg_medicationAllergy", medicationAllergy || "");
-            sessionStorage.setItem("reg_groupName", groupName || "");
-            sessionStorage.setItem("reg_idCardPhotoName", idCardPhotoName || "");
-            sessionStorage.setItem("reg_existingIdCardPhotoUrl", existingIdCardPhotoUrl || "");
-            sessionStorage.setItem("reg_type", type || "individual");
-            sessionStorage.setItem("reg_registrationType", registrationType || "individual");
-            sessionStorage.setItem("reg_categoryId", String(categoryId || ""));
-            sessionStorage.setItem("reg_participants", String(participants || ""));
-            sessionStorage.setItem("reg_selectedJerseySize", selectedJerseySize || "M");
-            // store jerseys as JSON string (numbers or empty strings)
-            sessionStorage.setItem("reg_jerseys", JSON.stringify(jerseys || {}));
-        } catch (e) {
-            console.error("Failed to save form data:", e);
-        }
-    }, [
-        fullName, email, phone, emergencyPhone, birthDate, gender, currentAddress,
-        nationality, medicalHistory, medicationAllergy, groupName, idCardPhotoName,
-        existingIdCardPhotoUrl, type, registrationType, categoryId, participants,
-        selectedJerseySize, jerseys
-    ]);
+    }, []); // Empty dependency array - only run on mount
 
     // --- Move all hook-based computations here so they always run in the same order ---
     // Check if user has family bundle in cart
@@ -372,30 +185,6 @@ export default function RegistrationPage() {
                 if (item.type === "family") return sum + (item.participants || 4);
                 return sum + (item.participants || 0);
             }, 0);
-    }
-
-    // NEW: Calculate extra jersey charges
-    function calculateJerseyCharges(jerseySelection: Record<string, number | "">): number {
-        let total = 0;
-        Object.entries(jerseySelection).forEach(([size, count]) => {
-            const numCount = Number(count || 0);
-            if (numCount > 0) {
-                const jerseyOption = jerseyOptions.find(j => j.size === size);
-                if (jerseyOption && jerseyOption.isExtraSize) {
-                    total += numCount * Number(jerseyOption.price);
-                }
-            }
-        });
-        return total;
-    }
-
-    // NEW: Calculate jersey charges for individual
-    function calculateIndividualJerseyCharge(size: string): number {
-        const jerseyOption = jerseyOptions.find(j => j.size === size);
-        if (jerseyOption && jerseyOption.isExtraSize) {
-            return Number(jerseyOption.price);
-        }
-        return 0;
     }
 
     // Calculate price based on total participants
@@ -458,27 +247,15 @@ export default function RegistrationPage() {
         return calculatePrice(category, type === "community" ? totalWithCurrent : 1);
     }, [categoryId, categories, participants, items, type]);
 
-    // NEW: Calculate subtotal including jersey charges
+    // Calculate subtotal for current category
     const currentSubtotal = useMemo(() => {
         if (type === "family") {
             const category = categories.find(c => c.id === categoryId);
-            const bundleSize = category?.bundleSize || 4;
-            const baseTotal = currentPrice * bundleSize;
-            const jerseyCharge = calculateJerseyCharges(jerseys);
-            return baseTotal + jerseyCharge;
+            return currentPrice * (category?.bundleSize || 4);
         }
-        
-        if (type === "individual") {
-            const basePrice = currentPrice;
-            const jerseyCharge = calculateIndividualJerseyCharge(selectedJerseySize);
-            return basePrice + jerseyCharge;
-        }
-        
         const currentParticipants = Number(participants || 0);
-        const baseTotal = currentPrice * currentParticipants;
-        const jerseyCharge = calculateJerseyCharges(jerseys);
-        return baseTotal + jerseyCharge;
-    }, [currentPrice, participants, type, categoryId, categories, jerseys, selectedJerseySize, jerseyOptions]);
+        return currentPrice * currentParticipants;
+    }, [currentPrice, participants, type, categoryId, categories]);
 
     // Calculate discount percentage
     const discountInfo = useMemo(() => {
@@ -501,10 +278,6 @@ export default function RegistrationPage() {
 
     // Display pricing breakdown (null when not available)
     const selectedCategory = categoryId ? categories.find(c => c.id === categoryId) ?? null : null;
-
-    // NEW: Get adult and kids jersey options separately
-    const adultJerseys = useMemo(() => jerseyOptions.filter(j => j.type === "adult"), [jerseyOptions]);
-    const kidsJerseys = useMemo(() => jerseyOptions.filter(j => j.type === "kids"), [jerseyOptions]);
 
     function updateJersey(size: string, value: number | "") {
         setJerseys((s) => ({ ...s, [size]: value }));
@@ -532,9 +305,8 @@ export default function RegistrationPage() {
     }
 
     function validatePersonalDetails(): boolean {
-        // Accept either a newly uploaded idCardPhoto file OR an existing stored ID photo for logged-in users
-        // ALSO accept a previously-uploaded filename from session (idCardPhotoName)
-        const hasIdProof = Boolean(idCardPhoto) || Boolean(existingIdCardPhotoUrl) || Boolean(idCardPhotoName);
+        // Accept either a newly uploaded idCardPhoto file OR an existing stored ID photo URL for logged-in users
+        const hasIdProof = Boolean(idCardPhoto) || Boolean(existingIdCardPhotoUrl);
         if (!fullName || !email || !phone || !birthDate || !currentAddress || !hasIdProof) {
             showToast("Please fill all required fields (Name, Email, Phone, Birth Date, Address, and ID Card/Passport Photo)", "error");
             return false;
@@ -607,7 +379,7 @@ export default function RegistrationPage() {
             sessionStorage.setItem("reg_currentAddress", currentAddress);
             sessionStorage.setItem("reg_nationality", nationality);
             sessionStorage.setItem("reg_medicalHistory", medicalHistory);
-            sessionStorage.setItem("reg_medicationAllergy", medicationAllergy);
+            sessionStorage.setItem("reg_medicationAllergy", medicationAllergy); // NEW
             // store the filename for convenience (either newly uploaded file name or existing saved file name)
             if (idCardPhoto) {
                  sessionStorage.setItem("reg_idCardPhotoName", idCardPhoto.name);
@@ -643,8 +415,6 @@ export default function RegistrationPage() {
                 return;
             }
 
-            const jerseyCharge = calculateJerseyCharges(jerseys);
-
             // Add family bundle to cart
             addItem({
                 type: "family",
@@ -655,16 +425,10 @@ export default function RegistrationPage() {
                 jerseys: Object.fromEntries(
                     Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
                 ),
-                jerseyCharges: jerseyCharge, // NEW
             });
 
-            const totalWithCharges = (currentPrice * bundleSize) + jerseyCharge;
-            showToast(`Family bundle added! Total: Rp ${totalWithCharges.toLocaleString("id-ID")}${jerseyCharge > 0 ? ` (includes Rp ${jerseyCharge.toLocaleString("id-ID")} extra size charges)` : ''}`, "success");
-            
-            // Reset jerseys
-            const resetJerseys: Record<string, number | ""> = {};
-            jerseyOptions.forEach(j => { resetJerseys[j.size] = ""; });
-            setJerseys(resetJerseys);
+            showToast(`Family bundle added! ${bundleSize} people at Rp ${currentPrice.toLocaleString("id-ID")}/person`, "success");
+            setJerseys({ XS: "", S: "", M: "", L: "", XL: "", XXL: "" });
 
             // UX: after adding a family bundle, switch the registration radio back to Individual
             // so the form doesn't show family-specific inputs and avoids confusion.
@@ -674,17 +438,17 @@ export default function RegistrationPage() {
             return;
         }
 
-        // Community validation - UPDATED: Allow adding 1+ participants, no minimum
+        // Community validation
         const currentParticipants = Number(participants || 0);
         
-        if (currentParticipants < 1) {
-            showToast("Please enter at least 1 participant to add to cart", "error");
-            return;
-        }
-
         // NEW: Check total participants including cart
         const totalInCart = getTotalCommunityParticipants();
         const totalWithCurrent = totalInCart + currentParticipants;
+        
+        if (totalWithCurrent < 10) {
+            showToast(`Community registration requires a minimum of 10 total participants. You currently have ${totalInCart} in cart. Add at least ${10 - totalInCart} more.`, "error");
+            return;
+        }
 
         // FIXED: Validate jersey distribution matches participant count - MUST MATCH EXACTLY
         const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
@@ -694,7 +458,6 @@ export default function RegistrationPage() {
         }
 
         const pricePerPerson = calculatePrice(category, totalWithCurrent);
-        const jerseyCharge = calculateJerseyCharges(jerseys);
 
         savePersonalDetailsToSession();
 
@@ -708,17 +471,16 @@ export default function RegistrationPage() {
             jerseys: Object.fromEntries(
                 Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
             ),
-            jerseyCharges: jerseyCharge, // NEW
         });
 
-        const totalPrice = (pricePerPerson * currentParticipants) + jerseyCharge;
-        showToast(`Category added! Total: Rp ${totalPrice.toLocaleString("id-ID")}${jerseyCharge > 0 ? ` (includes Rp ${jerseyCharge.toLocaleString("id-ID")} extra size charges)` : ''}`, "success");
+        showToast(`Category added! Total participants: ${totalWithCurrent}. Price per person: Rp ${pricePerPerson.toLocaleString("id-ID")}`, "success");
 
         // Reset community fields to allow adding another category
         setParticipants("");
-        const resetJerseys: Record<string, number | ""> = {};
-        jerseyOptions.forEach(j => { resetJerseys[j.size] = ""; });
-        setJerseys(resetJerseys);
+        setJerseys({ 
+            XS: "", S: "", M: "", L: "", XL: "", XXL: "",
+            "XS - KIDS": "", "S - KIDS": "", "M - KIDS": "", "L - KIDS": "", "XL - KIDS": ""
+        });
     }
 
     // Checkout with modal (for both individual and community)
@@ -738,27 +500,27 @@ export default function RegistrationPage() {
 
             const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
             if (totalJerseys !== category.bundleSize && totalJerseys > 0) {
-                showToast(`Please complete jersey selection`, "error");
+                showToast(`Please complete jersey selection (${totalJerseys}/${category.bundleSize}) or clear it before checkout`, "error");
                 return;
             }
 
             setAgreedToTerms(false);
             setIsModalOpen(true);
         } else {
-            // For community, check if total meets minimum - UPDATED: Check cart total, not current input
-            const totalInCart = getTotalCommunityParticipants();
+            // For community, check if total meets minimum
+            const currentParticipants = Number(participants || 0);
+            const totalWithCurrent = getTotalCommunityParticipants() + currentParticipants;
 
-            if (totalInCart < 10) {
-                showToast(`Community registration requires minimum 10 participants. Currently have ${totalInCart}`, "error");
+            if (totalWithCurrent < 10) {
+                showToast(`Community registration requires minimum 10 total participants. You currently have ${getTotalCommunityParticipants()} in cart.`, "error");
                 return;
             }
 
             // If there's a current category being filled, validate it before checkout
-            const currentParticipants = Number(participants || 0);
             if (currentParticipants > 0) {
                 const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
                 if (totalJerseys !== currentParticipants) {
-                    showToast(`Jersey count must match participant count`, "error");
+                    showToast(`Jersey count (${totalJerseys}) must match participant count (${currentParticipants}). Please complete or clear the current category before checkout.`, "error");
                     return;
                 }
             }
@@ -769,41 +531,7 @@ export default function RegistrationPage() {
         }
     }
 
-    // NEW: Add individual to cart function
-    function handleAddIndividualToCart() {
-        if (!validatePersonalDetails()) return;
-        if (!categoryId) return;
-
-        const category = categories.find((c) => c.id === categoryId);
-        if (!category) return;
-
-        if (!selectedJerseySize) {
-            showToast("Please select a jersey size", "error");
-            return;
-        }
-
-        savePersonalDetailsToSession();
-
-        const jerseyCharge = calculateIndividualJerseyCharge(selectedJerseySize);
-        
-        // Add individual item to cart
-        addItem({
-            type: "individual",
-            categoryId: category.id,
-            categoryName: category.name,
-            price: currentPrice,
-            jerseySize: selectedJerseySize,
-            jerseyCharges: jerseyCharge, // NEW
-        });
-
-        const totalPrice = currentPrice + jerseyCharge;
-        showToast(`Added to cart! Total: Rp ${totalPrice.toLocaleString("id-ID")}${jerseyCharge > 0 ? ` (includes Rp ${jerseyCharge.toLocaleString("id-ID")} extra size charge)` : ''}`, "success");
-
-        // Reset jersey size selection
-        setSelectedJerseySize("M");
-    }
-
-    // Checkout execution (after terms accepted)
+    // Execute checkout after terms accepted
     function executeCheckout() {
         if (!categoryId) return;
 
@@ -824,15 +552,13 @@ export default function RegistrationPage() {
             currentAddress,
             nationality,
             medicalHistory,
-            medicationAllergy,
+            medicationAllergy, // NEW
             idCardPhoto: idCardPhoto || undefined,
             registrationType,
             groupName: type === "community" ? groupName : undefined,
         });
 
         if (type === "individual") {
-            const jerseyCharge = calculateIndividualJerseyCharge(selectedJerseySize);
-            
             // Add individual item to cart
             addItem({
                 type: "individual",
@@ -840,12 +566,9 @@ export default function RegistrationPage() {
                 categoryName: category.name,
                 price: currentPrice,
                 jerseySize: selectedJerseySize,
-                jerseyCharges: jerseyCharge,
             });
         } else if (type === "family") {
             const bundleSize = category.bundleSize || 4;
-            const jerseyCharge = calculateJerseyCharges(jerseys);
-            
             addItem({
                 type: "family",
                 categoryId: category.id,
@@ -855,7 +578,6 @@ export default function RegistrationPage() {
                 jerseys: Object.fromEntries(
                     Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
                 ),
-                jerseyCharges: jerseyCharge,
             });
 
             // same UX reset when family added via executeCheckout
@@ -863,15 +585,11 @@ export default function RegistrationPage() {
             setRegistrationType("individual");
 
             // reset local fields
-            const resetJerseys: Record<string, number | ""> = {};
-            jerseyOptions.forEach(j => { resetJerseys[j.size] = ""; });
-            setJerseys(resetJerseys);
+            setJerseys({ XS: "", S: "", M: "", L: "", XL: "", XXL: "" });
         } else {
             // For community, add current category if filled
             const currentParticipants = Number(participants || 0);
             if (currentParticipants > 0) {
-                const jerseyCharge = calculateJerseyCharges(jerseys);
-                
                 addItem({
                     type: "community",
                     categoryId: category.id,
@@ -881,7 +599,6 @@ export default function RegistrationPage() {
                     jerseys: Object.fromEntries(
                         Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
                     ),
-                    jerseyCharges: jerseyCharge,
                 });
             }
         }
@@ -950,27 +667,6 @@ export default function RegistrationPage() {
         };
     }, [type, categoryId, categories, participants, items]);
 
-    function openSizeChart() {
-        setShowSizeChart(true);
-    }
-
-    if (loading) {
-        return (
-            <main className="flex min-h-screen pt-28 pb-16 items-center justify-center"
-                style={{
-                    backgroundImage: "url('/images/generalBg.jpg')",
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                }}>
-                <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
-                    <p className="mt-4 text-gray-700 font-semibold">Loading registration form...</p>
-                </div>
-            </main>
-        );
-    }
-
     return (
         <main
             className="flex min-h-screen pt-28 pb-16"
@@ -990,7 +686,7 @@ export default function RegistrationPage() {
                     <h2 className="text-2xl font-bold text-center mb-1 text-gray-800 font-moderniz">REGISTRATION FORM</h2>
                     <p className="text-center text-sm text-gray-600 mb-6 font-mustica">Enter the details to get going</p>
 
-                    {/* Registration Type Selection */}
+                    {/* MOVED: Registration Type radios now on top for easier access */}
                     <div className="space-y-3 mb-6">
                         <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-3">Registration Type <strong className="text-red-500">*</strong></p>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1035,7 +731,7 @@ export default function RegistrationPage() {
                         </div>
                     </div>
 
-                    {/* Personal Details Form - Keep all existing personal details inputs */}
+                    {/* Personal details */}
                     <div className="space-y-4">
                         <div className="grid gap-3">
                             <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Full Name (as per ID Card) <strong className = "text-red-500">*</strong></label>
@@ -1237,6 +933,16 @@ export default function RegistrationPage() {
                     {/* Family Bundle Layout */}
                     {type === "family" && (
                         <div className="space-y-6 mt-6">
+                            {/* <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                                <h3 className="font-semibold text-purple-900 mb-2">👨‍👩‍👧‍👦 Family Bundle - 3km Only</h3>
+                                <p className="text-sm text-purple-700">
+                                    Special family package for 4 people at Rp 145,000/person (Total: Rp 580,000)
+                                </p>
+                                <p className="text-xs text-purple-600 mt-1">
+                                    ⚠️ Note: Cannot be combined with community registration
+                                </p>
+                            </div> */}
+
                             <div className="rounded-lg border border-gray-200 p-5 bg-white">
                                 <div className="space-y-5">
                                     <div className="grid gap-3">
@@ -1256,109 +962,33 @@ export default function RegistrationPage() {
                                     </div>
 
                                     <div>
-                                        <div className="flex items-center justify-between mb-3">
-                                            <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                                                Jersey Size Distribution (4 people total) <strong className="text-red-500">*</strong>
-                                            </label>
-                                            <button
-                                                type="button"
-                                                onClick={() => openSizeChart()}
-                                                className="text-xs text-purple-600 hover:text-purple-700 font-semibold underline flex items-center gap-1"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                                View Size Charts
-                                            </button>
-                                        </div>
+                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-3">
+                                            Jersey Size Distribution (4 people total) <strong className ="text-red-500">*</strong>
+                                        </label>
                                         
-                                        {/* Adult Sizes - Standard */}
+                                        {/* Adult Sizes */}
                                         <div className="mb-4">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-xs font-semibold text-gray-700">Adult Sizes (Standard):</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openSizeChart()}
-                                                    className="text-xs text-blue-600 hover:text-blue-700 underline"
-                                                >
-                                                    Size Guide
-                                                </button>
-                                            </div>
+                                            <p className="text-xs font-semibold text-gray-700 mb-2">Adult Sizes:</p>
                                             <div className="grid grid-cols-3 gap-3">
-                                                {["S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"].map((size) => {
-                                                    const jerseyInfo = adultJerseys.find(j => j.size === size);
-                                                    return (
-                                                        <div key={size} className="flex flex-col items-center">
-                                                            <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
-                                                            <input
-                                                                type="number"
-                                                                min={0}
-                                                                value={jerseys[size] ?? ""}
-                                                                onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                                className="jersey-input shift-right accent-[#e687a4]"
-                                                                placeholder="0"
-                                                                inputMode="numeric"
-                                                                aria-label={`Count for size ${size}`}
-                                                            />
-                                                        </div>
-                                                    );
-                                                })}
+                                                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                                                    <div key={size} className="flex flex-col items-center">
+                                                        <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
+                                                        <input
+                                                          type="number"
+                                                          min={0}
+                                                          value={jerseys[size]}
+                                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                          className="jersey-input shift-right accent-[#e687a4]"
+                                                          placeholder="0"
+                                                        />
+                                                    </div>
+                                                ))}
                                             </div>
-                                        </div>
-
-                                        {/* Adult Sizes - Extra (6XL with +10k charge) */}
-                                        <div className="mb-4">
-                                          <div className="flex items-center justify-between mb-2">
-                                            <p className="text-xs font-semibold text-orange-700">Adult Sizes (Extra - +Rp 10.000 each):</p>
-                                            <button
-                                              type="button"
-                                              onClick={() => openSizeChart()}
-                                              className="text-xs text-orange-600 hover:text-orange-700 underline"
-                                            >
-                                              Size Guide
-                                            </button>
-                                          </div>
-
-                                          <div className="grid grid-cols-3 gap-3">
-                                            <div className="flex flex-col items-center">
-                                              <div className="flex items-center gap-1 mb-2">
-                                                <span className="text-xs font-medium text-orange-600">6XL</span>
-                                                <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
-                                              </div>
-                                              <input
-                                                type="number"
-                                                min={0}
-                                                value={jerseys["6XL"] ?? ""}
-                                                onChange={(e) => updateJersey("6XL", e.target.value === "" ? "" : Number(e.target.value))}
-                                                className="jersey-input shift-right accent-orange-500 border-orange-300 focus:border-orange-500"
-                                                placeholder="0"
-                                                inputMode="numeric"
-                                                aria-label="Count for 6XL"
-                                              />
-                                            </div>
-                                          </div>
-
-                                          {Number(jerseys["6XL"] || 0) > 0 && (
-                                            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                                              <p className="text-xs text-orange-700">
-                                                ℹ️ Extra size charges: +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
-                                              </p>
-                                            </div>
-                                          )}
                                         </div>
 
                                         {/* Kids Sizes */}
                                         <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-xs font-semibold text-gray-700">Kids Sizes:</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openSizeChart()}
-                                                    className="text-xs text-purple-600 hover:text-purple-700 underline"
-                                                >
-                                                    Size Guide
-                                                </button>
-                                            </div>
+                                            <p className="text-xs font-semibold text-gray-700 mb-2">Kids Sizes:</p>
                                             <div className="grid grid-cols-3 gap-3">
                                                 {["XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"].map((size) => (
                                                     <div key={size} className="flex flex-col items-center">
@@ -1377,7 +1007,7 @@ export default function RegistrationPage() {
                                         </div>
 
                                         <p className="text-xs text-gray-500 mt-3 text-center">
-                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / 4
+                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / {participants || 0}
                                         </p>
                                     </div>
 
@@ -1403,32 +1033,16 @@ export default function RegistrationPage() {
                                         </div>
 
                                         <div className="pt-3 border-t border-purple-200">
-                                            <div className="space-y-2 mb-3">
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <span className="text-sm font-semibold text-gray-700">
-                                                        Subtotal ({selectedCategory?.bundleSize || 4} people):
-                                                    </span>
-                                                    <span className="text-base font-bold text-purple-700">
-                                                        Rp {(currentPrice * (selectedCategory?.bundleSize || 4)).toLocaleString("id-ID")}
-                                                    </span>
-                                                </div>
-                                                {calculateJerseyCharges(jerseys) > 0 && (
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-orange-600">Extra size charges:</span>
-                                                        <span className="text-sm font-semibold text-orange-600">
-                                                            +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                <div className="pt-2 border-t border-purple-200">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm font-bold text-gray-700">Grand Total:</span>
-                                                        <span className="text-lg sm:text-xl font-bold text-purple-800 block">
-                                                            Rp {currentSubtotal.toLocaleString("id-ID")}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                            <div className="space-y-2">
+                                                <span className="text-sm font-semibold text-gray-700 block">
+                                                    Total Bundle ({selectedCategory?.bundleSize || 4} people):
+                                                </span>
+                                                <span className="text-lg sm:text-xl font-bold text-purple-800 block text-right">
+                                                    Rp {currentSubtotal.toLocaleString("id-ID")}
+                                                </span>
                                             </div>
+                                            
+                                    
                                         </div>
                                     </div>
 
@@ -1466,7 +1080,7 @@ export default function RegistrationPage() {
                                     <p className="text-xs text-emerald-600">
                                         {getTotalCommunityParticipants() >= 10 
                                             ? "✓ Minimum requirement met! Add more for better pricing."
-                                            : `Add ${10 - getTotalCommunityParticipants()} more to meet minimum for checkout.`}
+                                            : `Add ${10 - getTotalCommunityParticipants()} more to meet minimum.`}
                                     </p>
                                 </div>
                             )}
@@ -1499,11 +1113,11 @@ export default function RegistrationPage() {
                                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Number of Participants (for this category) *</label>
                                         <input
                                             type="number"
-                                            min={1}
+                                            min={getTotalCommunityParticipants() >= 10 ? 1 : 10}
                                             value={participants}
                                             onChange={(e) => setParticipants(e.target.value === "" ? "" : Number(e.target.value))}
                                             className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-emerald-500 focus:outline-none transition-colors text-base"
-                                            placeholder="Enter participant amount (minimum 1)"
+                                            placeholder={getTotalCommunityParticipants() >= 10 ? "Enter participant amount" : "Minimum 10 participants"}
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
                                             This will be added to your community total ({getTotalCommunityParticipants()} currently in cart)
@@ -1537,93 +1151,29 @@ export default function RegistrationPage() {
                                     <div className="grid gap-3">
                                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Jersey Size Distribution *</label>
                                         
-                                        {/* Adult Sizes - Standard */}
+                                        {/* Adult Sizes */}
                                         <div className="mb-4">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-xs font-semibold text-gray-700">Adult Sizes (Standard):</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openSizeChart()}
-                                                    className="text-xs text-blue-600 hover:text-blue-700 underline"
-                                                >
-                                                    Size Guide
-                                                </button>
-                                            </div>
+                                            <p className="text-xs font-semibold text-gray-700 mb-2">Adult Sizes:</p>
                                             <div className="grid grid-cols-3 gap-3">
-                                                {["S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"].map((size) => {
-                                                    const jerseyInfo = adultJerseys.find(j => j.size === size);
-                                                    return (
-                                                        <div key={size} className="flex flex-col items-center">
-                                                            <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
-                                                            <input
-                                                                type="number"
-                                                                min={0}
-                                                                value={jerseys[size] ?? ""}
-                                                                onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                                className="jersey-input shift-right accent-[#e687a4]"
-                                                                placeholder="0"
-                                                                inputMode="numeric"
-                                                                aria-label={`Count for size ${size}`}
-                                                            />
-                                                        </div>
-                                                    );
-                                                })}
+                                                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                                                    <div key={size} className="flex flex-col items-center">
+                                                        <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
+                                                        <input
+                                                          type="number"
+                                                          min={0}
+                                                          value={jerseys[size]}
+                                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                          className="jersey-input shift-right accent-[#e687a4]"
+                                                          placeholder="0"
+                                                        />
+                                                    </div>
+                                                ))}
                                             </div>
-                                        </div>
-
-                                        {/* Adult Sizes - Extra (6XL with +10k charge) */}
-                                        <div className="mb-4">
-                                          <div className="flex items-center justify-between mb-2">
-                                            <p className="text-xs font-semibold text-orange-700">Adult Sizes (Extra - +Rp 10.000 each):</p>
-                                            <button
-                                              type="button"
-                                              onClick={() => openSizeChart()}
-                                              className="text-xs text-orange-600 hover:text-orange-700 underline"
-                                            >
-                                              Size Guide
-                                            </button>
-                                          </div>
-
-                                          <div className="grid grid-cols-3 gap-3">
-                                            <div className="flex flex-col items-center">
-                                              <div className="flex items-center gap-1 mb-2">
-                                                <span className="text-xs font-medium text-orange-600">6XL</span>
-                                                <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
-                                              </div>
-                                              <input
-                                                type="number"
-                                                min={0}
-                                                value={jerseys["6XL"] ?? ""}
-                                                onChange={(e) => updateJersey("6XL", e.target.value === "" ? "" : Number(e.target.value))}
-                                                className="jersey-input shift-right accent-orange-500 border-orange-300 focus:border-orange-500"
-                                                placeholder="0"
-                                                inputMode="numeric"
-                                                aria-label="Count for 6XL"
-                                              />
-                                            </div>
-                                          </div>
-
-                                          {Number(jerseys["6XL"] || 0) > 0 && (
-                                            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                                              <p className="text-xs text-orange-700">
-                                                ℹ️ Extra size charges: +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
-                                              </p>
-                                            </div>
-                                          )}
                                         </div>
 
                                         {/* Kids Sizes */}
                                         <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-xs font-semibold text-gray-700">Kids Sizes:</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openSizeChart()}
-                                                    className="text-xs text-purple-600 hover:text-purple-700 underline"
-                                                >
-                                                    Size Guide
-                                                </button>
-                                            </div>
+                                            <p className="text-xs font-semibold text-gray-700 mb-2">Kids Sizes:</p>
                                             <div className="grid grid-cols-3 gap-3">
                                                 {["XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"].map((size) => (
                                                     <div key={size} className="flex flex-col items-center">
@@ -1642,13 +1192,14 @@ export default function RegistrationPage() {
                                         </div>
 
                                         <p className="text-xs text-gray-500 mt-3 text-center">
-                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / 4
+                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / {participants || 0}
                                         </p>
                                     </div>
 
-                                    {/* Dynamic Pricing Display with Discount and Jersey Charges */}
+                                    {/* Dynamic Pricing Display with Discount */}
                                     {Number(participants || 0) > 0 && (
                                         <div className="p-4 bg-gradient-to-r from-emerald-50 to-blue-50 border-2 border-emerald-300 rounded-lg">
+                                            {/* Price per person with discount badge */}
                                             <div className="flex justify-between items-center mb-3">
                                                 <span className="text-sm font-semibold text-gray-700">Price per person:</span>
                                                 <div className="flex items-center gap-3">
@@ -1668,32 +1219,30 @@ export default function RegistrationPage() {
                                                 </div>
                                             </div>
 
+                                            {/* Subtotal with discount calculation */}
                                             <div className="pt-3 border-t border-emerald-200">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="text-sm font-semibold text-gray-700">
-                                                        Base subtotal ({participants} people):
+                                                        Subtotal ({participants} people):
                                                     </span>
-                                                    <span className="text-base font-bold text-emerald-700">
-                                                        Rp {(currentPrice * Number(participants || 0)).toLocaleString("id-ID")}
-                                                    </span>
-                                                </div>
-                                                {calculateJerseyCharges(jerseys) > 0 && (
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-sm text-orange-600">Extra size charges:</span>
-                                                        <span className="text-sm font-semibold text-orange-600">
-                                                            +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                <div className="pt-2 border-t border-emerald-200">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm font-bold text-gray-700">Grand Total:</span>
+                                                    <div className="text-right">
+                                                        {discountInfo && (
+                                                            <div className="text-xs text-gray-400 line-through mb-1">
+                                                                Rp {(discountInfo.basePrice * Number(participants)).toLocaleString("id-ID")}
+                                                            </div>
+                                                        )}
                                                         <span className="text-xl font-bold text-emerald-800">
                                                             Rp {currentSubtotal.toLocaleString("id-ID")}
                                                         </span>
                                                     </div>
                                                 </div>
+                                                
+                        
                                             </div>
+
+                                            <p className="text-xs text-gray-600 mt-3">
+                                                Total with cart: {getTotalCommunityParticipants() + Number(participants || 0)} participants
+                                            </p>
                                         </div>
                                     )}
 
@@ -1702,7 +1251,7 @@ export default function RegistrationPage() {
                                             onClick={handleAddToCart}
                                             disabled={
                                                 !participants || 
-                                                Number(participants || 0) < 1 ||
+                                                (getTotalCommunityParticipants() + Number(participants || 0)) < 10 ||
                                                 Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0) !== Number(participants || 0)
                                             }
                                             className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
@@ -1714,9 +1263,9 @@ export default function RegistrationPage() {
                                                 ⚠️ Jersey count must match participant count to add to cart
                                             </p>
                                         )}
-                                        {getTotalCommunityParticipants() < 10 && (
+                                        {(getTotalCommunityParticipants() + Number(participants || 0)) < 10 && (
                                             <p className="text-center text-xs text-gray-500 mt-2">
-                                                Note: Total {getTotalCommunityParticipants()} in cart. Need {10 - getTotalCommunityParticipants()} more for checkout (you can still add categories)
+                                                Need {10 - (getTotalCommunityParticipants() + Number(participants || 0))} more total participants (minimum 10)
                                             </p>
                                         )}
                                     </div>
@@ -1728,7 +1277,7 @@ export default function RegistrationPage() {
                                     onClick={handleCheckout}
                                     className={`w-1/2 md:w-1/3 px-6 py-3 rounded-full font-semibold shadow-xl transition-all transform ${
                                         getTotalCommunityParticipants() >= 10
-                                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95'
+                                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white hover:shadow-2xl hover:scale-105 active:scale-95'
                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
                                     disabled={getTotalCommunityParticipants() < 10}
@@ -1738,7 +1287,7 @@ export default function RegistrationPage() {
                             </div>
                             {getTotalCommunityParticipants() < 10 && (
                                 <p className="text-center text-xs text-gray-500">
-                                    Need {10 - getTotalCommunityParticipants()} more participants in cart to checkout
+                                    Need {10 - getTotalCommunityParticipants()} more participants to checkout
                                 </p>
                             )}
                         </div>
@@ -1764,108 +1313,52 @@ export default function RegistrationPage() {
 
                             <div className="text-xs text-gray-500">
                                 {type === "individual" && selectedCategory?.earlyBirdRemaining && selectedCategory?.earlyBirdRemaining > 0
-
-                                    ? `Early-bird automatically applied (${selectedCategory?.earlyBirdRemaining} slots remaining).`
-                                   
+                                    ? `Early-bird automatically applied for first ${selectedCategory?.earlyBirdCapacity} individuals (${selectedCategory?.earlyBirdRemaining} slots remaining).`
                                     : null}
                             </div>
 
-                            {/* Jersey Size Selection with Extra Size Indicator */}
+                            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded">
+                                <p className="text-sm font-semibold text-emerald-800">
+                                    Price: Rp {currentPrice.toLocaleString("id-ID")}
+                                </p>
+                            </div>
+
                             <div className="grid gap-3">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Jersey Size</label>
-                                    <button
-                                        type="button"
-                                        onClick={() => openSizeChart()}
-                                        className="text-xs text-blue-600 hover:text-blue-700 font-semibold underline flex items-center gap-1"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Size Guide
-                                    </button>
-                                </div>
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Jersey Size</label>
                                 <select
                                     value={selectedJerseySize}
                                     onChange={(e) => setSelectedJerseySize(e.target.value)}
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 focus:border-blue-500 focus:outline-none transition-colors text-base cursor-pointer"
                                 >
                                     <optgroup label="Adult Sizes">
-                                        {adultJerseys.map((jersey) => (
-                                            <option key={jersey.size} value={jersey.size}>
-                                                {jersey.size} {jersey.isExtraSize ? `(+Rp ${Number(jersey.price).toLocaleString("id-ID")})` : ''}
-                                            </option>
-                                        ))}
+                                        <option value="XS">XS</option>
+                                        <option value="S">S</option>
+                                        <option value="M">M</option>
+                                        <option value="L">L</option>
+                                        <option value="XL">XL</option>
+                                        <option value="XXL">XXL</option>
                                     </optgroup>
                                     <optgroup label="Kids Sizes">
-                                        {kidsJerseys.map((jersey) => (
-                                            <option key={jersey.size} value={jersey.size}>
-                                                {jersey.size}
-                                            </option>
-                                        ))}
+                                        <option value="XS - KIDS">XS - KIDS</option>
+                                        <option value="S - KIDS">S - KIDS</option>
+                                        <option value="M - KIDS">M - KIDS</option>
+                                        <option value="L - KIDS">L - KIDS</option>
+                                        <option value="XL - KIDS">XL - KIDS</option>
                                     </optgroup>
                                 </select>
-                                
-                                {/* Extra Size Notice */}
-                                {jerseyOptions.find(j => j.size === selectedJerseySize)?.isExtraSize && (
-                                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                                        <p className="text-xs text-orange-700">
-                                            <strong>ℹ️ Extra Size:</strong> This size requires an additional charge of Rp {calculateIndividualJerseyCharge(selectedJerseySize).toLocaleString("id-ID")}
-                                        </p>
-                                    </div>
-                                )}
                             </div>
 
-                            {/* Price Display with Jersey Charges - FIXED */}
-                            <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-lg">
-                                <div className="space-y-2">
-                                    <span className="text-sm font-semibold text-gray-700 block">Price breakdown:</span>
-                                    <div className="space-y-1">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600">Base price:</span>
-                                            <span className="text-lg font-bold text-blue-700">
-                                                Rp {currentPrice.toLocaleString("id-ID")}
-                                            </span>
-                                        </div>
-                                        {calculateIndividualJerseyCharge(selectedJerseySize) > 0 && (
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Extra size charge:</span>
-                                                <span className="text-sm font-semibold text-orange-600">
-                                                    +Rp {calculateIndividualJerseyCharge(selectedJerseySize).toLocaleString("id-ID")}
-                                                </span>
-                                            </div>
-                                        )}
-                                        <div className="pt-2 border-t border-blue-200">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm font-bold text-gray-700">Total:</span>
-                                                <span className="text-xl font-bold text-blue-700">
-                                                    Rp {currentSubtotal.toLocaleString("id-ID")}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Add to Cart and Buy Now Buttons */}
-                            <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                                <button
-                                    onClick={handleAddIndividualToCart}
-                                    className="flex-1 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95"
-                                >
-                                    Add to Cart
-                                </button>
+                            <div className="flex justify-end items-center gap-3 mt-4">
                                 <button
                                     onClick={handleCheckout}
-                                    className="flex-1 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95"
+                                    className="px-8 py-3 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95"
                                 >
                                     Buy Now
                                 </button>
                             </div>
                         </div>
                     )}
-
-            </section>
+                </section>
             </div>
 
             {/* Terms and Conditions Modal */}
@@ -1943,7 +1436,7 @@ export default function RegistrationPage() {
                               <li>
                                 <strong>Categories & Pricing: </strong>
                                 <ol className="pl-6 mt-1 space-y-1 terms-ol-roman">
-                                    <li>Registration fee is divided based on distance categories as follows:
+                                    <li>Registration fee pendaftaran dibagi berdasarkan kategori jarak tempuh sebagai berikut:
                                         <ol type = "a" className="pl-6 mt-1 space-y-1 terms-ol-alpha">
                                             <li>3 KM: Rp 130.000,- (Early Bird) | Rp 150.000,- (Normal Price)</li>
                                             <li>5 KM: Rp 180.000,- (Early Bird) | Rp 200.000,- (Normal Price)</li>
@@ -1953,9 +1446,8 @@ export default function RegistrationPage() {
                                 </ol>
                               </li>
                               <li>
-                               
                                 <strong>Registration Status: </strong>
-                                Registration will be declared successful and valid after the participant has made full payment. The organizer will send a confirmation email as proof of ticket purchase.
+                                 Registration will be declared successful and valid after the participant has made full payment. The organizer will send a confirmation email as proof of ticket purchase.
                               </li>
                               <li>
                                 <strong>Data Accuracy: </strong>
@@ -1994,12 +1486,13 @@ export default function RegistrationPage() {
                               <li>
                                 <strong>Force Majeure: </strong>
                                 If the event is forcefully canceled due to conditions beyond the organizer's control (such as heavy rain, storms, natural disasters, demonstrations, government policies), the organizer is <strong>not obligated to refund the registration fee.</strong>
-                             
                               </li>
                               <li>
-                                
+                                <strong>Changes of schedule/location: </strong>
+                            If there are changes to the event date or location, purchased tickets remain valid for the new schedule or location. Participants are not entitled to a refund.
                               </li>
                             </ol>
+                            
                             <h2 className = "mt-4 font-bold">SECTION 4: RACE PACK CLAIM</h2>
                             <ol type="1" className="pl-6 text-sm space-y-2 terms-ol-decimal">
                                 <li>
@@ -2423,118 +1916,6 @@ export default function RegistrationPage() {
                     onClose={() => setShowTutorial(false)}
                 />
             )}
-
-            {/* Size Chart Modal - Updated to show both charts side by side */}
-            {showSizeChart && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-                        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-2xl font-bold text-white">
-                                    Jersey Size Charts
-                                </h3>
-                                <button
-                                    onClick={() => setShowSizeChart(false)}
-                                    className="p-2 hover:bg-white/20 rounded-full transition-colors"
-                                >
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-6">
-                            {/* Responsive grid: 2 columns on desktop, 1 column on mobile */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {/* Adult Size Chart */}
-                                <div className="flex flex-col">
-                                    <h4 className="text-lg font-bold text-emerald-700 mb-3 text-center">Adult Sizes</h4>
-                                    <img
-                                        src="/assets/sizes/dewasa.jpg"
-                                        alt="Adult size chart"
-                                        className="w-full h-auto rounded-lg shadow-md object-contain"
-                                    />
-                                </div>
-
-                                {/* Kids Size Chart */}
-                                <div className="flex flex-col">
-                                    <h4 className="text-lg font-bold text-purple-700 mb-3 text-center">Kids Sizes</h4>
-                                    <img
-                                        src="/assets/sizes/anak.jpg"
-                                        alt="Kids size chart"
-                                        className="w-full h-auto rounded-lg shadow-md object-contain"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-6 border-t border-gray-200 bg-gray-50">
-                            <button
-                                onClick={() => setShowSizeChart(false)}
-                                className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-full transition-all"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </main>
     );
-}
-
-// --- tiny hook: state synced to sessionStorage immediately ---
-function useSessionState<T>(key: string, initialValue: T) {
-    const [state, setState] = useState<T>(() => {
-        if (typeof window === "undefined") return initialValue;
-        try {
-            const v = sessionStorage.getItem(key);
-            if (v === null) return initialValue;
-
-            // Try parsing JSON first (handles values written via JSON.stringify)
-            try {
-                return JSON.parse(v) as T;
-            } catch (parseErr) {
-                // If parsing fails, fall back to the raw string for string-like keys
-                // This makes the hook tolerant of legacy / plain-string writes.
-                // For non-string initial types, attempt basic conversions for common primitives.
-                const trimmed = v.trim();
-                // null/undefined markers
-                if (trimmed === "null") return (null as unknown) as T;
-                if (trimmed === "undefined") return (undefined as unknown) as T;
-
-                // boolean
-                if (trimmed === "true") return (true as unknown) as T;
-                if (trimmed === "false") return (false as unknown) as T;
-
-                // number
-                const num = Number(trimmed);
-                if (!Number.isNaN(num) && typeof initialValue === "number") return (num as unknown) as T;
-
-                // otherwise return raw string cast to T (common case)
-                return (v as unknown) as T;
-            }
-        } catch (e) {
-            // on any error, return initial value
-            return initialValue;
-        }
-    });
-
-    useEffect(() => {
-        try {
-            // Always write a JSON-serialized value so future reads are consistent.
-            sessionStorage.setItem(key, JSON.stringify(state));
-        } catch (e) { /* ignore quota/errors */ }
-    }, [key, state]);
-
-    const setAndSave = (value: React.SetStateAction<T>) => {
-        setState(prev => {
-            const next = typeof value === "function" ? (value as (p: T) => T)(prev) : value;
-            try { sessionStorage.setItem(key, JSON.stringify(next)); } catch (e) { /* ignore */ }
-            return next;
-        });
-    };
-
-    return [state, setAndSave] as const;
 }
