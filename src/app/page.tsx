@@ -556,12 +556,12 @@ export default function Home() {
 								<h3 className="font-moderniz text-xl text-[#1F6251] mt-1">
 									Race Pack Claim
 								</h3>
-								<span className="badge-small"><strong>Important</strong></span>
+								<span className="badge-small text-[#1F6251]"><strong>Important</strong></span>
 							</div>
 							<p className="font-mustica text-[#52605f] mt-3">
 								Get your gear ready for the big day! You can pick up your Race Pack at:
 							</p>
-							<ul className="claim-list mt-4">
+							<ul className="claim-list mt-4 text-[#52605f]">
 								<li>
 									<strong>Location:</strong> Corepreneur 1st Floor, UC Tower
 								</li>
@@ -572,10 +572,11 @@ export default function Home() {
 									<strong>What to Bring:</strong> Valid ID card (KTP/Birth Certificate/Passport) and your registration QR Code.
 								</li>
 							</ul>
+							<br/>
 							<strong className="mt-4 text-[#52605f]">
 								Representative Collection
 							</strong>
-							<ul className="claim-list">
+							<ul className="claim-list text-[#52605f]">
 								<li>
 									<strong>Individuals:</strong> If someone is collecting for you, they must bring a power of attorney letter.
 								</li>
