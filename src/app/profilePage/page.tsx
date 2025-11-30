@@ -229,7 +229,7 @@ export default function App() {
         backgroundRepeat: "no-repeat",
       }}
     >
-      <FloatingElements />
+      {/* <FloatingElements /> */}
       
       <div className="relative z-10 min-h-screen pt-30">
         {/* <header className="relative overflow-hidden">
@@ -338,7 +338,7 @@ export default function App() {
           </div>
 
           {/* Bottom accent wave - green gradient */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 opacity-40 pointer-events-none">
+          {/* <div className="absolute bottom-0 left-0 right-0 h-32 opacity-40 pointer-events-none">
             <svg className="w-full h-full" viewBox="0 0 1200 100" preserveAspectRatio="none">
               <path
                 d="M0,40 C300,80 500,20 800,50 C1000,70 1100,30 1200,40 L1200,100 L0,100 Z"
@@ -352,7 +352,7 @@ export default function App() {
                 </linearGradient>
               </defs>
             </svg>
-          </div>
+          </div> */}
         </footer>
       </div>
     </div>
