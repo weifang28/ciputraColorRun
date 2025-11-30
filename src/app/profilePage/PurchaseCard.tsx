@@ -149,14 +149,18 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
                     </div>
                     <p className="text-[#682950]">Jersey Sizes</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Mobile: single column stack; >=sm: two columns */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {purchase.jerseySizes.map((jersey, index) => (
-                      <div 
+                      <div
                         key={index}
-                        className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/70 backdrop-blur-sm border border-[#D9D9D9]/40 transition-all hover:border-[#94DCAD]/50 hover:shadow-md"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 rounded-xl bg-white/70 backdrop-blur-sm border border-[#D9D9D9]/40 transition-all hover:border-[#94DCAD]/50 hover:shadow-md"
                       >
-                        <span className="text-[#682950]/80">Size {jersey.size}</span>
-                        <span className="text-white px-3 py-1 rounded-full bg-[#91DDAF]">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-[#682950]/80">Size</span>
+                          <span className="text-lg font-semibold text-[#682950]">{jersey.size}</span>
+                        </div>
+                        <span className="text-white px-3 py-1 rounded-full bg-[#91DDAF] mt-3 sm:mt-0">
                           {jersey.count} pcs
                         </span>
                       </div>
@@ -207,25 +211,21 @@ export function PurchaseCard({ purchase, qrCodeData }: PurchaseCardProps) {
             <p className="absolute -top-8 left-0 right-0 text-center text-sm text-[#682950]/70">Registration QR Code</p>
             
             <div className="w-full aspect-square relative overflow-hidden bg-gradient-to-br from-[#FFF1C5]/50 to-[#FFDFC0]/50 rounded-3xl border-4 border-white shadow-2xl transition-all hover:shadow-xl">
-              <div className="absolute inset-0 flex items-center justify-center p-4">
+              <div className="absolute inset-0 flex items-center justify-center p-4 overflow-auto">
                 {!isConfirmed ? (
-                  // CHANGED: Show waiting message when not confirmed
-                  <div className="relative z-10 flex flex-col items-center gap-4 text-center px-6">
-                    <svg className="w-24 h-24 text-amber-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  // Compact / responsive waiting state for small phones
+                  <div className="relative z-10 flex flex-col items-center gap-3 text-center px-4 max-w-full">
+                    <svg className="w-16 h-16 sm:w-24 sm:h-24 text-amber-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <div>
-                      <p className="text-lg font-bold text-[#682950] mb-2">
-                        {isPending && "Awaiting Verification"}
-                        {isDeclined && "Payment Declined"}
+                    <div className="px-2">
+                      <p className="text-base sm:text-lg font-bold text-[#682950] mb-1">
+                        {isPending ? "Awaiting Verification" : "Payment Declined"}
                       </p>
-                      <p className="text-sm text-[#682950]/70">
-                        {isPending && "Your QR code will appear here once your payment is verified by our admin (usually within 48 hours)."}
-                         {isDeclined && "Payment Declined"}
-                      </p>
-                      <p className="text-sm text-[#682950]/70">
-                        {isPending && "Your QR code will appear here once your payment is verified by our admin (usually within 48 hours)."}
-                        {isDeclined && "Please contact support or submit a new payment."}
+                      <p className="text-xs sm:text-sm text-[#682950]/70 leading-relaxed max-w-[18rem] sm:max-w-xs break-words">
+                        {isPending
+                          ? "Your QR code will appear here once your payment is verified by our admin (usually within 48 hours)."
+                          : "Please contact support or submit a new payment."}
                       </p>
                     </div>
                   </div>

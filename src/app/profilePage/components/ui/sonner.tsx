@@ -13,9 +13,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       // Force red background + white text via CSS variables Sonner consumes
       style={
         {
-          "--normal-bg": "#9fd4ab",        // red-600
+          "--normal-bg": "#ef4444",        // red background
           "--normal-text": "#ffffff",      // white text
-          "--normal-border": "#7bbf8c",    // darker red border
+          "--normal-border": "#b91c1c",    // darker red border
         } as React.CSSProperties
       }
       {...props}
