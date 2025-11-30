@@ -235,11 +235,11 @@ export default function CartPage() {
                             <p className="text-sm text-gray-600">
                               Base Price: <span className="font-semibold text-gray-900">Rp {item.price.toLocaleString("id-ID")}</span>
                             </p>
-                            {item.jerseyCharges && item.jerseyCharges > 0 && (
-                              <p className="text-sm text-orange-600">
-                                Extra Size Charge: <span className="font-semibold">+Rp {item.jerseyCharges.toLocaleString("id-ID")}</span>
-                              </p>
-                            )}
+                            {Number(item.jerseyCharges || 0) > 0 && (
+                            <p className="text-sm text-orange-600">
+                              Extra Size Charge: <span className="font-semibold">+Rp {Number(item.jerseyCharges).toLocaleString("id-ID")}</span>
+                            </p>
+                          )}
                             <p className="text-base font-bold text-emerald-700 mt-1">
                               Total: Rp {(item.price + (item.jerseyCharges || 0)).toLocaleString("id-ID")}
                             </p>
@@ -272,7 +272,7 @@ export default function CartPage() {
                               <p className="text-sm text-orange-600">
                                 Extra Size Charges: <span className="font-semibold">+Rp {item.jerseyCharges.toLocaleString("id-ID")}</span>
                               </p>
-                            )}
+                            )} 
                             <p className="text-base font-bold text-purple-700 mt-1">
                               Total: Rp {((item.price * (item.participants || 4)) + (item.jerseyCharges || 0)).toLocaleString("id-ID")}
                             </p>
@@ -302,11 +302,11 @@ export default function CartPage() {
                             <p className="text-sm text-gray-600">
                               Base: Rp {item.price.toLocaleString("id-ID")} × {item.participants || 0} = Rp {(item.price * (item.participants || 0)).toLocaleString("id-ID")}
                             </p>
-                            {item.jerseyCharges && item.jerseyCharges > 0 && (
+                            {item.jerseyCharges && item.jerseyCharges > 0 ? (
                               <p className="text-sm text-orange-600">
                                 Extra Size Charges: <span className="font-semibold">+Rp {item.jerseyCharges.toLocaleString("id-ID")}</span>
                               </p>
-                            )}
+                              ) : null}
                             <p className="text-base font-bold text-emerald-700 mt-1">
                               Total: Rp {((item.price * (item.participants || 0)) + (item.jerseyCharges || 0)).toLocaleString("id-ID")}
                             </p>

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { showToast } from "../../lib/toast";
 import TutorialModal from "../components/TutorialModal";
 
@@ -39,36 +39,91 @@ export default function RegistrationPage() {
     const router = useRouter();
     const { addItem, items, setUserDetails } = useCart();
     const [currentUser, setCurrentUser] = useState<any | null>(null);
-    const [existingIdCardPhotoUrl, setExistingIdCardPhotoUrl] = useState<string | null>(null);
-
+    
     const [type, setType] = useState<"individual" | "community" | "family">("individual");
+    // NEW: keep a separate registrationType state (used across the file)
+    const [registrationType, setRegistrationType] = useState<"individual" | "community" | "family">("individual");
     
     const [loading, setLoading] = useState(true);
     const [categories, setCategories] = useState<Category[]>([]);
     const [jerseyOptions, setJerseyOptions] = useState<JerseyOption[]>([]); // NEW
     const [categoryId, setCategoryId] = useState<number | null>(null);
     const [participants, setParticipants] = useState<number | "">("");
-    const [jerseys, setJerseys] = useState<Record<string, number | "">>({});
     const [selectedJerseySize, setSelectedJerseySize] = useState("M");
     const [useEarlyBird, setUseEarlyBird] = useState(false);
 
-    // Personal details
-    const [fullName, setFullName] = useState("");
-    const [email, setEmail] = useState("");
-    const [phone, setPhone] = useState("");
-    const [emergencyPhone, setEmergencyPhone] = useState("");
-    const [birthDate, setBirthDate] = useState("");
-    const [gender, setGender] = useState<"male" | "female">("male");
-    const [currentAddress, setCurrentAddress] = useState("");
-    const [nationality, setNationality] = useState<"WNI" | "WNA">("WNI");
-    const [medicalHistory, setMedicalHistory] = useState("");
-    const [medicationAllergy, setMedicationAllergy] = useState(""); // NEW
-    const [idCardPhoto, setIdCardPhoto] = useState<File | null>(null);
-    const [idCardPhotoName, setIdCardPhotoName] = useState<string | null>(null);
-    const [registrationType, setRegistrationType] = useState<"individual" | "community" | "family">("individual");
+    // --- NEW: helper to restore session-backed personal fields immediately on mount ---
+    function loadSessionPersonalData() {
+        if (typeof window === "undefined") return;
+        try {
+            const regFull = sessionStorage.getItem("reg_fullName");
+            if (!regFull) return; // nothing to restore
 
-    // Group/Community name state
-    const [groupName, setGroupName] = useState("");
+            setFullName(regFull || "");
+            setEmail(sessionStorage.getItem("reg_email") || "");
+            setPhone(sessionStorage.getItem("reg_phone") || "");
+            setEmergencyPhone(sessionStorage.getItem("reg_emergencyPhone") || "");
+            setBirthDate(sessionStorage.getItem("reg_birthDate") || "");
+            setGender((sessionStorage.getItem("reg_gender") as "male" | "female") || "male");
+            setCurrentAddress(sessionStorage.getItem("reg_currentAddress") || "");
+            setNationality((sessionStorage.getItem("reg_nationality") as "WNI" | "WNA") || "WNI");
+            setMedicalHistory(sessionStorage.getItem("reg_medicalHistory") || "");
+            setMedicationAllergy(sessionStorage.getItem("reg_medicationAllergy") || "");
+            setGroupName(sessionStorage.getItem("reg_groupName") || "");
+            setIdCardPhotoName(sessionStorage.getItem("reg_idCardPhotoName") || null);
+            setExistingIdCardPhotoUrl(sessionStorage.getItem("reg_existingIdCardPhotoUrl") || null);
+        } catch (e) {
+            // ignore parse errors
+        }
+    }
+
+    
+
+    // --- Replace selected personal states with session-backed states ---
+    const [fullName, setFullName] = useSessionState<string>("reg_fullName", "");
+    const [email, setEmail] = useSessionState<string>("reg_email", "");
+    const [phone, setPhone] = useSessionState<string>("reg_phone", "");
+    const [emergencyPhone, setEmergencyPhone] = useSessionState<string>("reg_emergencyPhone", "");
+    const [birthDate, setBirthDate] = useSessionState<string>("reg_birthDate", "");
+    const [gender, setGender] = useSessionState<"male" | "female">("reg_gender", "male");
+    const [currentAddress, setCurrentAddress] = useSessionState<string>("reg_currentAddress", "");
+    const [nationality, setNationality] = useSessionState<"WNI" | "WNA">("reg_nationality", "WNI");
+    const [medicalHistory, setMedicalHistory] = useSessionState<string>("reg_medicalHistory", "");
+    const [medicationAllergy, setMedicationAllergy] = useSessionState<string>("reg_medicationAllergy", "");
+    const [groupName, setGroupName] = useSessionState<string>("reg_groupName", "");
+    const [idCardPhotoName, setIdCardPhotoName] = useSessionState<string | null>("reg_idCardPhotoName", null);
+
+    // Keep idCard photo File in memory only (cannot store File in sessionStorage)
+    const [idCardPhoto, setIdCardPhoto] = useState<File | null>(null);
+    const [existingIdCardPhotoUrl, setExistingIdCardPhotoUrl] = useSessionState<string | null>("reg_existingIdCardPhotoUrl", null);
+
+    // --- NEW: immediate-save effect for personal fields (real-time save) ---
+    useEffect(() => {
+        try {
+            sessionStorage.setItem("reg_fullName", fullName || "");
+            sessionStorage.setItem("reg_email", email || "");
+            sessionStorage.setItem("reg_phone", phone || "");
+            sessionStorage.setItem("reg_emergencyPhone", emergencyPhone || "");
+            sessionStorage.setItem("reg_birthDate", birthDate || "");
+            sessionStorage.setItem("reg_gender", gender || "male");
+            sessionStorage.setItem("reg_currentAddress", currentAddress || "");
+            sessionStorage.setItem("reg_nationality", nationality || "WNI");
+            sessionStorage.setItem("reg_medicalHistory", medicalHistory || "");
+            sessionStorage.setItem("reg_medicationAllergy", medicationAllergy || "");
+            sessionStorage.setItem("reg_groupName", groupName || "");
+            sessionStorage.setItem("reg_idCardPhotoName", idCardPhotoName || "");
+            sessionStorage.setItem("reg_existingIdCardPhotoUrl", existingIdCardPhotoUrl || "");
+        } catch (e) {
+            // ignore quota errors
+        }
+    }, [
+        fullName, email, phone, emergencyPhone, birthDate, gender,
+        currentAddress, nationality, medicalHistory, medicationAllergy,
+        groupName, idCardPhotoName, existingIdCardPhotoUrl
+    ]);
+
+    // Jerseys: use local state (do NOT persist full jersey map to session to avoid backend overwrite)
+    const [jerseys, setJerseys] = useState<Record<string, number | "">>({});
 
     // modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -108,7 +163,10 @@ export default function RegistrationPage() {
             (window as any).AOS.refresh();
         }
 
-        // Load current user
+        // Restore any session personal data immediately (this runs before the async user fetch)
+        loadSessionPersonalData();
+
+        // Load current user - but DO NOT overwrite session personal fields if session exists
         (async () => {
             try {
                 const resUser = await fetch("/api/user");
@@ -117,25 +175,39 @@ export default function RegistrationPage() {
                     const user = body?.user;
                     if (user) {
                         setCurrentUser(user);
-                        setFullName(user.name || "");
-                        setEmail(user.email || "");
-                        setPhone(user.phone || "");
-                        setEmergencyPhone(user.emergencyPhone || "");
-                        setBirthDate(user.birthDate ? new Date(user.birthDate).toISOString().slice(0,10) : "");
-                        setGender(user.gender || "male");
-                        setCurrentAddress(user.currentAddress || "");
-                        setNationality(user.nationality || "WNI");
-                        setMedicalHistory(user.medicalHistory || "");
-                        setMedicationAllergy(user.medicationAllergy || ""); // NEW
-                        if (user.idCardPhoto) {
-                            setExistingIdCardPhotoUrl(user.idCardPhoto);
-                            // show filename if available
-                            try {
-                                const parts = String(user.idCardPhoto).split("/");
-                                setIdCardPhotoName(parts[parts.length - 1] || "Uploaded ID");
-                            } catch { /* ignore */ }
+
+                        // If there's already session personal data, prefer session (user likely editing as guest)
+                        const hasSessionFull = typeof window !== 'undefined' && Boolean(sessionStorage.getItem("reg_fullName"));
+                        if (!hasSessionFull) {
+                            // No session -> populate from server user
+                            setFullName(user.name || "");
+                            setEmail(user.email || "");
+                            setPhone(user.phone || "");
+                            setEmergencyPhone(user.emergencyPhone || "");
+                            setBirthDate(user.birthDate ? new Date(user.birthDate).toISOString().slice(0,10) : "");
+                            setGender(user.gender || "male");
+                            setCurrentAddress(user.currentAddress || "");
+                            setNationality(user.nationality || "WNI");
+                            setMedicalHistory(user.medicalHistory || "");
+                            setMedicationAllergy(user.medicationAllergy || "");
+                            if (user.idCardPhoto) {
+                                setExistingIdCardPhotoUrl(user.idCardPhoto);
+                                try {
+                                    const parts = String(user.idCardPhoto).split("/");
+                                    setIdCardPhotoName(parts[parts.length - 1] || "Uploaded ID");
+                                } catch { /* ignore */ }
+                            }
+                        } else {
+                            // If session exists, keep session values; still set existingIdCardPhotoUrl if missing
+                            if (!existingIdCardPhotoUrl && user.idCardPhoto) {
+                                setExistingIdCardPhotoUrl(user.idCardPhoto);
+                            }
                         }
+                    } else {
+                        // Not logged in -> keep session restore done earlier
                     }
+                } else {
+                    // Not logged in -> session restore done earlier
                 }
             } catch (err) {
                 // silent fail
@@ -169,13 +241,49 @@ export default function RegistrationPage() {
                 if (!res.ok) throw new Error("Failed to load jersey options");
                 const data = await res.json();
                 setJerseyOptions(data);
-                
-                // Initialize jerseys state with all available sizes
+
+                // Build default map for all sizes returned by server
                 const initialJerseys: Record<string, number | ""> = {};
                 data.forEach((jersey: JerseyOption) => {
                     initialJerseys[jersey.size] = "";
                 });
-                setJerseys(initialJerseys);
+
+                // Prefer any saved session jerseys (reg_jerseys) or reg_formData.jerseys,
+                // but ensure we include all newly-introduced sizes from the server.
+                let merged: Record<string, number | ""> = { ...initialJerseys };
+
+                try {
+                    const savedFormData = sessionStorage.getItem("reg_formData");
+                    if (savedFormData) {
+                        const formData = JSON.parse(savedFormData);
+                        if (formData && formData.jerseys && typeof formData.jerseys === "object") {
+                            Object.entries(formData.jerseys).forEach(([k, v]) => {
+                                if (k in merged) merged[k] = v;
+                                else merged[k] = v; // keep any unexpected keys
+                            });
+                        }
+                    }
+                } catch (e) {
+                    // ignore parsing errors
+                }
+
+                // If not present in reg_formData, try dedicated reg_jerseys key
+                try {
+                    const saved = sessionStorage.getItem("reg_jerseys");
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (parsed && typeof parsed === "object") {
+                            Object.entries(parsed).forEach(([k, v]) => {
+                                merged[k] = v;
+                            });
+                        }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+
+                // Finally set jerseys without overwriting with empty defaults
+                setJerseys(merged);
             } catch (err) {
                 console.error("Failed to load jersey options:", err);
                 showToast("Failed to load jersey sizes. Please refresh the page.", "error");
@@ -184,6 +292,66 @@ export default function RegistrationPage() {
             }
         })();
     }, []);
+
+    // Add this useEffect to save form data to session on every change
+    useEffect(() => {
+        // Save all form data to sessionStorage whenever any field changes
+        try {
+            const formData = {
+                fullName,
+                email,
+                phone,
+                emergencyPhone,
+                birthDate,
+                gender,
+                currentAddress,
+                nationality,
+                medicalHistory,
+                medicationAllergy,
+                groupName,
+                idCardPhotoName,
+                existingIdCardPhotoUrl,
+                // registration UI state
+                type,
+                registrationType,
+                categoryId,
+                participants,
+                selectedJerseySize,
+                jerseys, // store raw jersey map (numbers or "")
+            };
+            // JSON backup
+            sessionStorage.setItem("reg_formData", JSON.stringify(formData));
+
+            // Also write individual keys used by other pages/confirm step
+            sessionStorage.setItem("reg_fullName", fullName || "");
+            sessionStorage.setItem("reg_email", email || "");
+            sessionStorage.setItem("reg_phone", phone || "");
+            sessionStorage.setItem("reg_emergencyPhone", emergencyPhone || "");
+            sessionStorage.setItem("reg_birthDate", birthDate || "");
+            sessionStorage.setItem("reg_gender", gender || "male");
+            sessionStorage.setItem("reg_currentAddress", currentAddress || "");
+            sessionStorage.setItem("reg_nationality", nationality || "WNI");
+            sessionStorage.setItem("reg_medicalHistory", medicalHistory || "");
+            sessionStorage.setItem("reg_medicationAllergy", medicationAllergy || "");
+            sessionStorage.setItem("reg_groupName", groupName || "");
+            sessionStorage.setItem("reg_idCardPhotoName", idCardPhotoName || "");
+            sessionStorage.setItem("reg_existingIdCardPhotoUrl", existingIdCardPhotoUrl || "");
+            sessionStorage.setItem("reg_type", type || "individual");
+            sessionStorage.setItem("reg_registrationType", registrationType || "individual");
+            sessionStorage.setItem("reg_categoryId", String(categoryId || ""));
+            sessionStorage.setItem("reg_participants", String(participants || ""));
+            sessionStorage.setItem("reg_selectedJerseySize", selectedJerseySize || "M");
+            // store jerseys as JSON string (numbers or empty strings)
+            sessionStorage.setItem("reg_jerseys", JSON.stringify(jerseys || {}));
+        } catch (e) {
+            console.error("Failed to save form data:", e);
+        }
+    }, [
+        fullName, email, phone, emergencyPhone, birthDate, gender, currentAddress,
+        nationality, medicalHistory, medicationAllergy, groupName, idCardPhotoName,
+        existingIdCardPhotoUrl, type, registrationType, categoryId, participants,
+        selectedJerseySize, jerseys
+    ]);
 
     // --- Move all hook-based computations here so they always run in the same order ---
     // Check if user has family bundle in cart
@@ -364,8 +532,9 @@ export default function RegistrationPage() {
     }
 
     function validatePersonalDetails(): boolean {
-        // Accept either a newly uploaded idCardPhoto file OR an existing stored ID photo URL for logged-in users
-        const hasIdProof = Boolean(idCardPhoto) || Boolean(existingIdCardPhotoUrl);
+        // Accept either a newly uploaded idCardPhoto file OR an existing stored ID photo for logged-in users
+        // ALSO accept a previously-uploaded filename from session (idCardPhotoName)
+        const hasIdProof = Boolean(idCardPhoto) || Boolean(existingIdCardPhotoUrl) || Boolean(idCardPhotoName);
         if (!fullName || !email || !phone || !birthDate || !currentAddress || !hasIdProof) {
             showToast("Please fill all required fields (Name, Email, Phone, Birth Date, Address, and ID Card/Passport Photo)", "error");
             return false;
@@ -655,7 +824,7 @@ export default function RegistrationPage() {
             currentAddress,
             nationality,
             medicalHistory,
-            medicationAllergy, // NEW
+            medicationAllergy,
             idCardPhoto: idCardPhoto || undefined,
             registrationType,
             groupName: type === "community" ? groupName : undefined,
@@ -1124,10 +1293,12 @@ export default function RegistrationPage() {
                                                             <input
                                                                 type="number"
                                                                 min={0}
-                                                                value={jerseys[size]}
+                                                                value={jerseys[size] ?? ""}
                                                                 onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
                                                                 className="jersey-input shift-right accent-[#e687a4]"
                                                                 placeholder="0"
+                                                                inputMode="numeric"
+                                                                aria-label={`Count for size ${size}`}
                                                             />
                                                         </div>
                                                     );
@@ -1137,39 +1308,43 @@ export default function RegistrationPage() {
 
                                         {/* Adult Sizes - Extra (6XL with +10k charge) */}
                                         <div className="mb-4">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-xs font-semibold text-orange-700">Adult Sizes (Extra - +Rp 10.000 each):</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openSizeChart()}
-                                                    className="text-xs text-orange-600 hover:text-orange-700 underline"
-                                                >
-                                                    Size Guide
-                                                </button>
+                                          <div className="flex items-center justify-between mb-2">
+                                            <p className="text-xs font-semibold text-orange-700">Adult Sizes (Extra - +Rp 10.000 each):</p>
+                                            <button
+                                              type="button"
+                                              onClick={() => openSizeChart()}
+                                              className="text-xs text-orange-600 hover:text-orange-700 underline"
+                                            >
+                                              Size Guide
+                                            </button>
+                                          </div>
+
+                                          <div className="grid grid-cols-3 gap-3">
+                                            <div className="flex flex-col items-center">
+                                              <div className="flex items-center gap-1 mb-2">
+                                                <span className="text-xs font-medium text-orange-600">6XL</span>
+                                                <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
+                                              </div>
+                                              <input
+                                                type="number"
+                                                min={0}
+                                                value={jerseys["6XL"] ?? ""}
+                                                onChange={(e) => updateJersey("6XL", e.target.value === "" ? "" : Number(e.target.value))}
+                                                className="jersey-input shift-right accent-orange-500 border-orange-300 focus:border-orange-500"
+                                                placeholder="0"
+                                                inputMode="numeric"
+                                                aria-label="Count for 6XL"
+                                              />
                                             </div>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                <div className="flex flex-col items-center">
-                                                    <div className="flex items-center gap-1 mb-2">
-                                                        <span className="text-xs font-medium text-orange-600">6XL</span>
-                                                        <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
-                                                    </div>
-                                                    <input
-                                                        type="number"
-                                                        min={0}
-                                                        value={jerseys["6XL"]}
-                                                        onChange={(e) => updateJersey("6XL", e.target.value === "" ? "" : Number(e.target.value))}
-                                                        className="jersey-input shift-right accent-orange-500 border-orange-300 focus:border-orange-500"
-                                                        placeholder="0"
-                                                    />
-                                                </div>
+                                          </div>
+
+                                          {Number(jerseys["6XL"] || 0) > 0 && (
+                                            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                                              <p className="text-xs text-orange-700">
+                                                ℹ️ Extra size charges: +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
+                                              </p>
                                             </div>
-                                            {Number(jerseys["6XL"] || 0) > 0 && (
-                                                <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                                                    <p className="text-xs text-orange-700">
-                                                        ℹ️ Extra size charges: +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
-                                                    </p>
-                                                </div>
-                                            )}
+                                          )}
                                         </div>
 
                                         {/* Kids Sizes */}
@@ -1228,7 +1403,7 @@ export default function RegistrationPage() {
                                         </div>
 
                                         <div className="pt-3 border-t border-purple-200">
-                                            <div className="space-y-2">
+                                            <div className="space-y-2 mb-3">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="text-sm font-semibold text-gray-700">
                                                         Subtotal ({selectedCategory?.bundleSize || 4} people):
@@ -1383,10 +1558,12 @@ export default function RegistrationPage() {
                                                             <input
                                                                 type="number"
                                                                 min={0}
-                                                                value={jerseys[size]}
+                                                                value={jerseys[size] ?? ""}
                                                                 onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
                                                                 className="jersey-input shift-right accent-[#e687a4]"
                                                                 placeholder="0"
+                                                                inputMode="numeric"
+                                                                aria-label={`Count for size ${size}`}
                                                             />
                                                         </div>
                                                     );
@@ -1396,39 +1573,43 @@ export default function RegistrationPage() {
 
                                         {/* Adult Sizes - Extra (6XL with +10k charge) */}
                                         <div className="mb-4">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-xs font-semibold text-orange-700">Adult Sizes (Extra - +Rp 10.000 each):</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openSizeChart()}
-                                                    className="text-xs text-orange-600 hover:text-orange-700 underline"
-                                                >
-                                                    Size Guide
-                                                </button>
+                                          <div className="flex items-center justify-between mb-2">
+                                            <p className="text-xs font-semibold text-orange-700">Adult Sizes (Extra - +Rp 10.000 each):</p>
+                                            <button
+                                              type="button"
+                                              onClick={() => openSizeChart()}
+                                              className="text-xs text-orange-600 hover:text-orange-700 underline"
+                                            >
+                                              Size Guide
+                                            </button>
+                                          </div>
+
+                                          <div className="grid grid-cols-3 gap-3">
+                                            <div className="flex flex-col items-center">
+                                              <div className="flex items-center gap-1 mb-2">
+                                                <span className="text-xs font-medium text-orange-600">6XL</span>
+                                                <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
+                                              </div>
+                                              <input
+                                                type="number"
+                                                min={0}
+                                                value={jerseys["6XL"] ?? ""}
+                                                onChange={(e) => updateJersey("6XL", e.target.value === "" ? "" : Number(e.target.value))}
+                                                className="jersey-input shift-right accent-orange-500 border-orange-300 focus:border-orange-500"
+                                                placeholder="0"
+                                                inputMode="numeric"
+                                                aria-label="Count for 6XL"
+                                              />
                                             </div>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                <div className="flex flex-col items-center">
-                                                    <div className="flex items-center gap-1 mb-2">
-                                                        <span className="text-xs font-medium text-orange-600">6XL</span>
-                                                        <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
-                                                    </div>
-                                                    <input
-                                                        type="number"
-                                                        min={0}
-                                                        value={jerseys["6XL"]}
-                                                        onChange={(e) => updateJersey("6XL", e.target.value === "" ? "" : Number(e.target.value))}
-                                                        className="jersey-input shift-right accent-orange-500 border-orange-300 focus:border-orange-500"
-                                                        placeholder="0"
-                                                    />
-                                                </div>
+                                          </div>
+
+                                          {Number(jerseys["6XL"] || 0) > 0 && (
+                                            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                                              <p className="text-xs text-orange-700">
+                                                ℹ️ Extra size charges: +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
+                                              </p>
                                             </div>
-                                            {Number(jerseys["6XL"] || 0) > 0 && (
-                                                <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                                                    <p className="text-xs text-orange-700">
-                                                        ℹ️ Extra size charges: +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
-                                                    </p>
-                                                </div>
-                                            )}
+                                          )}
                                         </div>
 
                                         {/* Kids Sizes */}
@@ -1461,7 +1642,7 @@ export default function RegistrationPage() {
                                         </div>
 
                                         <p className="text-xs text-gray-500 mt-3 text-center">
-                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / {participants || 0}
+                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / 4
                                         </p>
                                     </div>
 
@@ -1547,7 +1728,7 @@ export default function RegistrationPage() {
                                     onClick={handleCheckout}
                                     className={`w-1/2 md:w-1/3 px-6 py-3 rounded-full font-semibold shadow-xl transition-all transform ${
                                         getTotalCommunityParticipants() >= 10
-                                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white hover:shadow-2xl hover:scale-105 active:scale-95'
+                                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95'
                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
                                     disabled={getTotalCommunityParticipants() < 10}
@@ -1684,7 +1865,7 @@ export default function RegistrationPage() {
                         </div>
                     )}
 
-                                    </section>
+            </section>
             </div>
 
             {/* Terms and Conditions Modal */}
@@ -2301,4 +2482,59 @@ export default function RegistrationPage() {
             )}
         </main>
     );
+}
+
+// --- tiny hook: state synced to sessionStorage immediately ---
+function useSessionState<T>(key: string, initialValue: T) {
+    const [state, setState] = useState<T>(() => {
+        if (typeof window === "undefined") return initialValue;
+        try {
+            const v = sessionStorage.getItem(key);
+            if (v === null) return initialValue;
+
+            // Try parsing JSON first (handles values written via JSON.stringify)
+            try {
+                return JSON.parse(v) as T;
+            } catch (parseErr) {
+                // If parsing fails, fall back to the raw string for string-like keys
+                // This makes the hook tolerant of legacy / plain-string writes.
+                // For non-string initial types, attempt basic conversions for common primitives.
+                const trimmed = v.trim();
+                // null/undefined markers
+                if (trimmed === "null") return (null as unknown) as T;
+                if (trimmed === "undefined") return (undefined as unknown) as T;
+
+                // boolean
+                if (trimmed === "true") return (true as unknown) as T;
+                if (trimmed === "false") return (false as unknown) as T;
+
+                // number
+                const num = Number(trimmed);
+                if (!Number.isNaN(num) && typeof initialValue === "number") return (num as unknown) as T;
+
+                // otherwise return raw string cast to T (common case)
+                return (v as unknown) as T;
+            }
+        } catch (e) {
+            // on any error, return initial value
+            return initialValue;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            // Always write a JSON-serialized value so future reads are consistent.
+            sessionStorage.setItem(key, JSON.stringify(state));
+        } catch (e) { /* ignore quota/errors */ }
+    }, [key, state]);
+
+    const setAndSave = (value: React.SetStateAction<T>) => {
+        setState(prev => {
+            const next = typeof value === "function" ? (value as (p: T) => T)(prev) : value;
+            try { sessionStorage.setItem(key, JSON.stringify(next)); } catch (e) { /* ignore */ }
+            return next;
+        });
+    };
+
+    return [state, setAndSave] as const;
 }

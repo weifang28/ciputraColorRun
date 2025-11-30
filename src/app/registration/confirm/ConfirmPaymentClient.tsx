@@ -228,86 +228,96 @@ export default function ConfirmPaymentClient() {
                     credentials: "include",
                 });
 
-                if (res.ok) {
-                    clearCart();
-                    setSubmitted(true);
-                    setShowPopup(true);
-                    showToast("Payment submitted — awaiting verification.", "success");
-                    
-                    // REMOVE THIS BLOCK - Server already sends email
-                    // fetch("/api/notify/submission", {
-                    //     method: "POST",
-                    //     headers: { "Content-Type": "application/json" },
-                    //     body: JSON.stringify({ email, name: fullName }),
-                    //     credentials: "include",
-                    // }).catch(() => {});
-                    
-                    setIsSubmitting(false);
-                    setUploadStatus("");
-                    return;
+                const body: any = await res.json().catch(() => ({}));
+
+                if (res.status === 413) {
+                    console.log("[handleConfirmedSubmit] 413 error, falling back to chunked upload...");
+                    throw new Error("File too large, switching to chunked upload");
                 }
-            }
-            
-            console.log("[handleConfirmedSubmit] Using chunked upload...");
-            setUploadStatus("Uploading payment proof...");
-            
-            proofUrl = await uploadFileInChunks(proofFile, "proofs");
-            console.log("[handleConfirmedSubmit] Proof uploaded:", proofUrl);
-            
-            if (userDetails?.idCardPhoto instanceof File) {
-                setUploadStatus("Uploading ID card...");
-                idCardUrl = await uploadFileInChunks(userDetails.idCardPhoto, "id-cards");
-                console.log("[handleConfirmedSubmit] ID card uploaded:", idCardUrl);
-            }
-            
-            setUploadStatus("Saving registration...");
-            
-            const res = await fetch("/api/payments/base64", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    proofUrl,
-                    idCardUrl,
-                    items,
-                    amount: totalPrice,
-                    fullName,
-                    email,
-                    phone,
-                    birthDate,
-                    gender,
-                    currentAddress,
-                    nationality,
-                    emergencyPhone,
-                    medicalHistory,
-                    medicationAllergy: medicationAllergy || "",
-                    registrationType: items[0]?.type || "individual",
-                    proofSenderName: proofSenderName?.trim() || undefined,
-                    groupName: groupName?.trim() || undefined,
-                }),
-                credentials: "include",
-            });
 
-            const body: any = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    console.error("[handleConfirmedSubmit] Server error:", res.status, body);
+                    const errorMsg = body?.error || "An unexpected error occurred. Please try again.";
+                    showToast(errorMsg, "error");
+                    throw new Error("Upload failed");
+                }
 
-            if (!res.ok) {
-                console.error("[handleConfirmedSubmit] Server error:", res.status, body);
-                const errorMsg = body?.error || "An unexpected error occurred. Please try again.";
-                showToast(errorMsg, "error");
-                throw new Error("Upload failed");
+                console.log("[handleConfirmedSubmit] Upload successful");
+            } else {
+                console.log("[handleConfirmedSubmit] Using chunked upload...");
+                setUploadStatus("Uploading payment proof...");
+                
+                proofUrl = await uploadFileInChunks(proofFile, "proofs");
+                console.log("[handleConfirmedSubmit] Proof uploaded:", proofUrl);
+                
+                if (userDetails?.idCardPhoto instanceof File) {
+                    setUploadStatus("Uploading ID card...");
+                    idCardUrl = await uploadFileInChunks(userDetails.idCardPhoto, "id-cards");
+                    console.log("[handleConfirmedSubmit] ID card uploaded:", idCardUrl);
+                }
+                
+                setUploadStatus("Saving registration...");
+                
+                const res = await fetch("/api/payments/base64", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        proofUrl,
+                        idCardUrl,
+                        items,
+                        amount: totalPrice,
+                        fullName,
+                        email,
+                        phone,
+                        birthDate,
+                        gender,
+                        currentAddress,
+                        nationality,
+                        emergencyPhone,
+                        medicalHistory,
+                        medicationAllergy: medicationAllergy || "",
+                        registrationType: items[0]?.type || "individual",
+                        proofSenderName: proofSenderName?.trim() || undefined,
+                        groupName: groupName?.trim() || undefined,
+                    }),
+                    credentials: "include",
+                });
+
+                const body: any = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    console.error("[handleConfirmedSubmit] Server error:", res.status, body);
+                    const errorMsg = body?.error || "An unexpected error occurred. Please try again.";
+                    showToast(errorMsg, "error");
+                    throw new Error("Upload failed");
+                }
+
+                console.log("[handleConfirmedSubmit] Registration successful");
             }
 
+            // Clear cart and session data ONLY after successful upload
             clearCart();
+            
+            // NEW: clear all registration session keys after successful payment submission
+            try {
+                const keysToClear = [
+                    "reg_formData",
+                    "reg_fullName","reg_email","reg_phone","reg_emergencyPhone",
+                    "reg_birthDate","reg_gender","reg_currentAddress","reg_nationality",
+                    "reg_medicalHistory","reg_medicationAllergy","reg_groupName",
+                    "reg_idCardPhotoName","reg_existingIdCardPhotoUrl",
+                    "reg_type","reg_registrationType","reg_categoryId","reg_participants",
+                    "reg_selectedJerseySize","reg_jerseys"
+                ];
+                keysToClear.forEach(k => sessionStorage.removeItem(k));
+                console.log("[handleConfirmedSubmit] Cleared registration form session data");
+            } catch (e) {
+                console.error("[handleConfirmedSubmit] Failed to clear session data:", e);
+            }
+            
             setSubmitted(true);
             setShowPopup(true);
             showToast("Payment submitted — awaiting verification.", "success");
-
-            // REMOVE THIS BLOCK - Server already sends email
-            // fetch("/api/notify/submission", {
-            //     method: "POST",
-            //     headers: { "Content-Type": "application/json" },
-            //     body: JSON.stringify({ email, name: fullName }),
-            //     credentials: "include",
-            // }).catch(() => {});
 
         } catch (err: any) {
             console.error("[ConfirmPayment] submit error:", err);
@@ -352,13 +362,7 @@ export default function ConfirmPaymentClient() {
                                     const pairs = Object.entries(jerseysObj)
                                         .filter(([, cnt]) => Number(cnt) > 0)
                                         .map(([size, cnt]) => `${size}(${cnt})`);
-
-                                    if (pairs.length > 0) {
-                                        secondaryLabel = pairs.join(", ");
-                                    } else {
-                                        const fallbackCount = item.participants ?? (item.type === "family" ? 4 : 0);
-                                        secondaryLabel = `${fallbackCount} participants`;
-                                    }
+                                    secondaryLabel = pairs.length > 0 ? pairs.join(", ") : `${item.participants || 0} participants`;
                                 } else {
                                     secondaryLabel = `Size ${item.jerseySize || "—"}`;
                                 }
@@ -367,13 +371,35 @@ export default function ConfirmPaymentClient() {
                                     ? Number(item.price) * Number(item.participants || 0)
                                     : Number(item.price);
 
+                                // extra charge amount saved on cart item
+                                const extraCharge = Number(item.jerseyCharges || 0);
+
+                                // compute 6XL count for display (community/family use jerseys map, individual uses jerseySize)
+                                const count6XL =
+                                    (item.jerseys && Number(item.jerseys["6XL"] || 0)) ||
+                                    (item.type === "individual" && item.jerseySize === "6XL" ? 1 : 0);
+
                                 return (
                                     <div key={item.id} className="flex justify-between text-sm border-b pb-2">
-                                        <div>
-                                            <span className="font-medium">{item.categoryName}</span>
-                                            <span className="text-gray-500 ml-2">{secondaryLabel}</span>
-                                        </div>
-                                        <span className="font-medium">Rp {Number(itemTotal).toLocaleString("id-ID")}</span>
+                                      <div>
+                                        <p className="font-semibold text-gray-900">{item.categoryName}</p>
+                                        <p className="text-gray-600 text-xs">{secondaryLabel}</p>
+
+                                        {/* EXTRA: show human-friendly note when extra-size charges exist */}
+                                        {extraCharge > 0 && (
+                                          <p className="text-xs text-orange-700 mt-1">
+                                            <strong>Note:</strong>{" "}
+                                            {count6XL > 0
+                                              ? `Includes extra size charge for ${count6XL}× 6XL`
+                                              : "Includes extra size charge"}
+                                            : <span className="font-semibold">+Rp {extraCharge.toLocaleString("id-ID")}</span>
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      <div>
+                                        <p className="font-semibold">Rp {itemTotal.toLocaleString("id-ID")}</p>
+                                      </div>
                                     </div>
                                 );
                             })}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { CartItem } from "../context/CartContext";
 import "../styles/homepage.css"
 
@@ -14,15 +14,30 @@ export default function EditCartItemModal({
   onRemove: () => void;
 }) {
   const sizes = useMemo(() => [
-    "XS", "S", "M", "L", "XL", "XXL",
+    "XS", "S", "M", "L", "XL", "XXL", "2XL", "3XL", "4XL", "5XL", "6XL",
     "XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"
   ], []);
+
   const [localJerseySize, setLocalJerseySize] = useState(item.jerseySize || "M");
+
+  // initialise localJerseys and keep it in sync whenever the item or sizes change
   const [localJerseys, setLocalJerseys] = useState<Record<string, number>>(() => {
     const base: Record<string, number> = {};
     sizes.forEach((s) => (base[s] = Number(item.jerseys?.[s] || 0)));
     return base;
   });
+
+  useEffect(() => {
+    // when item updates (parent changed), resync localJerseys ensuring all sizes exist
+    const base: Record<string, number> = {};
+    sizes.forEach((s) => {
+      // prefer the item value if present, otherwise 0
+      base[s] = Number(item.jerseys?.[s] ?? 0);
+    });
+    setLocalJerseySize(item.jerseySize || "M");
+    setLocalJerseys(base);
+  }, [item, sizes]);
+
   const [error, setError] = useState<string | null>(null);
 
   const participants = Number(item.participants || (item.type === "family" ? 4 : 1));
@@ -31,7 +46,12 @@ export default function EditCartItemModal({
     setLocalJerseys((prev) => ({ ...prev, [size]: Math.max(0, Math.floor(Number(val) || 0)) }));
   }
 
-  function handleSave() {
+  // NEW: map of extra-size charges (extend here if new sizes become chargeable)
+  const EXTRA_SIZE_CHARGES: Record<string, number> = {
+    "6XL": 10000, // 6XL has +Rp 10.000 per piece
+  };
+
+  async function handleSave() {
     setError(null);
     if (item.type === "community" || item.type === "family") {
       const total = Object.values(localJerseys).reduce((s, v) => s + Number(v || 0), 0);
@@ -40,12 +60,42 @@ export default function EditCartItemModal({
         return;
       }
     }
+
+    // Normalise jerseys: ensure all sizes are present and numbers (no undefined)
+    const normalized: Record<string, number> = {};
+    sizes.forEach((s) => {
+      normalized[s] = Number(localJerseys[s] || 0);
+    });
+
+    // NEW: compute jerseyCharges based on normalized counts and extra-size mapping
+    let jerseyCharges = 0;
+    if (item.type === "individual") {
+      const size = localJerseySize;
+      if (EXTRA_SIZE_CHARGES[size]) jerseyCharges = EXTRA_SIZE_CHARGES[size];
+    } else {
+      Object.entries(normalized).forEach(([size, count]) => {
+        const c = Number(count || 0);
+        if (c > 0 && EXTRA_SIZE_CHARGES[size]) {
+          jerseyCharges += c * EXTRA_SIZE_CHARGES[size];
+        }
+      });
+    }
+
     const updated: CartItem = {
       ...item,
       jerseySize: item.type === "individual" ? localJerseySize : undefined,
-      jerseys: item.type === "individual" ? undefined : localJerseys,
+      jerseys: item.type === "individual" ? undefined : normalized,
+      jerseyCharges, // NEW: include extra-size charges so CartContext totals update
     };
-    onSave(updated);
+
+    // Pass updated item to parent/context which is responsible for persisting (see CartContext.updateItem)
+    try {
+      onSave(updated);
+      // optional: you could call an API here if you keep a server-side cart endpoint.
+      // Example (uncomment if you have an API): await fetch('/api/cart/item', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(updated), credentials: 'include' });
+    } catch (err) {
+      console.error("Failed to save cart item:", err);
+    }
   }
 
   return (
@@ -77,7 +127,7 @@ export default function EditCartItemModal({
                   <input
                     type="number"
                     min={0}
-                    value={localJerseys[s]}
+                    value={localJerseys[s] ?? 0}
                     onChange={(e) => updateSizeCount(s, Number(e.target.value))}
                     className="w-full px-2 py-1 border border-gray-300 rounded text-gray-900 edit-jersey-input"
                     inputMode="numeric"
