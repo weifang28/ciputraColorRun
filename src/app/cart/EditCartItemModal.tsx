@@ -13,17 +13,20 @@ export default function EditCartItemModal({
   onSave: (updated: CartItem) => void;
   onRemove: () => void;
 }) {
-  const sizes = useMemo(() => [
-    "XS", "S", "M", "L", "XL", "XXL", "3L", "4L", "5L", "6L",,
+  // explicit string[] type and remove stray comma; use consistent XL naming
+  const sizes = useMemo<string[]>(() => [
+    "XS", "S", "M", "L", "XL", "XXL", "3L", "4L", "5L", "6L",
     "XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"
   ], []);
-
   const [localJerseySize, setLocalJerseySize] = useState(item.jerseySize || "M");
 
   // initialise localJerseys and keep it in sync whenever the item or sizes change
   const [localJerseys, setLocalJerseys] = useState<Record<string, number>>(() => {
     const base: Record<string, number> = {};
-    sizes.forEach((s) => (base[s] = Number(item.jerseys?.[s] ?? 0)));
+    sizes.forEach((s) => {
+      // s is guaranteed string from useMemo<string[]>
+      base[s] = Number(item.jerseys?.[s] ?? 0);
+    });
     return base;
   });
 
