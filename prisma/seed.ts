@@ -78,13 +78,13 @@ async function main() {
       { size: "M", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000, isExtraSize: false, description: null },
       { size: "L", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000, isExtraSize: false, description: null },
       { size: "XL", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000, isExtraSize: false, description: null },
-      { size: "XXL", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000, isExtraSize: false, description: null },
-      { size: "3XL", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000, isExtraSize: false, description: null },
-      { size: "4XL", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000, isExtraSize: false, description: null },
-      { size: "5XL", type: "adult", price: new Prisma.Decimal("0"), quantity: 10000, isExtraSize: false, description: null },
+      { size: "XXL", type: "adult", price: new Prisma.Decimal("10000"), quantity: 10000, isExtraSize: true, description: null },
+      { size: "3XL", type: "adult", price: new Prisma.Decimal("10000"), quantity: 10000, isExtraSize: true, description: null },
+      { size: "4XL", type: "adult", price: new Prisma.Decimal("10000"), quantity: 10000, isExtraSize: true, description: null },
+      { size: "5XL", type: "adult", price: new Prisma.Decimal("10000"), quantity: 10000, isExtraSize: true, description: null },
       
-      // Adult sizes (extra - with 10k charge)
-      { size: "6XL", type: "adult", price: new Prisma.Decimal("10000"), quantity: 10000, isExtraSize: true, description: "Extra size +Rp 10.000" },
+      // Adult sizes (extra - with 20k charge)
+      { size: "6XL", type: "adult", price: new Prisma.Decimal("20000"), quantity: 10000, isExtraSize: true, description: "Extra size +Rp 20.000" },
       
       // Kids sizes (no extra charge)
       { size: "XS - KIDS", type: "kids", price: new Prisma.Decimal("0"), quantity: 10000, isExtraSize: false, description: null },

@@ -48,7 +48,13 @@ export default function EditCartItemModal({
 
   // NEW: map of extra-size charges (extend here if new sizes become chargeable)
   const EXTRA_SIZE_CHARGES: Record<string, number> = {
-    "6XL": 10000, // 6XL has +Rp 10.000 per piece
+    "XXL": 10000,
+    "3XL": 10000,
+    "4XL": 10000,
+    "5XL": 10000,
+
+    // sizes above 5XL => 20k
+    "6XL": 20000,
   };
 
   async function handleSave() {
