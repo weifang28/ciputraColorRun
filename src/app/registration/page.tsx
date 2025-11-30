@@ -1619,7 +1619,7 @@ export default function RegistrationPage() {
                                             >
                                               Size Guide
                                             </button>
-                                                                                     </div>
+                                          </div>
 
                                           <div className="grid grid-cols-3 gap-3">
                                             <div className="flex flex-col items-center">
@@ -1860,10 +1860,36 @@ export default function RegistrationPage() {
                                     <div className="space-y-1">
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm text-gray-600">Base price:</span>
-                                            <span className="text-lg font-bold text-blue-700">
-                                                Rp {currentPrice.toLocaleString("id-ID")}
-                                            </span>
+                                            <div className="text-right">
+                                                {discountInfo ? (
+                                                    <>
+                                                        <div className="text-sm text-gray-400 line-through">
+                                                            Rp {discountInfo.basePrice.toLocaleString("id-ID")}
+                                                        </div>
+                                                        <div className="text-lg font-bold text-blue-700">
+                                                            Rp {currentPrice.toLocaleString("id-ID")}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="text-lg font-bold text-blue-700">
+                                                        Rp {currentPrice.toLocaleString("id-ID")}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
+
+                                        {/* Discount badge / savings */}
+                                        {discountInfo && (
+                                            <div className="flex items-center justify-between">
+                                                <div />
+                                                <div className="flex items-center gap-3">
+                                                    <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+                                                        -{discountInfo.discountPercent}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {/* Extra size charge */}
                                         {calculateIndividualJerseyCharge(selectedJerseySize) > 0 && (
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">Extra size charge:</span>
@@ -1872,18 +1898,18 @@ export default function RegistrationPage() {
                                                 </span>
                                             </div>
                                         )}
+
                                         <div className="pt-2 border-t border-blue-200">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm font-bold text-gray-700">Total:</span>
-                                                <span className="text-xl font-bold text-blue-700">
-                                                    Rp {currentSubtotal.toLocaleString("id-ID")}
-                                                </span>
+                                                <span className="text-lg font-bold text-emerald-800">
+                                                    Rp {(currentPrice + calculateIndividualJerseyCharge(selectedJerseySize)).toLocaleString("id-ID")}
+                                               </span>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-
+                                     </div>
+                                 </div>
+                             </div>
                             {/* Add to Cart and Buy Now Buttons */}
                             <div className="flex flex-col sm:flex-row gap-3 mt-4">
                                 <button
