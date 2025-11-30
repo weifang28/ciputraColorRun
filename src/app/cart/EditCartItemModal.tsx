@@ -14,7 +14,7 @@ export default function EditCartItemModal({
   onRemove: () => void;
 }) {
   const sizes = useMemo(() => [
-    "XS", "S", "M", "L", "XL", "XXL", "2XL", "3XL", "4XL", "5XL", "6XL",
+    "XS", "S", "M", "L", "XL", "XXL", "3L", "4L", "5L", "6L",,
     "XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"
   ], []);
 
@@ -47,15 +47,41 @@ export default function EditCartItemModal({
   }
 
   // NEW: map of extra-size charges (extend here if new sizes become chargeable)
-  const EXTRA_SIZE_CHARGES: Record<string, number> = {
-    "XXL": 10000,
-    "3XL": 10000,
-    "4XL": 10000,
-    "5XL": 10000,
+  //  const EXTRA_SIZE_CHARGES: Record<string, number> = {
+  //    "XXL": 10000,
+  //    "3L": 10000,
+  //    "4L": 10000,
+  //    "5L": 10000,
+  //
+  //    // sizes above 5L => 20k
+  //    "6L": 20000,
+  //  };
+  // Determine extra charge for a given size string (handles "XL", "XXL", "3XL", etc.)
+  function parseXLSize(size: string): number | null {
+    if (!size) return null;
+    const s = String(size).trim().toUpperCase();
+    if (s === "XL") return 1;
+    // "XXL" -> 2
+    if (s === "XXL") return 2;
+    // match "3XL", "4XL", "5XL", "6XL", ...
+    const m = s.match(/^(\d+)XL$/);
+    if (m) {
+      const n = Number(m[1]);
+      if (!Number.isNaN(n)) return n;
+    }
+    return null;
+  }
 
-    // sizes above 5XL => 20k
-    "6XL": 20000,
-  };
+  function getExtraChargeForSize(size: string): number {
+    const xl = parseXLSize(size);
+    if (xl === null) return 0;
+    // sizes above XL:
+    // - XXL (2) and 3..5 => 10k
+    // - >5 => 20k
+    if (xl > 1 && xl <= 5) return 10000;
+    if (xl > 5) return 20000;
+    return 0;
+  }
 
   async function handleSave() {
     setError(null);
@@ -77,13 +103,13 @@ export default function EditCartItemModal({
     let jerseyCharges = 0;
     if (item.type === "individual") {
       const size = localJerseySize;
-      if (EXTRA_SIZE_CHARGES[size]) jerseyCharges = EXTRA_SIZE_CHARGES[size];
+      jerseyCharges = getExtraChargeForSize(size);
     } else {
       Object.entries(normalized).forEach(([size, count]) => {
         const c = Number(count || 0);
-        if (c > 0 && EXTRA_SIZE_CHARGES[size]) {
-          jerseyCharges += c * EXTRA_SIZE_CHARGES[size];
-        }
+        if (c <= 0) return;
+        const extra = getExtraChargeForSize(size);
+        if (extra > 0) jerseyCharges += c * extra;
       });
     }
 

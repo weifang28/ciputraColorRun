@@ -1361,7 +1361,7 @@ export default function RegistrationPage() {
                                           </div>
 
                                           <div className="grid grid-cols-4 gap-3">
-                                            {["XXL","3XL","4XL","5XL"].map((size) => (
+                                            {["XXL","3L","4L","5L"].map((size) => (
                                               <div key={size} className="flex flex-col items-center">
                                                 <div className="flex items-center gap-1 mb-2">
                                                   <span className="text-xs font-medium text-orange-600">{size}</span>
@@ -1396,7 +1396,7 @@ export default function RegistrationPage() {
                                           </div>
 
                                           <div className="grid grid-cols-3 gap-3">
-                                            {["6XL"].map((size) => (
+                                            {["6L"].map((size) => (
                                               <div key={size} className="flex flex-col items-center">
                                                 <div className="flex items-center gap-1 mb-2">
                                                   <span className="text-xs font-medium text-red-600">{size}</span>
@@ -1625,7 +1625,7 @@ export default function RegistrationPage() {
                                           </div>
 
                                           <div className="grid grid-cols-4 gap-3">
-                                            {["XXL","3XL","4XL","5XL"].map((size) => (
+                                            {["XXL","3L","4L","5L"].map((size) => (
                                               <div key={size} className="flex flex-col items-center">
                                                 <div className="flex items-center gap-1 mb-2">
                                                   <span className="text-xs font-medium text-orange-600">{size}</span>
@@ -1660,7 +1660,7 @@ export default function RegistrationPage() {
                                           </div>
 
                                           <div className="grid grid-cols-3 gap-3">
-                                            {["6XL"].map((size) => (
+                                            {["6L"].map((size) => (
                                               <div key={size} className="flex flex-col items-center">
                                                 <div className="flex items-center gap-1 mb-2">
                                                   <span className="text-xs font-medium text-red-600">{size}</span>
