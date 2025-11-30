@@ -1679,7 +1679,7 @@ export default function RegistrationPage() {
                                         </div>
 
                                         <p className="text-xs text-gray-500 mt-3 text-center">
-                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / 4
+                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / {participants || 0}
                                         </p>
                                     </div>
 
