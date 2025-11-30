@@ -141,7 +141,7 @@ export default function RegistrationPage() {
         title: "Fill Personal Details and Pick Registration Type",
         description: "Start off by filling your personal details and picking the registration type (Individual/Community/Family)",
         image: "/images/tutorial/tut1.png",
-        tip: "Prepare ID"
+        tip: "Prepare ID Card"
       },
       {
         title: "Choose Race Distance, and Jersey Sizes",
@@ -258,8 +258,27 @@ export default function RegistrationPage() {
                         const formData = JSON.parse(savedFormData);
                         if (formData && formData.jerseys && typeof formData.jerseys === "object") {
                             Object.entries(formData.jerseys).forEach(([k, v]) => {
-                                if (k in merged) merged[k] = v;
-                                else merged[k] = v; // keep any unexpected keys
+                                // normalize parsed value to number | ""
+                                let parsed: number | "" = "";
+
+                                if (v === "" || v === null || v === undefined) {
+                                    parsed = "";
+                                } else if (typeof v === "number" && Number.isFinite(v)) {
+                                    parsed = v;
+                                } else if (typeof v === "string") {
+                                    const t = v.trim();
+                                    if (t === "") {
+                                        parsed = "";
+                                    } else {
+                                        const n = Number(t);
+                                        parsed = Number.isNaN(n) ? (merged[k] ?? 0) : n;
+                                    }
+                                } else {
+                                    // fallback: keep existing merged value if present, otherwise 0
+                                    parsed = merged[k] ?? 0;
+                                }
+
+                                merged[k] = parsed;
                             });
                         }
                     }
@@ -1582,7 +1601,7 @@ export default function RegistrationPage() {
                                             >
                                               Size Guide
                                             </button>
-                                          </div>
+                                                                                     </div>
 
                                           <div className="grid grid-cols-3 gap-3">
                                             <div className="flex flex-col items-center">
