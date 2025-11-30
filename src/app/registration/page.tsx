@@ -292,8 +292,26 @@ export default function RegistrationPage() {
                     if (saved) {
                         const parsed = JSON.parse(saved);
                         if (parsed && typeof parsed === "object") {
-                            Object.entries(parsed).forEach(([k, v]) => {
-                                merged[k] = v;
+                             Object.entries(parsed).forEach(([k, v]) => {
+                                // normalize parsed value to number | ""
+                                let parsedVal: number | "" = "";
+                                if (v === "" || v === null || v === undefined) {
+                                    parsedVal = "";
+                                } else if (typeof v === "number" && Number.isFinite(v)) {
+                                    parsedVal = v;
+                                } else if (typeof v === "string") {
+                                    const t = v.trim();
+                                    if (t === "") {
+                                        parsedVal = "";
+                                    } else {
+                                        const n = Number(t);
+                                        parsedVal = Number.isNaN(n) ? (merged[k] ?? 0) : n;
+                                    }
+                                } else {
+                                    // fallback: keep existing merged value if present, otherwise 0
+                                    parsedVal = merged[k] ?? 0;
+                                }
+                                merged[k] = parsedVal;
                             });
                         }
                     }
