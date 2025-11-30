@@ -2090,7 +2090,7 @@ export default function RegistrationPage() {
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
+                                    </svg>
                                         Size Guide
                                     </button>
                                 </div>
@@ -2784,11 +2784,72 @@ export default function RegistrationPage() {
                                 {/* Adult Size Chart */}
                                 <div className="flex flex-col">
                                     <h4 className="text-lg font-bold text-emerald-700 mb-3 text-center">Adult Sizes</h4>
-                                    <img
+                                    {/* <img
                                         src="/assets/sizes/dewasa.jpg"
                                         alt="Adult size chart"
                                         className="w-full h-auto rounded-lg shadow-md object-contain"
-                                    />
+                                    /> */}
+                                    {/* EXTRA: detailed measurements table (Length x Width) */}
+                                    <div className="mt-4 overflow-x-auto">
+                                      <table className="w-full text-sm bg-white shadow-sm rounded-md border border-gray-200">
+                                        <thead>
+                                          <tr className="bg-gray-50">
+                                            <th className="px-3 py-2 text-left text-gray-700 font-medium">Size</th>
+                                            <th className="px-3 py-2 text-left text-gray-700 font-medium">Length (cm)</th>
+                                            <th className="px-3 py-2 text-left text-gray-700 font-medium">Width (cm)</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="text-gray-700">
+                                          {/* Standard adult sizes */}
+                                          <tr className="border-t">
+                                            <td className="px-3 py-2">S</td>
+                                            <td className="px-3 py-2">63</td>
+                                            <td className="px-3 py-2">45</td>
+                                          </tr>
+                                          <tr className="border-t">
+                                            <td className="px-3 py-2">M</td>
+                                            <td className="px-3 py-2">67</td>
+                                            <td className="px-3 py-2">48</td>
+                                          </tr>
+                                          <tr className="border-t">
+                                            <td className="px-3 py-2">L</td>
+                                            <td className="px-3 py-2">71</td>
+                                            <td className="px-3 py-2">52</td>
+                                          </tr>
+                                          <tr className="border-t">
+                                            <td className="px-3 py-2">XL</td>
+                                            <td className="px-3 py-2">75</td>
+                                            <td className="px-3 py-2">56</td>
+                                          </tr>
+                                          <tr className="border-t">
+                                            <td className="px-3 py-2">XXL</td>
+                                            <td className="px-3 py-2">77</td>
+                                            <td className="px-3 py-2">58</td>
+                                          </tr>
+                                          {/* Larger sizes kept after standard sizes */}
+                                          <tr className="border-t">
+                                            <td className="px-3 py-2">XXXL</td>
+                                            <td className="px-3 py-2">80</td>
+                                            <td className="px-3 py-2">61</td>
+                                          </tr>
+                                          <tr className="border-t">
+                                            <td className="px-3 py-2">4L</td>
+                                            <td className="px-3 py-2">82</td>
+                                            <td className="px-3 py-2">63</td>
+                                          </tr>
+                                          <tr className="border-t">
+                                            <td className="px-3 py-2">5L</td>
+                                            <td className="px-3 py-2">84</td>
+                                            <td className="px-3 py-2">65</td>
+                                          </tr>
+                                          <tr className="border-t">
+                                            <td className="px-3 py-2">6L</td>
+                                            <td className="px-3 py-2">86</td>
+                                            <td className="px-3 py-2">67</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
                                 </div>
 
                                 {/* Kids Size Chart */}
