@@ -222,24 +222,94 @@ export default function ConfirmPaymentClient() {
                 }
                 formData.append("items", JSON.stringify(items));
 
-                const res = await fetch("/api/payments", {
-                    method: "POST",
-                    body: formData,
-                    credentials: "include",
-                });
+                let res: Response;
+                let body: any;
+                // Try FormData endpoint first (small files)
+                if (canUseFormData) {
+                    const formData = new FormData();
+                    formData.append("proof", proofFile);
+                    if (proofSenderName?.trim()) formData.append("proofSenderName", proofSenderName.trim());
+                    formData.append("amount", String(totalPrice));
+                    formData.append("fullName", fullName);
+                    formData.append("email", email);
+                    formData.append("phone", phone);
+                    formData.append("birthDate", birthDate);
+                    formData.append("gender", gender);
+                    formData.append("currentAddress", currentAddress);
+                    formData.append("nationality", nationality);
+                    formData.append("emergencyPhone", emergencyPhone);
+                    formData.append("medicalHistory", medicalHistory);
+                    formData.append("medicationAllergy", medicationAllergy || "");
+                    formData.append("registrationType", items[0]?.type || "individual");
+                    if (groupName?.trim()) formData.append("groupName", groupName.trim());
+                    if (userDetails?.idCardPhoto instanceof File) {
+                        formData.append("idCardPhoto", userDetails.idCardPhoto);
+                    }
+                    formData.append("items", JSON.stringify(items));
 
-                const body: any = await res.json().catch(() => ({}));
-
-                if (res.status === 413) {
-                    console.log("[handleConfirmedSubmit] 413 error, falling back to chunked upload...");
-                    throw new Error("File too large, switching to chunked upload");
+                    res = await fetch("/api/payments", { method: "POST", body: formData, credentials: "include" });
+                    body = await res.json().catch(() => ({}));
+                    // If server signals email/name mismatch, prompt the user
+                    if (res.status === 409 && body?.error === "EMAIL_NAME_MISMATCH") {
+                        const proceed = window.confirm(`The email you provided (${email}) is already associated with the account name "${body.existingName}". It's recommended to login first. Press OK to continue registering with this email anyway, or Cancel to login.`);
+                        if (!proceed) {
+                            router.push("/auth/login");
+                            return;
+                        }
+                        // user chose to continue -> retry with forceCreate flag
+                        formData.append("forceCreate", "true");
+                        res = await fetch("/api/payments", { method: "POST", body: formData, credentials: "include" });
+                        body = await res.json().catch(() => ({}));
+                    }
+                } else {
+                    // JSON/base64 endpoint
+                    const payload = {
+                        proofUrl,
+                        idCardUrl,
+                        items,
+                        amount: totalPrice,
+                        fullName,
+                        email,
+                        phone,
+                        birthDate,
+                        gender,
+                        currentAddress,
+                        nationality,
+                        emergencyPhone,
+                        medicalHistory,
+                        medicationAllergy: medicationAllergy || "",
+                        registrationType: items[0]?.type || "individual",
+                        proofSenderName: proofSenderName?.trim() || undefined,
+                        groupName: groupName?.trim() || undefined,
+                    };
+                    res = await fetch("/api/payments/base64", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                        credentials: "include",
+                    });
+                    body = await res.json().catch(() => ({}));
+                    if (res.status === 409 && body?.error === "EMAIL_NAME_MISMATCH") {
+                        const proceed = window.confirm(`The email you provided (${email}) is already associated with the account name "${body.existingName}". It's recommended to login first. Press OK to continue registering with this email anyway, or Cancel to login.`);
+                        if (!proceed) {
+                            router.push("/auth/login");
+                            return;
+                        }
+                        // retry with forceCreate
+                        payload.forceCreate = true;
+                        res = await fetch("/api/payments/base64", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload),
+                            credentials: "include",
+                        });
+                        body = await res.json().catch(() => ({}));
+                    }
                 }
 
                 if (!res.ok) {
-                    console.error("[handleConfirmedSubmit] Server error:", res.status, body);
-                    const errorMsg = body?.error || "An unexpected error occurred. Please try again.";
-                    showToast(errorMsg, "error");
-                    throw new Error("Upload failed");
+                    const errMsg = body?.error || "Upload failed";
+                    throw new Error(errMsg);
                 }
 
                 console.log("[handleConfirmedSubmit] Upload successful");

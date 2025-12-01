@@ -131,7 +131,7 @@ export async function POST(req: Request) {
 
     // Extract fields
     const fullName = String(formData.get("fullName") || "");
-    const email = String(formData.get("email") || "");
+    const email = String(formData.get("email") || "").trim();
     const phone = String(formData.get("phone") || "");
     const birthDate = String(formData.get("birthDate") || "");
     const gender = String(formData.get("gender") || "");
@@ -145,16 +145,27 @@ export async function POST(req: Request) {
     const proofSenderName = String(formData.get("proofSenderName") || "").trim();
     const groupName = String(formData.get("groupName") || "").trim();
     const cartItemsJson = String(formData.get("items") || "");
+    const forceCreate = String(formData.get("forceCreate") || "") === "true";
 
-    // CHANGED: Find existing user by full name (case-insensitive) - reuse if exists
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        name: {
-          equals: fullName,
-          mode: 'insensitive'
+    // Pre  p by email first (use findFirst because email is not guaranteed unique)
+    const existingByEmail = email ? await prisma.user.findFirst({ where: { email } }) : null;
+    let existingUser;
+    // Reuse only when email exists AND names match (case-insensitive)
+    if (existingByEmail && existingByEmail.name && existingByEmail.name.toLowerCase() === (fullName || "").toLowerCase()) {
+      existingUser = existingByEmail;
+    } else {
+      // Do not block on email/name mismatch — create a separate user in that case.
+      const existingByName = await prisma.user.findFirst({
+        where: {
+          name: { equals: fullName, mode: 'insensitive' }
         }
+      });
+      existingUser = existingByName && (!email || (existingByName.email === email)) ? existingByName : undefined;
+
+      if (existingByEmail && existingByEmail.name && existingByEmail.name.toLowerCase() !== (fullName || "").toLowerCase()) {
+        console.warn("[payments] Email exists with different name; creating a separate user:", existingByEmail.email, "existingName:", existingByEmail.name);
       }
-    });
+    }
 
     // MOVED: Generate txId and accessCode BEFORE file operations
     const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

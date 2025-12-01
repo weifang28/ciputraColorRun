@@ -62,19 +62,17 @@ function generateBibNumber(categoryName: string | undefined, participantId: numb
 }
 
 export async function POST(req: Request) {
-  console.log("[payments/base64] POST request received");
+  const body = await req.json();
+  const fullName = String(body.fullName || "");
+  const email = String(body.email || "").trim();
+  const forceCreate = Boolean(body.forceCreate);
 
   try {
-    const body = await req.json();
-    
     const {
       proofUrl,
       idCardUrl,
       items,
       amount,
-      fullName,
-      email,
-      phone,
       birthDate,
       gender,
       currentAddress,
@@ -91,15 +89,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
     }
 
-    // CHANGED: Find existing user by full name - reuse if exists
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        name: {
-          equals: fullName,
-          mode: 'insensitive'
+    // Prefer lookup by email first (use findFirst because email is not guaranteed unique)
+    const existingByEmail = email ? await prisma.user.findFirst({ where: { email } }) : null;
+    let existingUser;
+    // Reuse only when email exists AND names match (case-insensitive)
+    if (existingByEmail && existingByEmail.name && existingByEmail.name.toLowerCase() === (fullName || "").toLowerCase()) {
+      existingUser = existingByEmail;
+    } else {
+      // Do not block on email/name mismatch — create a separate user in that case.
+      const existingByName = await prisma.user.findFirst({
+        where: {
+          name: { equals: fullName, mode: 'insensitive' }
         }
+      });
+      existingUser = existingByName && (!email || (existingByName.email === email)) ? existingByName : undefined;
+
+      if (existingByEmail && existingByEmail.name && existingByEmail.name.toLowerCase() !== (fullName || "").toLowerCase()) {
+        // Log for audit/debug but proceed to create a new user as requested
+        console.warn("[payments/base64] Email exists with different name; creating a separate user:", existingByEmail.email, "existingName:", existingByEmail.name);
       }
-    });
+    }
 
     const txId = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
