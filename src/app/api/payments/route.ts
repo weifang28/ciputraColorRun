@@ -148,7 +148,7 @@ export async function POST(req: Request) {
     const forceCreate = String(formData.get("forceCreate") || "") === "true";
 
     // Helper: normalize a name for robust comparison
-    function normalizeName(n?: string) {
+    function normalizeName(n?: string | null) {
       const s = String(n || "");
       // NFD + strip combining marks (diacritics), collapse whitespace, trim, lower-case
       return s
