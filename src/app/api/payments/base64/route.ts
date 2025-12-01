@@ -73,6 +73,7 @@ export async function POST(req: Request) {
       idCardUrl,
       items,
       amount,
+      phone,                 // <-- added
       birthDate,
       gender,
       currentAddress,
