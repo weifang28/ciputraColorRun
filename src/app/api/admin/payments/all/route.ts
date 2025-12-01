@@ -14,7 +14,7 @@ export async function GET(request: Request) {
       },
       include: {
         user: true,
-        payments: true,
+        payment: true,
         participants: {
           include: {
             category: true,
