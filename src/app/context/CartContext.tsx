@@ -13,6 +13,7 @@ export interface CartItem {
   participants?: number;
   jerseys?: Record<string, number>;
   jerseyCharges?: number; // NEW: Extra charges for sizes above 5XL
+  groupName?: string; // ADDED: carry community/group name (optional)
 }
 
 export interface UserDetails {
