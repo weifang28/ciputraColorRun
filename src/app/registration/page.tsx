@@ -1370,282 +1370,27 @@ export default function RegistrationPage() {
                                     </div>
                                     <div className="grid grid-cols-3 gap-3">
                                         {["S", "M", "L", "XL"].map((size) => (
-                                            <div key={size} className="flex flex-col items-center">
-                                                <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
-                                                <input
-                                                    type="number"
-                                                    min={0}
-                                                    value={jerseys[size] ?? ""}
-                                                    onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                    className="jersey-input shift-right accent-[#e687a4]"
-                                                    placeholder="0"
-                                                    inputMode="numeric"
-                                                    aria-label={`Count for size ${size}`}
-                                                />
+                                          <div key={size} className="flex flex-col items-center">
+                                            <div className="flex items-center gap-1 mb-2">
+                                              <span className="text-xs font-medium text-gray-700">{size}</span>
                                             </div>
+                                            <input
+                                              type="number"
+                                              min={0}
+                                              value={jerseys[size] ?? ""}
+                                              onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                              className="jersey-input shift-right accent-purple-500 border-purple-300 focus:border-purple-500"
+                                              placeholder="0"
+                                              inputMode="numeric"
+                                              aria-label={`Count for size ${size}`}
+                                            />
+                                          </div>
                                         ))}
-                                    </div>
-                                </div>
-
-                                {/* Extra sizes: +Rp 10.000 each */}
-                                <div className="mb-4">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <p className="text-xs font-semibold text-orange-700">Adult Sizes (Extra - +Rp 10.000 each):</p>
-                                    <button
-                                      type="button"
-                                      onClick={() => openSizeChart()}
-                                      className="text-xs text-orange-600 hover:text-orange-700 underline"
-                                    >
-                                      Size Guide
-                                    </button>
-                                  </div>
-
-                                  <div className="grid grid-cols-4 gap-3">
-                                    {["XXL","3L","4L","5L"].map((size) => (
-                                      <div key={size} className="flex flex-col items-center">
-                                        <div className="flex items-center gap-1 mb-2">
-                                          <span className="text-xs font-medium text-orange-600">{size}</span>
-                                          <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
-                                        </div>
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          value={jerseys[size] ?? ""}
-                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                          className="jersey-input shift-right accent-orange-500 border-orange-300 focus:border-orange-500"
-                                          placeholder="0"
-                                          inputMode="numeric"
-                                          aria-label={`Count for size ${size}`}
-                                        />
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {/* Large extra sizes: +Rp 20.000 each */}
-                                <div className="mb-4">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <p className="text-xs font-semibold text-red-600">Large Extra Sizes (Extra - +Rp 20.000 each):</p>
-                                    <button
-                                      type="button"
-                                      onClick={() => openSizeChart()}
-                                      className="text-xs text-red-500 hover:text-red-600 underline"
-                                    >
-                                      Size Guide
-                                    </button>
-                                  </div>
-
-                                  <div className="grid grid-cols-3 gap-3">
-                                    {["6L"].map((size) => (
-                                      <div key={size} className="flex flex-col items-center">
-                                        <div className="flex items-center gap-1 mb-2">
-                                          <span className="text-xs font-medium text-red-600">{size}</span>
-                                          <span className="text-[10px] text-red-500 font-semibold">+20k</span>
-                                        </div>
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          value={jerseys[size] ?? ""}
-                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                          className="jersey-input shift-right accent-red-500 border-red-300 focus:border-red-500"
-                                          placeholder="0"
-                                          inputMode="numeric"
-                                          aria-label={`Count for size ${size}`}
-                                        />
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                <p className="text-xs text-gray-500 mt-3 text-center">
-                                    Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / 4
-                                </p>
-                            </div>
-
-                            {/* Family Bundle Pricing Display */}
-                            <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-lg">
-                                <div className="space-y-2 mb-3">
-                                    <span className="text-sm font-semibold text-gray-700 block">Price per person:</span>
-                                    <div className="flex items-center gap-2 flex-wrap justify-end">
-                                        {discountInfo && (
-                                            <>
-                                                <span className="text-xs sm:text-sm text-gray-400 line-through">
-                                                    Rp {discountInfo.basePrice.toLocaleString("id-ID")}
-                                                </span>
-                                                <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full whitespace-nowrap">
-                                                    -{discountInfo.discountPercent}%
-                                                </span>
-                                            </>
-                                        )}
-                                        <span className="text-base sm:text-lg font-bold text-purple-700 whitespace-nowrap">
-                                            Rp {currentPrice.toLocaleString("id-ID")}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="pt-3 border-t border-purple-200">
-                                    <div className="space-y-2 mb-3">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-sm font-semibold text-gray-700">
-                                                Subtotal ({selectedCategory?.bundleSize || 4} people):
-                                            </span>
-                                            <span className="text-base font-bold text-purple-700">
-                                                Rp {(currentPrice * (selectedCategory?.bundleSize || 4)).toLocaleString("id-ID")}
-                                            </span>
-                                        </div>
-                                        {calculateJerseyCharges(jerseys) > 0 && (
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-orange-600">Extra size charges:</span>
-                                                <span className="text-sm font-semibold text-orange-600">
-                                                    +Rp {calculateJerseyCharges(jerseys).toLocaleString("id-ID")}
-                                                </span>
-                                            </div>
-                                        )}
-                                        <div className="pt-2 border-t border-purple-200">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm font-bold text-gray-700">Grand Total:</span>
-                                                <span className="text-lg sm:text-xl font-bold text-purple-800 block">
-                                                    Rp {currentSubtotal.toLocaleString("id-ID")}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="pt-4">
-                                <button
-                                    onClick={handleAddToCart}
-                                    className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95"
-                                >
-                                    ADD FAMILY BUNDLE TO CART
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-
-                    {/* Community layout with improved pricing */}
-                    {type === "community" && (
-                        <div className="space-y-6 mt-6">
-                            {/* Current Progress */}
-                            {communityCount > 0 && (
-                                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <p className="text-sm font-medium text-emerald-800">
-                                          Community Participants: {communityCount}
-                                      </p>
-                                      <p className="text-xs text-emerald-600">
-                                        {communityCount >= 10 ? <span className="font-semibold text-green-600">✓ Minimum met</span> : <span>Add {10 - communityCount} more</span>}
-                                      </p>
-                                    </div>
-                                    {familyCount > 0 && (
-                                      <div className="mt-2 pt-2 border-t border-emerald-100 text-sm text-emerald-700">
-                                        <strong>Family Bundle participants (separate):</strong> {familyCount} (do not count toward community minimum)
-                                      </div>
-                                    )}
-                                </div>
-                            )}
-
-                            <div className="rounded-lg border border-gray-200 p-5 bg-white">
-                                <div className="space-y-5">
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                        <p className="text-xs text-blue-700">
-                                            💡 <strong>Tip:</strong> Add multiple categories! Total participants across all categories determine your tier pricing.
-                                            Example: 20 in 3K + 20 in 5K + 20 in 10K = 60 total → Best pricing tier!
-                                        </p>
-                                    </div>
-
-                                    <div className="grid gap-3">
-                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Race Category *</label>
-                                        <select
-                                            value={categoryId ?? ""}
-                                            onChange={(e) => setCategoryId(Number(e.target.value))}
-                                            className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 focus:border-emerald-500 focus:outline-none transition-colors text-base cursor-pointer"
-                                        >
-                                            {categories.map((cat) => (
-                                                <option key={cat.id} value={cat.id}>
-                                                    {cat.name} - Starting from Rp {Number(cat.basePrice).toLocaleString("id-ID")}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="grid gap-3">
-                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Number of Participants (for this category) *</label>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            value={participants}
-                                            onChange={(e) => setParticipants(e.target.value === "" ? "" : Number(e.target.value))}
-                                            className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-emerald-500 focus:outline-none transition-colors text-base"
-                                            placeholder="Enter participant amount (minimum 1)"
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            This will be added to your community total ({getTotalCommunityParticipants()} currently in cart)
-                                        </p>
-                                    </div>
-
-                                    {/* LIVE TIER INFO */}
-                                    {tierInfo && Number(participants || 0) > 0 && (
-                                        <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-lg">
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm font-semibold text-gray-700">Current Tier:</span>
-                                                    <span className="px-3 py-1 bg-purple-500 text-white text-xs font-bold rounded-full">
-                                                        {tierInfo.tier}
-                                                    </span>
-                                                </div>
-                                                <div className="text-xs text-gray-600">
-                                                    Total: {tierInfo.totalWithCurrent} participants ({tierInfo.totalInCart} in cart + {Number(participants || 0)} current)
-                                                </div>
-                                                {tierInfo.nextTier && tierInfo.participantsToNext > 0 && (
-                                                    <div className="pt-2 border-t border-purple-200">
-                                                        <p className="text-xs text-purple-700">
-                                                            🎯 Add <strong>{tierInfo.participantsToNext}</strong> more to unlock <strong>{tierInfo.nextTier}</strong> pricing!
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="grid gap-3">
-                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Jersey Size Distribution *</label>
-                                        
-                                        {/* Adult Sizes - Standard */}
-                                        <div className="mb-4">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-xs font-semibold text-gray-700">Adult Sizes (Standard):</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openSizeChart()}
-                                                    className="text-xs text-blue-600 hover:text-blue-700 underline"
-                                                >
-                                                    Size Guide
-                                                </button>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                {["S", "M", "L", "XL"].map((size) => (
-                                                    <div key={size} className="flex flex-col items-center">
-                                                        <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
-                                                        <input
-                                                            type="number"
-                                                            min={0}
-                                                            value={jerseys[size] ?? ""}
-                                                            onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                            className="jersey-input shift-right accent-[#e687a4]"
-                                                            placeholder="0"
-                                                            inputMode="numeric"
-                                                            aria-label={`Count for size ${size}`}
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Extra sizes: +Rp 10.000 each */}
-                                        <div className="mb-4">
+                                         </div>
+                                       </div>
+ 
+                                       {/* Extra sizes: +Rp 10.000 each */}
+                                       <div className="mb-4">
                                           <div className="flex items-center justify-between mb-2">
                                             <p className="text-xs font-semibold text-orange-700">Adult Sizes (Extra - +Rp 10.000 each):</p>
                                             <button
@@ -1661,7 +1406,7 @@ export default function RegistrationPage() {
                                             {["XXL","3L","4L","5L"].map((size) => (
                                               <div key={size} className="flex flex-col items-center">
                                                 <div className="flex items-center gap-1 mb-2">
-                                                  <span className="text-xs font-medium text-orange-600">{size}</span>
+                                                  <span className="text-xs font-medium text-orange-700">{size}</span>
                                                   <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
                                                 </div>
                                                 <input
@@ -1780,18 +1525,8 @@ export default function RegistrationPage() {
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="flex justify-center mt-4">
-                                <button
-                                    onClick={handleCheckout}
-                                    className="w-1/2 md:w-1/3 px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95"
-                                >
-                                    Proceed to Checkout
-                                </button>
-                            </div>
                         </div>
                     )}
-
 
                     {/* Community layout with improved pricing */}
                     {type === "community" && (
@@ -1895,21 +1630,24 @@ export default function RegistrationPage() {
                                             </div>
                                             <div className="grid grid-cols-3 gap-3">
                                                 {["S", "M", "L", "XL"].map((size) => (
-                                                    <div key={size} className="flex flex-col items-center">
-                                                        <span className="text-xs font-medium text-gray-500 mb-2">{size}</span>
-                                                        <input
-                                                            type="number"
-                                                            min={0}
-                                                            value={jerseys[size] ?? ""}
-                                                            onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
-                                                            className="jersey-input shift-right accent-[#e687a4]"
-                                                            placeholder="0"
-                                                            inputMode="numeric"
-                                                            aria-label={`Count for size ${size}`}
-                                                        />
+                                                  <div key={size} className="flex flex-col items-center">
+                                                    <div className="flex items-center gap-1 mb-2">
+                                                      <span className="text-xs font-medium text-gray-700">{size}</span>
                                                     </div>
+                                                    <input
+                                                      type="number"
+                                                      min={0}
+                                                      value={jerseys[size] ?? ""}
+                                                      onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                      className="jersey-input shift-right accent-purple-500 border-purple-300 focus:border-purple-500"
+                                                      placeholder="0"
+                                                      inputMode="numeric"
+                                                      aria-label={`Count for size ${size}`}
+                                                    />
+                                                  </div>
                                                 ))}
-                                            </div>
+                                                 </div>
+                                              
                                         </div>
 
                                         {/* Extra sizes: +Rp 10.000 each */}
@@ -1929,7 +1667,7 @@ export default function RegistrationPage() {
                                             {["XXL","3L","4L","5L"].map((size) => (
                                               <div key={size} className="flex flex-col items-center">
                                                 <div className="flex items-center gap-1 mb-2">
-                                                  <span className="text-xs font-medium text-orange-600">{size}</span>
+                                                  <span className="text-xs font-medium text-orange-700">{size}</span>
                                                   <span className="text-[10px] text-orange-500 font-semibold">+10k</span>
                                                 </div>
                                                 <input
@@ -2231,8 +1969,7 @@ export default function RegistrationPage() {
                             </div>
                         </div>
                     )}
-
-            </section>
+                </section>
             </div>
 
             {/* Terms and Conditions Modal */}
