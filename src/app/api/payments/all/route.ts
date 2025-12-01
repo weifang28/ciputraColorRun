@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       include: {
         user: true,
         // use the relation name that matches your generated Prisma client
-        payments: true,
+        payment: true,
         participants: {
           include: {
             category: true,
