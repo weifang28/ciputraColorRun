@@ -13,7 +13,7 @@ export async function GET() {
           include: { jersey: true, category: true },
           orderBy: { id: "asc" },
         },
-        payments: true,
+        payment: true,
       },
       orderBy: { createdAt: "desc" },
     });
