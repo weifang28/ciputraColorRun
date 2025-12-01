@@ -22,19 +22,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing registrationId' }, { status: 400 });
     }
 
-    // Update registration + its pending payments in a single transaction
+    // Load registration (include payment relation) so we can target the transaction-level Payment
+    const registrationBefore = await prisma.registration.findUnique({
+      where: { id: registrationId },
+      include: { user: true, payment: true },
+    });
+    if (!registrationBefore) {
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+    }
+
+    const paymentIdForReg = registrationBefore.payment?.id ?? null;
+
+    // Update registration + its pending payment(s) in a single transaction
     const registration = await prisma.$transaction(async (tx) => {
-      // mark payments for this registration as confirmed
-      await tx.payment.updateMany({
-        where: { registrationId, status: 'pending' },
-        data: { status: 'confirmed' },
-      });
+      if (paymentIdForReg) {
+        // Update the transaction-level payment by id
+        await tx.payment.updateMany({
+          where: { id: paymentIdForReg, status: 'pending' },
+          data: { status: 'confirmed' },
+        });
+      } else {
+        // Fallback for legacy schemas where Payment may have registrationId
+        await tx.payment.updateMany({
+          where: { registrationId, status: 'pending' } as any,
+          data: { status: 'confirmed' },
+        });
+      }
 
       // update registration paymentStatus
       const reg = await tx.registration.update({
         where: { id: registrationId },
         data: { paymentStatus: 'confirmed' },
-        include: { user: true },
+        include: { user: true, payment: true },
       });
 
       return reg;
