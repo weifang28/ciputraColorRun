@@ -54,14 +54,17 @@ export async function GET(request: Request) {
         participantCount: reg.participants.length,
         categoryCounts: Object.keys(categoryCounts).length > 0 ? categoryCounts : undefined,
         jerseySizes: Object.keys(jerseySizes).length > 0 ? jerseySizes : undefined,
-        payments: reg.payments.map(p => ({
-          id: p.id,
-          amount: p.amount,
-          proofOfPayment: p.proofOfPayment,
-          // Prisma client types may be stale until `prisma generate` is run.
-          proofSenderName: (p as any).proofSenderName,
-          status: p.status,
-        })),
+        // Normalize singular `payment` relation to an array for consumers expecting `payments`
+        payments: reg.payment ? [{
+          id: reg.payment.id,
+          amount: Number(reg.payment.amount ?? 0),
+          proofOfPayment: reg.payment.proofOfPayment,
+          // keep custom fields potentially present on the record
+          proofSenderName: (reg.payment as any)?.proofSenderName,
+          status: reg.payment.status,
+          transactionId: reg.payment.transactionId,
+          registrationId: reg.id,
+        }] : [],
         user: {
           birthDate: reg.user.birthDate,
           gender: reg.user.gender,
