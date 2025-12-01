@@ -216,6 +216,51 @@ export default function LODashboard() {
     }
   }
 
+  // Confirm decline from the modal — decline all registrations for the selected payment (or the pending id)
+  async function confirmDecline() {
+    const reason = declineReason?.trim() || 'Declined by admin';
+    // Determine registration IDs to decline: prefer selectedPayment.registrationIds, fallback to pendingDeclineId
+    const regIds: number[] = [];
+    if (selectedPayment?.registrationIds && selectedPayment.registrationIds.length > 0) {
+      regIds.push(...selectedPayment.registrationIds);
+    } else if (pendingDeclineId) {
+      regIds.push(pendingDeclineId);
+    } else if (selectedPayment?.registrationId) {
+      regIds.push(selectedPayment.registrationId);
+    }
+
+    if (regIds.length === 0) {
+      alert('No registration selected to decline.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      for (const regId of regIds) {
+        const res = await fetch('/api/payments/decline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ registrationId: regId, reason }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body?.error || body?.message || `Failed to decline registration ${regId}`);
+      }
+      // Success
+      setShowDeclineModal(false);
+      setPendingDeclineId(null);
+      setDeclineReason('');
+      await fetchPayments();
+      await fetchStatusCounts();
+      alert('Selected registration(s) declined and notification(s) sent.');
+    } catch (err: any) {
+      console.error('Decline failed:', err);
+      alert('Decline failed: ' + (err?.message || String(err)));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const handleChangeStatus = async (registrationId: number, newStatus: 'confirmed' | 'declined') => {
     const action = newStatus === 'confirmed' ? 'confirm' : 'decline';
     if (!confirm(`Change payment status to ${newStatus}?`)) return;
