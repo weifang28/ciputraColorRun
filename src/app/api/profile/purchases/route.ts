@@ -45,10 +45,10 @@ export async function GET(req: Request) {
     console.log('[profile/purchases] Found user ID:', user.id, 'Name:', user.name);
 
     // 2. Fetch registrations ONLY for this specific user ID - INCLUDE payment status
-    const registrations = await prisma.registration.findMany({
-      where: { 
-        userId: user.id  // CRITICAL: Filter by user ID, not email
-      },
+    // NOTE: schema uses `payment` (singular) on Registration now.
+    // Include the singular payment and then normalize to a `payments` array for backward compatibility.
+    const rawRegs = await prisma.registration.findMany({
+      where: { userId: user.id },
       include: {
         qrCodes: true,
         participants: {
@@ -57,13 +57,35 @@ export async function GET(req: Request) {
             jersey: true,
           },
         },
-        payments: {
+        payment: {
           select: {
+            id: true,
             status: true,
+            amount: true,
+            transactionId: true,
+            proofOfPayment: true,
           },
         },
       },
       orderBy: { createdAt: 'desc' },
+    });
+
+    // Normalize so existing UI expects `payments` array
+    const registrations = rawRegs.map((r: any) => {
+      const paymentsArr = r.payment ? [{
+        id: r.payment.id,
+        status: r.payment.status,
+        amount: r.payment.amount,
+        transactionId: r.payment.transactionId,
+        proofOfPayment: r.payment.proofOfPayment,
+        registrationId: r.id,
+      }] : [];
+
+      // keep original shape plus normalized payments
+      return {
+        ...r,
+        payments: paymentsArr,
+      };
     });
 
     console.log('[profile/purchases] Found registrations:', registrations.length, 'for user ID:', user.id);

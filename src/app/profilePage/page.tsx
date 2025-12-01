@@ -5,6 +5,7 @@ import { UserInfoCard } from './UserInfoCard';
 import { PurchaseCard } from './PurchaseCard';
 import { FloatingElements } from './FloatingElements';
 import { Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface UserData {
   name: string;
@@ -26,6 +27,7 @@ type PurchaseData =
       jerseySizes: { size: string; count: number }[];
       totalPrice: number;
       qrCodeData: string | null;
+      paymentStatus?: string;
     }
   | {
       type: 'individual';
@@ -33,9 +35,20 @@ type PurchaseData =
       jerseySize: string;
       price: number;
       qrCodeData: string | null;
+      paymentStatus?: string;
+    }
+  | {
+      type: 'family';
+      category: string;
+      participantCount: number;
+      jerseySizes: { size: string; count: number }[];
+      totalPrice: number;
+      qrCodeData: string | null;
+      paymentStatus?: string;
     };
 
 export default function App() {
+  const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,19 +63,27 @@ export default function App() {
         if (!userRes.ok) {
           if (userRes.status === 401) {
             setError('Please log in to view your profile');
-          } else {
-            const errData = await userRes.json().catch(() => ({}));
-            setError(errData?.error || 'Failed to load user data');
+            setIsLoading(false);
+            return;
           }
-          setIsLoading(false);
-          return;
+          const err = await userRes.json().catch(() => ({}));
+          throw new Error(err?.error || 'Failed to load user');
         }
         const userData = await userRes.json();
         setUserData(userData.user);
 
         const purchaseRes = await fetch('/api/profile/purchases', { credentials: 'include' });
-        if (!purchaseRes.ok) throw new Error('Failed to load purchases');
-        
+        if (!purchaseRes.ok) {
+          if (purchaseRes.status === 401) {
+            // Not authenticated -> redirect to login
+            router.push('/auth/login');
+            return;
+          }
+          const errBody = await purchaseRes.json().catch(() => ({}));
+          const msg = errBody?.error || errBody?.message || `Failed to load purchases (${purchaseRes.status})`;
+          throw new Error(msg);
+        }
+
         const purchaseData = await purchaseRes.json();
         const registrations = purchaseData?.registrations || [];
 
@@ -74,6 +95,31 @@ export default function App() {
           // ADDED: Get payment status
           const paymentStatus = reg.paymentStatus || 'pending';
           const isConfirmed = paymentStatus === 'confirmed';
+
+          // If this registration is a FAMILY bundle, map it as a single family purchase
+          const regType = (reg.registrationType || (reg as any).registration_type) as string | undefined;
+          if (regType === 'family') {
+            const sizesMap: Record<string, number> = {};
+            participants.forEach((p: any) => {
+              const size = p.jersey?.size || 'M';
+              sizesMap[size] = (sizesMap[size] || 0) + 1;
+            });
+            const categoryName = participants[0]?.category?.name || 'Unknown';
+            const participantCount = participants.length;
+            const qrForCat = Array.isArray(reg.qrCodes) ? reg.qrCodes.find((q: any) => Number(q.categoryId) === Number(participants[0]?.categoryId)) : reg.qrCodes?.[0];
+            const qrCodeData = isConfirmed ? (qrForCat?.qrCodeData ?? null) : null;
+
+            mapped.push({
+              type: 'family',
+              category: categoryName,
+              participantCount,
+              jerseySizes: Object.entries(sizesMap).map(([size, count]) => ({ size, count })),
+              totalPrice: Number(reg.totalAmount || 0),
+              qrCodeData,
+              paymentStatus,
+            } as any);
+            continue; // skip normal per-category mapping
+          }
 
           const byCat: Record<number, any[]> = {};
           participants.forEach((p: any) => {
@@ -145,8 +191,8 @@ export default function App() {
 
         setPurchases(mapped);
       } catch (err: any) {
-        console.error('Error fetching profile/purchases:', err);
-        setError(err?.message || 'An error occurred while loading your profile');
+        console.error('fetchUserAndPurchases error:', err);
+        setError(err?.message || 'Failed to load profile or purchases');
       } finally {
         setIsLoading(false);
       }
@@ -185,6 +231,12 @@ export default function App() {
         return false;
     }
   };
+
+  // Format number to Indonesian Rupiah
+  function formatRupiah(amount?: number | null): string {
+    if (amount == null || Number.isNaN(Number(amount))) return 'Rp -';
+    return 'Rp ' + Number(amount).toLocaleString('id-ID');
+  }
 
   if (isLoading) {
     return (
@@ -308,9 +360,15 @@ export default function App() {
                         {purchases.length === 0 ? (
                           <div className="text-center text-gray-600">No purchases found.</div>
                         ) : (
-                          purchases.map((p, idx) => (
-                            <PurchaseCard key={idx} purchase={p as any} qrCodeData={(p as any).qrCodeData ?? null} />
-                          ))
+                          <>
+                            {purchases.map((p, idx) => (
+                              <PurchaseCard
+                                key={`purchase-${(p as any)?.registrationId ?? idx}`}
+                                purchase={p as any}
+                                qrCodeData={(p as any).qrCodeData ?? null}
+                              />
+                            ))}
+                          </>
                         )}
                       </div>
                     </div>

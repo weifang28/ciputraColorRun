@@ -80,7 +80,9 @@ model Registration {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   participants     Participant[]
-  payments         Payment[]
+  // NEW: link to the transaction-level payment that covers this registration
+  paymentId        Int?
+  payment          Payment?      @relation(fields: [paymentId], references: [id])
   qrCodes          QrCode[]
   user             User          @relation(fields: [userId], references: [id])
 }
@@ -100,17 +102,17 @@ model Participant {
 
 model Payment {
   id               Int       @id @default(autoincrement())
-  registrationId   Int
   transactionId    String
   proofOfPayment   String?
   proofSenderName  String?
-  paidAt           DateTime?   // NEW: time of settlement / external paid timestamp
+  paidAt           DateTime?   // time of settlement / external paid timestamp
   status           String    @default("pending")
   amount           Decimal?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  registration     Registration @relation(fields: [registrationId], references: [id])
+  // NEW: one Payment covers many Registrations
+  registrations    Registration[]
 }
 
 model QrCode {

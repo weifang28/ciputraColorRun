@@ -8,13 +8,14 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'pending';
 
+    // fetch registrations including their payment (new single-payment relation)
     const registrations = await prisma.registration.findMany({
       where: {
         paymentStatus: status as any,
       },
       include: {
         user: true,
-        payments: true,
+        payment: true,
         participants: {
           include: {
             category: true,
@@ -52,15 +53,16 @@ export async function GET(request: Request) {
         participantCount: reg.participants.length,
         categoryCounts: Object.keys(categoryCounts).length > 0 ? categoryCounts : undefined,
         jerseySizes: Object.keys(jerseySizes).length > 0 ? jerseySizes : undefined,
-        payments: reg.payments.map(p => ({
-          id: p.id,
-          amount: Number(p.amount || 0),
-          proofOfPayment: p.proofOfPayment,
-          proofSenderName: (p as any).proofSenderName,
-          status: p.status,
-          transactionId: p.transactionId,
-          registrationId: p.registrationId,
-        })),
+        // payment (transaction) that covers this registration
+        payments: reg.payment ? [{
+          id: reg.payment.id,
+          amount: Number(reg.payment.amount || 0),
+          proofOfPayment: reg.payment.proofOfPayment,
+          proofSenderName: (reg.payment as any).proofSenderName,
+          status: reg.payment.status,
+          transactionId: reg.payment.transactionId,
+          registrationId: reg.id,
+        }] : [],
         user: {
           birthDate: reg.user.birthDate,
           gender: reg.user.gender,
@@ -73,11 +75,11 @@ export async function GET(request: Request) {
       };
     });
 
-    // Aggregate transactions (group payments by transactionId)
+    // Aggregate transactions by registration.payment.transactionId
     const txMap = new Map<string, any>();
-
     registrations.forEach(reg => {
-      reg.payments.forEach((p: any) => {
+      const p = reg.payment;
+      if (p) {
         const txId = p.transactionId || String(p.id);
         const entry = txMap.get(txId) || {
           transactionId: txId,
@@ -90,22 +92,28 @@ export async function GET(request: Request) {
           email: reg.user?.email,
           phone: reg.user?.phone,
           registrationTypes: new Set<string>(),
+          categoryCounts: {} as Record<string, number>,
+          jerseySizes: {} as Record<string, number>,
+          _amountAdded: false, // internal flag to avoid double-counting
         };
 
-        entry.totalAmount += Number(p.amount || 0);
-        entry.registrationIds.add(reg.id);
-        entry.payments.push({
-          id: p.id,
-          registrationId: reg.id,
-          amount: Number(p.amount || 0),
-          status: p.status,
-        });
-        if (reg.registrationType) entry.registrationTypes.add(reg.registrationType);
-        txMap.set(txId, entry);
-      });
+        // Ensure the transaction total is set only once (payment.amount is transaction-level)
+        if (!entry._amountAdded) {
+          entry.totalAmount = Number(p.amount || 0);
+          entry._amountAdded = true;
+        }
 
-      // If a registration has no payments (theoretically) include it as single-reg transaction
-      if (!reg.payments || reg.payments.length === 0) {
+         entry.registrationIds.add(reg.id);
+         // collect category & jersey aggregates
+         reg.participants.forEach(p => {
+           const catName = p.category?.name || 'Unknown';
+           entry.categoryCounts[catName] = (entry.categoryCounts[catName] || 0) + 1;
+           const jerseySize = p.jersey?.size || 'M';
+           entry.jerseySizes[jerseySize] = (entry.jerseySizes[jerseySize] || 0) + 1;
+         });
+        txMap.set(txId, entry);
+      } else {
+        // registrations without any payment -> synthetic per-registration transaction
         const syntheticTx = `reg-${reg.id}`;
         if (!txMap.has(syntheticTx)) {
           txMap.set(syntheticTx, {

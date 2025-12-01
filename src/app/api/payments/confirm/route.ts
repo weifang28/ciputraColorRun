@@ -50,9 +50,10 @@ export async function POST(request: Request) {
     }
 
     // 0) Load registration + user - CRITICAL: Get the specific userId from this registration
+    // load registration with the singular payment relation (schema uses `payment`)
     const registration = await prisma.registration.findUnique({
       where: { id: registrationId },
-      include: { user: true, payments: true },
+      include: { user: true, payment: true },
     });
     if (!registration) return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
 
@@ -128,11 +129,13 @@ export async function POST(request: Request) {
 
     // 3) Perform DB updates first, then send email
     const updated = await prisma.$transaction(async (tx) => {
-      // mark payments as confirmed
-      await tx.payment.updateMany({
-        where: { registrationId, status: 'pending' },
-        data: { status: 'confirmed' },
-      });
+      // mark the transaction-level payment (if present) as confirmed
+      if (registration.paymentId) {
+        await tx.payment.updateMany({
+          where: { id: registration.paymentId, status: 'pending' },
+          data: { status: 'confirmed' },
+        });
+      }
 
       // CRITICAL: Update ONLY this specific user by their unique ID with their access code
       console.log('[payments/confirm] Updating user', userId, 'with access code:', accessCode);
@@ -145,7 +148,7 @@ export async function POST(request: Request) {
       const reg = await tx.registration.update({
         where: { id: registrationId },
         data: { paymentStatus: 'confirmed' },
-        include: { user: true, payments: true },
+        include: { user: true, payment: true },
       });
 
       console.log('[payments/confirm] Updated registration', registrationId, 'payment status to confirmed');
@@ -186,31 +189,49 @@ export async function POST(request: Request) {
     });
     console.log('[payments/confirm] Verification - User', userId, 'now has access code:', verifyUser?.accessCode);
 
-    // 5) Fetch QR codes for this registration
-    const qrRecords = await prisma.qrCode.findMany({
-      where: { registrationId },
-      include: { category: true },
-      orderBy: { id: 'asc' },
-    });
+    // 5) Fetch QR codes for all registrations that belong to the same payment (if any).
+    // If this registration is part of a transaction-level payment, include QR codes for all registrations covered by that payment.
+    const paymentId = registration.paymentId ?? null;
+    let registrationsForPayment: any[] = [];
+    let qrRecords: any[] = [];
 
-    // Build attachments (inline) and HTML parts for each QR
+    if (paymentId) {
+      // fetch all registrations attached to this payment, include their qrCodes and category
+      registrationsForPayment = await prisma.registration.findMany({
+        where: { paymentId },
+        include: {
+          qrCodes: { include: { category: true } },
+        },
+        orderBy: { id: 'asc' },
+      });
+      // flatten qr records and keep registration context
+      qrRecords = registrationsForPayment.flatMap(r => (r.qrCodes || []).map((q: any) => ({ ...q, _registration: r })));
+    } else {
+      // fallback: single registration
+      const singleRegs = await prisma.registration.findUnique({
+        where: { id: registrationId },
+        include: { qrCodes: { include: { category: true } } },
+      });
+      registrationsForPayment = singleRegs ? [singleRegs] : [];
+      qrRecords = (singleRegs?.qrCodes || []).map((q: any) => ({ ...q, _registration: singleRegs }));
+    }
+
+    // Build attachments (inline) and HTML grouped by registration
     const attachments: any[] = [];
-    const qrHtmlParts: string[] = [];
-    
+    const qrHtmlPartsByReg: Record<number, string[]> = {};
+
+    // Build absolute host once
+    const hostHeader = request.headers.get('host') || 'ciputrarun.com';
+    const protocol = hostHeader.includes('localhost') ? 'http' : 'https';
+    const appUrl = `${protocol}://${hostHeader}`;
+
     for (const q of qrRecords) {
       const label = q.category?.name ? `<p style="margin:6px 0 8px;font-weight:600">${q.category?.name}</p>` : "";
       const rawToken = String(q.qrCodeData || "");
-      
-      // FIX: Build absolute claim URL using request host instead of env variables
-      const host = request.headers.get('host') || 'ciputrarun.com';
-      const protocol = host.includes('localhost') ? 'http' : 'https';
-      const appUrl = `${protocol}://${host}`;
-      
       const payload = rawToken.startsWith('http') ? rawToken : `${appUrl}/claim/${encodeURIComponent(rawToken)}`;
-      
-      console.log(`[confirm] Generated QR URL: ${payload}`);
 
-      // generate PNG buffer server-side
+      console.log(`[confirm] Generated QR URL: ${payload} (reg ${q.registrationId})`);
+
       let pngBuffer: Buffer;
       try {
         pngBuffer = await QRCode.toBuffer(payload, { type: "png", width: 400, margin: 1 });
@@ -226,7 +247,9 @@ export async function POST(request: Request) {
         cid,
       });
 
-      qrHtmlParts.push(
+      const regId = q._registration?.id ?? q.registrationId;
+      qrHtmlPartsByReg[regId] = qrHtmlPartsByReg[regId] || [];
+      qrHtmlPartsByReg[regId].push(
         `<div style="display:inline-block;margin:10px;text-align:center">
            ${label}
            <a href="${payload}" target="_blank" rel="noreferrer" style="text-decoration:none;color:inherit">
@@ -236,7 +259,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build complete email HTML
+    // Join QR parts grouped by registration with headings
+    const qrHtmlParts: string[] = registrationsForPayment.map(r => {
+      const regHeader = `<h3 style="margin-bottom:6px;">Registration #${r.id}${r.groupName ? ` — ${r.groupName}` : ''}</h3>`;
+      const parts = (qrHtmlPartsByReg[r.id] || []).join('');
+      return `<section style="margin-bottom:18px;">${regHeader}${parts || '<p>No QR codes available</p>'}</section>`;
+    });
+ 
+    // Build complete email HTML (include grouped registration QR sections)
     const mailHtml = `
       <div style="font-family: Inter, Arial, sans-serif; color:#111827; line-height:1.5; max-width:680px;">
         <h1 style="color:#0f172a;">Your Registration is Verified!</h1>

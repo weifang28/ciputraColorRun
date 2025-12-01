@@ -26,31 +26,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing registrationId' }, { status: 400 });
     }
 
-    // Get registration details before updating
+    // Get registration details before updating (include payment relation to get payment id)
     const registrationBefore = await prisma.registration.findUnique({
       where: { id: registrationId },
-      include: { user: true },
+      include: { user: true, payment: true },
     });
-
+ 
     if (!registrationBefore) {
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
-
+ 
     // Update both payment records and registration status inside a transaction
+    const paymentIdForReg = registrationBefore.payment?.id ?? null;
     const registration = await prisma.$transaction(async (tx) => {
-      // mark pending payments as declined
-      await tx.payment.updateMany({
-        where: { registrationId, status: 'pending' },
-        data: { status: 'declined' },
-      });
-
-      // update registration status to declined
-      const reg = await tx.registration.update({
-        where: { id: registrationId },
-        data: { paymentStatus: 'declined' },
-        include: { user: true },
-      });
-
+      // If this registration belongs to a transaction-level payment, decline that payment (by id)
+      if (paymentIdForReg) {
+        await tx.payment.updateMany({
+          where: { id: paymentIdForReg, status: 'pending' },
+          data: { status: 'declined' },
+        });
+      } else {
+        // Fallback for legacy rows where Payment may have registrationId field
+        await tx.payment.updateMany({
+          where: { registrationId, status: 'pending' } as any,
+          data: { status: 'declined' },
+        });
+      }
+ 
+       // update registration status to declined
+       const reg = await tx.registration.update({
+         where: { id: registrationId },
+         data: { paymentStatus: 'declined' },
+         include: { user: true },
+       });
+ 
       // Restore early-bird capacity
       const participants = await tx.participant.findMany({
         where: { registrationId },

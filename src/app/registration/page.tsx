@@ -401,15 +401,26 @@ export default function RegistrationPage() {
         return items.some(item => item.type === "community");
     }, [items]);
 
-    // Calculate total community participants across all cart items
+    // TOTALS: keep community and family totals separate
     function getTotalCommunityParticipants(): number {
         return items
-            .filter(item => item.type === "community" || item.type === "family")
+            .filter(item => item.type === "community")
+            .reduce((sum, item) => sum + (Number(item.participants || 0)), 0);
+    }
+
+    function getTotalFamilyParticipants(): number {
+        return items
+            .filter(item => item.type === "family")
             .reduce((sum, item) => {
-                if (item.type === "family") return sum + (item.participants || 4);
-                return sum + (item.participants || 0);
+                // family items use participants (bundle size). default to 4 if missing.
+                const count = Number(item.participants ?? 4) || 4;
+                return sum + count;
             }, 0);
     }
+
+    // Derived totals for rendering (avoid recomputing multiple times in JSX)
+    const communityCount = getTotalCommunityParticipants();
+    const familyCount = getTotalFamilyParticipants();
 
     // NEW: Calculate extra jersey charges
     function calculateJerseyCharges(jerseySelection: Record<string, number | "">): number {
@@ -1497,25 +1508,26 @@ export default function RegistrationPage() {
                         </div>
                     )}
 
-                    
-
-                    
-                    
 
                     {/* Community layout with improved pricing */}
                     {type === "community" && (
                         <div className="space-y-6 mt-6">
                             {/* Current Progress */}
-                            {getTotalCommunityParticipants() > 0 && (
+                            {communityCount > 0 && (
                                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                                    <p className="text-sm font-medium text-emerald-800 mb-2">
-                                        Total Community Participants in Cart: {getTotalCommunityParticipants()}
-                                    </p>
-                                    <p className="text-xs text-emerald-600">
-                                        {getTotalCommunityParticipants() >= 10 
-                                            ? "✓ Minimum requirement met! Add more for better pricing."
-                                            : `Add ${10 - getTotalCommunityParticipants()} more to meet minimum for checkout.`}
-                                    </p>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-sm font-medium text-emerald-800">
+                                          Community Participants: {communityCount}
+                                      </p>
+                                      <p className="text-xs text-emerald-600">
+                                        {communityCount >= 10 ? <span className="font-semibold text-green-600">✓ Minimum met</span> : <span>Add {10 - communityCount} more</span>}
+                                      </p>
+                                    </div>
+                                    {familyCount > 0 && (
+                                      <div className="mt-2 pt-2 border-t border-emerald-100 text-sm text-emerald-700">
+                                        <strong>Family Bundle participants (separate):</strong> {familyCount} (do not count toward community minimum)
+                                      </div>
+                                    )}
                                 </div>
                             )}
 

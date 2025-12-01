@@ -19,7 +19,10 @@ const TYPE_FILTERS = [
 ];
 
 interface PaymentDetail {
+  // compatibility fields kept
   registrationId: number;
+  registrationIds?: number[];
+  transactionId?: string;
   userName: string;
   email: string;
   phone: string;
@@ -34,8 +37,10 @@ interface PaymentDetail {
   payments: Array<{
     id: number;
     amount: number;
-    proofOfPayment: string;
-    status: string;
+    proofOfPayment?: string;
+    status?: string;
+    transactionId?: string;
+    registrationId?: number;
   }>;
   user?: {
     birthDate?: string;
@@ -46,6 +51,16 @@ interface PaymentDetail {
     medicalHistory?: string;
     idCardPhoto?: string;
   };
+
+  // NEW: include registration objects for the payment (populated from API.registrations)
+  registrations?: Array<{
+    registrationId: number;
+    registrationType: string;
+    totalAmount: number;
+    groupName?: string;
+    participantCount: number;
+    createdAt: string;
+  }>;
 }
 
 interface StatusCounts {
@@ -99,11 +114,7 @@ export default function LODashboard() {
     try {
       setLoading(true);
       const currentStatus = TABS.find(t => t.key === activeTab)?.status || 'pending';
-      
-      const endpoint = currentStatus === 'pending' 
-        ? '/api/payments/pending'
-        : `/api/payments/all?status=${currentStatus}`;
-      
+      const endpoint = currentStatus === 'pending' ? '/api/payments/pending' : `/api/payments/all?status=${currentStatus}`;
       const res = await fetch(endpoint, { credentials: 'include' });
       if (!res.ok) {
         if (res.status === 401) {
@@ -114,9 +125,42 @@ export default function LODashboard() {
         throw new Error(err.error || 'Failed to fetch payments');
       }
       const data = await res.json();
-      
-      const paymentsData = Array.isArray(data) ? data : data.registrations || [];
-      setPayments(paymentsData);
+
+      // Prefer aggregated transactions when provided by API
+      if (Array.isArray(data.transactions) && data.transactions.length > 0) {
+        // build registration map if server returned per-registration rows
+        const regMap: Record<number, any> = (data.registrations || []).reduce((m: Record<number, any>, r: any) => {
+          m[r.registrationId] = r;
+          return m;
+        }, {});
+
+        const txs = data.transactions as any[];
+        const mapped = txs.map(tx => ({
+          registrationId: tx.registrationIds?.[0] ?? 0, // compatibility: first reg id
+          registrationIds: tx.registrationIds ?? [],
+          transactionId: tx.transactionId,
+          userName: tx.userName ?? tx.email ?? '—',
+          email: tx.email ?? '—',
+          phone: tx.phone ?? '—',
+          registrationType: (tx.registrationTypes && tx.registrationTypes[0]) || 'individual',
+          groupName: tx.groupName,
+          totalAmount: Number(tx.totalAmount || 0),
+          createdAt: tx.createdAt,
+          paymentStatus: tx.paymentStatus,
+          participantCount: tx.registrationIds?.length ?? 0,
+          categoryCounts: tx.categoryCounts,
+          jerseySizes: tx.jerseySizes,
+          payments: tx.payments || [],
+          user: tx.user || undefined,
+          // attach registration objects if available
+          registrations: (tx.registrationIds || []).map((id: number) => regMap[id]).filter(Boolean),
+        })) as PaymentDetail[];
+        setPayments(mapped);
+      } else {
+        // Fallback: older per-registration shape
+        const paymentsData = Array.isArray(data) ? data : (data.registrations || []);
+        setPayments(paymentsData as any);
+      }
     } catch (err: any) {
       setError(err.message);
       console.error('Error fetching payments:', err);
@@ -125,71 +169,52 @@ export default function LODashboard() {
     }
   }
 
-  const handleAccept = async (registrationId: number) => {
-    if (!confirm('Confirm this payment? QR code will be sent to user email.')) return;
-    
+  // Accept/Decline must operate on all registrations linked to a payment
+  async function handleAccept(payment: PaymentDetail) {
+    if (!confirm(`Confirm payment for transaction ${payment.transactionId || payment.registrationId}? This will confirm all linked registrations.`)) return;
     try {
-      const res = await fetch('/api/payments/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ registrationId }),
-      });
-
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(body?.error || body?.message || 'Failed to confirm');
+      const regIds = payment.registrationIds && payment.registrationIds.length > 0 ? payment.registrationIds : [payment.registrationId];
+      for (const regId of regIds) {
+        const res = await fetch('/api/payments/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ registrationId: regId }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body?.error || body?.message || 'Failed to confirm registration ' + regId);
       }
-
-      alert('Payment confirmed successfully! QR code sent to user email.');
-      fetchPayments();
-      fetchStatusCounts(); // Refresh counts
-      setShowDetailsModal(false);
-    } catch (err: any) {
-      alert('Error: ' + err.message);
-    }
-  };
-
-  const handleDecline = async (registrationId: number) => {
-    setPendingDeclineId(registrationId);
-    setShowDeclineModal(true);
-  };
-
-  const confirmDecline = async () => {
-    if (!pendingDeclineId) return;
-    
-    if (!declineReason.trim()) {
-      alert('Please provide a reason for declining this payment');
-      return;
-    }
-    
-    try {
-      const res = await fetch('/api/payments/decline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ 
-          registrationId: pendingDeclineId,
-          reason: declineReason 
-        }),
-      });
-
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(body?.error || 'Failed to decline');
-      }
-
-      alert('Payment declined successfully. Email notification sent to user.');
+      alert('All registrations in transaction confirmed. QR codes will be sent.');
       fetchPayments();
       fetchStatusCounts();
       setShowDetailsModal(false);
-      setShowDeclineModal(false);
-      setDeclineReason("");
-      setPendingDeclineId(null);
     } catch (err: any) {
       alert('Error: ' + err.message);
     }
-  };
+  }
+
+  async function handleDecline(payment: PaymentDetail) {
+    if (!confirm(`Decline payment for transaction ${payment.transactionId || payment.registrationId}? This will decline all linked registrations.`)) return;
+    try {
+      const regIds = payment.registrationIds && payment.registrationIds.length > 0 ? payment.registrationIds : [payment.registrationId];
+      for (const regId of regIds) {
+        const res = await fetch('/api/payments/decline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ registrationId: regId, reason: 'Declined by admin' }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body?.error || body?.message || 'Failed to decline registration ' + regId);
+      }
+      alert('Transaction declined. Notifications sent.');
+      fetchPayments();
+      fetchStatusCounts();
+      setShowDetailsModal(false);
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
+  }
 
   const handleChangeStatus = async (registrationId: number, newStatus: 'confirmed' | 'declined') => {
     const action = newStatus === 'confirmed' ? 'confirm' : 'decline';
@@ -376,7 +401,7 @@ export default function LODashboard() {
                           Rp {Number(payment.totalAmount).toLocaleString('id-ID')}
                         </div>
                         <div className="text-sm text-[#ffdfc0]/60">
-                          {payment.participantCount} participant{payment.participantCount > 1 ? 's' : ''}
+                          {payment.participantCount} registration{payment.participantCount > 1 ? 's' : ''}
                         </div>
                       </div>
                     </div>
@@ -436,13 +461,13 @@ export default function LODashboard() {
                       {activeTab === 'pending' && (
                         <>
                           <button
-                            onClick={() => handleAccept(payment.registrationId)}
+                            onClick={() => handleAccept(payment)}
                             className="px-4 py-2 bg-green-500/20 border border-green-500/50 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors font-semibold"
                           >
                             Accept
                           </button>
                           <button
-                            onClick={() => handleDecline(payment.registrationId)}
+                            onClick={() => handleDecline(payment)}
                             className="px-4 py-2 bg-red-500/20 border border-red-500/50 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors font-semibold"
                           >
                             Decline
@@ -474,7 +499,26 @@ export default function LODashboard() {
                 <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#73e9dd] to-[#91dcac]">
                   Registration Details
                 </h2>
-                <p className="text-[#ffdfc0]/60 text-sm mt-1">ID: {selectedPayment.registrationId}</p>
+                <p className="text-[#ffdfc0]/60 text-sm mt-1">
+                  ID: {selectedPayment.registrationId} {selectedPayment.transactionId && `| Transaction: ${selectedPayment.transactionId}`}
+                </p>
+                <div className="text-[#ffdfc0]/60 text-sm mt-2 space-y-1">
+                  {selectedPayment.registrations && selectedPayment.registrations.length > 0 ? (
+                    selectedPayment.registrations.map((r) => (
+                      <div key={r.registrationId} className="flex items-center justify-between bg-[#1b1b1d] p-2 rounded">
+                        <div className="text-sm">
+                          <div className="font-medium">#{r.registrationId} — {r.registrationType}</div>
+                          <div className="text-xs text-[#9ca3af]">
+                            {r.groupName ? `${r.groupName} • ` : ''}{r.participantCount} participant{r.participantCount > 1 ? 's' : ''} • Rp {Number(r.totalAmount).toLocaleString('id-ID')}
+                          </div>
+                        </div>
+                        <div className="text-xs text-[#9ca3af]">{new Date(r.createdAt).toLocaleDateString('id-ID')}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div>Registrations: {selectedPayment.registrationIds?.join(', ')}</div>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setShowDetailsModal(false)}
@@ -643,13 +687,13 @@ export default function LODashboard() {
                 {selectedPayment.paymentStatus === 'pending' && (
                   <>
                     <button
-                      onClick={() => handleAccept(selectedPayment.registrationId)}
+                      onClick={() => handleAccept(selectedPayment)}
                       className="flex-1 min-w-[200px] px-6 py-3 bg-green-500/20 border border-green-500/50 text-green-300 rounded-lg hover:bg-green-500/30 transition-all font-bold"
                     >
                       ✓ Accept Payment
                     </button>
                     <button
-                      onClick={() => handleDecline(selectedPayment.registrationId)}
+                      onClick={() => handleDecline(selectedPayment)}
                       className="flex-1 min-w-[200px] px-6 py-3 bg-red-500/20 border border-red-500/50 text-red-300 rounded-lg hover:bg-red-500/30 transition-all font-bold"
                     >
                       ✗ Decline Payment

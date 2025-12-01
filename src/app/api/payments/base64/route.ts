@@ -282,36 +282,60 @@ export async function POST(req: Request) {
         }
 
         // create payment for this registration
-        const pay = await tx.payment.create({
-          data: {
-            registrationId: reg.id,
-            transactionId: txId,
-            proofOfPayment: proofUrl,
-            status: "pending",
-            amount: new Prisma.Decimal(String(itemTotal)),
-            proofSenderName: proofSenderName,
-          },
-        });
-        createdPayments.push(pay);
-      }
+        // const pay = await tx.payment.create({
+        //   data: {
+        //     registrationId: reg.id,
+        //     transactionId: txId,
+        //     proofOfPayment: proofUrl,
+        //     status: "pending",
+        //     amount: new Prisma.Decimal(String(itemTotal)),
+        //     proofSenderName: proofSenderName,
+        //   },
+        // });
+        // createdPayments.push(pay);
+        // NOTE: Do NOT create per-registration payments here.        // We create one transaction-level payment after the loop and attach it to all created registrations.
+       }
+ 
+       // bulk create participants
+       if (allParticipantRows.length > 0) {
+         await tx.participant.createMany({ data: allParticipantRows });
+       }
+ 
+       if (earlyBirdClaims.length > 0) {
+         await tx.earlyBirdClaim.createMany({ data: earlyBirdClaims });
+         console.log("[payments/base64] Created early bird claims:", earlyBirdClaims.length);
+       }
+ 
+       // After loop: create one transaction-level payment and attach it to registrations
+       const totalTxAmount = createdRegistrations.reduce((s, r) => s + Number(r.totalAmount || 0), 0);
+       const payment = await tx.payment.create({
+         data: {
+           transactionId: txId,
+           proofOfPayment: proofUrl,
+           status: "pending",
+           amount: new Prisma.Decimal(String(totalTxAmount)),
+           proofSenderName: proofSenderName,
+         },
+       });
+       if (createdRegistrations.length > 0) {
+         for (const r of createdRegistrations) {
+           await tx.registration.update({
+             where: { id: r.id },
+             data: { paymentId: payment.id },
+           });
+         }
+       }
+       createdPayments.push(payment);
+ 
+       return { registrations: createdRegistrations, payments: createdPayments, userId: user.id };
+     });
+ 
+     console.log("[payments/base64] Transaction completed");
 
-      // bulk create participants
-      if (allParticipantRows.length > 0) {
-        await tx.participant.createMany({ data: allParticipantRows });
-      }
-
-      if (earlyBirdClaims.length > 0) {
-        await tx.earlyBirdClaim.createMany({ data: earlyBirdClaims });
-        console.log("[payments/base64] Created early bird claims:", earlyBirdClaims.length);
-      }
-
-      return { registrations: createdRegistrations, payments: createdPayments, userId: user.id };
-    });
-
-    console.log("[payments/base64] Transaction completed");
-
+    // Use all created registration IDs to assign bibs and generate QR codes
+    const createdRegistrationIds = (result.registrations || []).map((r: any) => Number(r.id));
     const createdParticipants = await prisma.participant.findMany({
-      where: { registrationId: result.registration.id },
+      where: { registrationId: { in: createdRegistrationIds } },
       include: { category: true },
       orderBy: { id: "asc" },
     });
@@ -324,19 +348,22 @@ export async function POST(req: Request) {
       });
     }
 
-    const grouped = createdParticipants.reduce((acc: Record<number, number>, r) => {
-      const cid = r.categoryId ?? 0;
-      acc[cid] = (acc[cid] || 0) + 1;
-      return acc;
-    }, {});
+    // Group by registrationId + categoryId to create QR per-registration
+    const groupedByRegAndCat: Record<string, number> = {};
+    for (const p of createdParticipants) {
+      const key = `${p.registrationId}:${p.categoryId ?? 0}`;
+      groupedByRegAndCat[key] = (groupedByRegAndCat[key] || 0) + 1;
+    }
 
     const createdQrCodes: any[] = [];
-    for (const [catIdStr, count] of Object.entries(grouped)) {
+    for (const [key, count] of Object.entries(groupedByRegAndCat)) {
+      const [regIdStr, catIdStr] = key.split(":");
+      const regId = Number(regIdStr);
       const catId = Number(catIdStr);
-      const token = `${result.registration.id}-${catId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = `${regId}-${catId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const qr = await prisma.qrCode.create({
         data: {
-          registrationId: result.registration.id,
+          registrationId: regId,
           categoryId: catId,
           qrCodeData: token,
           totalPacks: count as number,
@@ -346,33 +373,35 @@ export async function POST(req: Request) {
       });
       createdQrCodes.push(qr);
     }
+ 
+     // RESTORED: Simple email notification that works
+     const registeredUser = await prisma.user.findUnique({
+       where: { id: result.userId }
+     });
+ 
+     if (registeredUser && registeredUser.email) {
+       console.log("[payments/base64] Sending registration confirmation email to:", registeredUser.email);
+       
+       try {
+         const emailUser = process.env.EMAIL_USER;
+         const emailPass = process.env.EMAIL_PASS;
+         
+         if (emailUser && emailPass) {
+           const transporter = nodemailer.createTransport({
+             host: process.env.EMAIL_HOST,
+             port: Number(process.env.EMAIL_PORT),
+             secure: (process.env.EMAIL_SECURE) === "true",
+             auth: { user: emailUser, pass: emailPass },
+           });
+ 
 
-    // RESTORED: Simple email notification that works
-    const registeredUser = await prisma.user.findUnique({
-      where: { id: result.userId }
-    });
-
-    if (registeredUser && registeredUser.email) {
-      console.log("[payments/base64] Sending registration confirmation email to:", registeredUser.email);
-      
-      try {
-        const emailUser = process.env.EMAIL_USER;
-        const emailPass = process.env.EMAIL_PASS;
-        
-        if (emailUser && emailPass) {
-          const transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: Number(process.env.EMAIL_PORT),
-            secure: (process.env.EMAIL_SECURE) === "true",
-            auth: { user: emailUser, pass: emailPass },
-          });
+          const regListHtml = (result.registrations || []).map((r: any) => `<li>#${r.id} — Rp ${Number(r.totalAmount).toLocaleString('id-ID')}</li>`).join("");
 
           await transporter.sendMail({
             from: `"Ciputra Color Run 2026" <${emailUser}>`,
             to: registeredUser.email,
             subject: "🎉 Registration Received — Ciputra Color Run 2026",
             html: `
-              <!-- Same HTML as above -->
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
                 <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 40px 24px; text-align: center;">
                   <h1 style="margin: 0; color: #ffffff; font-size: 28px;">🎉 Registration Received!</h1>
@@ -382,7 +411,8 @@ export async function POST(req: Request) {
                   <p style="margin: 0 0 20px 0; color: #111827; font-size: 16px;">Dear <strong>${registeredUser.name}</strong>,</p>
                   <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px;">Thank you for registering! We have received your registration and payment proof.</p>
                   <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                    <p style="margin: 0; color: #065f46; font-size: 14px;"><strong>Registration ID:</strong> <span style="font-family: monospace; font-size: 16px; color: #047857;">#${result.registration.id}</span></p>
+                    <p style="margin: 0; color: #065f46; font-size: 14px;"><strong>Registrations:</strong></p>
+                    <ul style="margin:8px 0 0 16px; color:#065f46">${regListHtml}</ul>
                   </div>
                   <div style="background: linear-gradient(135deg, #cbe7d1 0%, #efc6c9 100%); border: 3px solid #3b82f6; border-radius: 12px; padding: 28px; margin: 28px 0; text-align: center;">
                     <p style="margin: 0 0 16px 0; color: #1e40af; font-size: 15px; font-weight: 600;">🔑 YOUR ACCESS CODE</p>
@@ -398,28 +428,28 @@ export async function POST(req: Request) {
               </div>
             `,
           });
-          
-          console.log("[payments/base64] Registration email sent successfully");
-        }
-      } catch (emailError: any) {
-        console.error("[payments/base64] Email error:", emailError);
-      }
-    }
-
+           
+           console.log("[payments/base64] Registration email sent successfully");
+         }
+       } catch (emailError: any) {
+         console.error("[payments/base64] Email error:", emailError);
+       }
+     }
+ 
     return NextResponse.json({
       success: true,
-      registrationId: result.registration.id,
-      paymentId: result.payment.id,
+      registrations: result.registrations,
+      payments: result.payments,
       transactionId: txId,
       qrCodes: createdQrCodes,
-    });
-  } catch (err: any) {
-    console.error("[payments/base64] Error:", err?.message || err);
-
-    if (err?.code === "P6005" || err?.message?.includes("15000ms")) {
-      return NextResponse.json({ error: "Server is busy. Please try again." }, { status: 503 });
-    }
-
-    return NextResponse.json({ error: "An unexpected error occurred. Please try again." }, { status: 500 });
-  }
-}
+   });
+   } catch (err: any) {
+     console.error("[payments/base64] Error:", err?.message || err);
+ 
+     if (err?.code === "P6005" || err?.message?.includes("15000ms")) {
+       return NextResponse.json({ error: "Server is busy. Please try again." }, { status: 503 });
+     }
+ 
+     return NextResponse.json({ error: "An unexpected error occurred. Please try again." }, { status: 500 });
+   }
+ }

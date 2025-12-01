@@ -352,7 +352,9 @@ export async function POST(req: Request) {
             const remaining = Math.max(0, participantCount - totalFromJerseys);
             if (remaining > 0) {
               const jerseyId = defaultJerseyId;
-              for (let i = 0; i < remaining; i++) allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
+              for (let i = 0; i < remaining; i++) {
+                allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
+              }
             }
           } else if (participantCount > 0) {
             const jerseyId = defaultJerseyId;
@@ -366,19 +368,8 @@ export async function POST(req: Request) {
           console.warn("[payments] Unknown item.type, skipping:", item);
         }
 
-        // create payment record for this registration (same txId / proof)
-        const pay = await tx.payment.create({
-          data: {
-            registrationId: reg.id,
-            transactionId: txId,
-            proofOfPayment: proofPath!,
-            status: "pending",
-            amount: new Prisma.Decimal(String(itemTotal)),
-            proofSenderName: proofSenderName,
-          },
-        });
-        createdPayments.push(pay);
-        console.log("[payments] Created payment for registration:", reg.id, "paymentId:", pay.id);
+        // DO NOT create per-registration payment here.
+        // A single transaction-level payment will be created after the loop and attached to all created registrations.
       }
 
       // bulk create participants for all registrations
@@ -392,6 +383,29 @@ export async function POST(req: Request) {
         await tx.earlyBirdClaim.createMany({ data: earlyBirdClaims });
         console.log("[payments] Created early bird claims:", earlyBirdClaims.length);
       }
+
+      // Create one transaction-level payment that covers all registrations in this cart
+      const totalTxAmount = createdRegistrations.reduce((s, r) => s + Number(r.totalAmount || 0), 0);
+      const payment = await tx.payment.create({
+        data: {
+          transactionId: txId,
+          proofOfPayment: proofPath!,
+          status: "pending",
+          amount: new Prisma.Decimal(String(totalTxAmount)),
+          proofSenderName: proofSenderName,
+        },
+      });
+
+      // Attach payment -> registrations (one-to-many): set registration.paymentId = payment.id
+      if (createdRegistrations.length > 0) {
+        for (const r of createdRegistrations) {
+          await tx.registration.update({
+            where: { id: r.id },
+            data: { paymentId: payment.id },
+          });
+        }
+      }
+      createdPayments.push(payment);
 
       return { registrations: createdRegistrations, payments: createdPayments, userId: user.id };
      });
