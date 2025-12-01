@@ -27,16 +27,14 @@ export async function GET(request: Request) {
       },
     });
 
-    // Transform to match expected format
-    const payments = registrations.map(reg => {
-      // Calculate category counts
+    // Transform per-registration response (keeps original shape for backward compatibility)
+    const registrationsResp = registrations.map(reg => {
       const categoryCounts: Record<string, number> = {};
       const jerseySizes: Record<string, number> = {};
-      
+
       reg.participants.forEach(p => {
         const catName = p.category?.name || 'Unknown';
         categoryCounts[catName] = (categoryCounts[catName] || 0) + 1;
-        
         const jerseySize = p.jersey?.size || 'M';
         jerseySizes[jerseySize] = (jerseySizes[jerseySize] || 0) + 1;
       });
@@ -48,7 +46,7 @@ export async function GET(request: Request) {
         phone: reg.user.phone,
         registrationType: reg.registrationType,
         groupName: reg.groupName || undefined,
-        totalAmount: reg.totalAmount,
+        totalAmount: Number(reg.totalAmount || 0),
         createdAt: reg.createdAt,
         paymentStatus: reg.paymentStatus,
         participantCount: reg.participants.length,
@@ -56,10 +54,12 @@ export async function GET(request: Request) {
         jerseySizes: Object.keys(jerseySizes).length > 0 ? jerseySizes : undefined,
         payments: reg.payments.map(p => ({
           id: p.id,
-          amount: p.amount,
+          amount: Number(p.amount || 0),
           proofOfPayment: p.proofOfPayment,
           proofSenderName: (p as any).proofSenderName,
           status: p.status,
+          transactionId: p.transactionId,
+          registrationId: p.registrationId,
         })),
         user: {
           birthDate: reg.user.birthDate,
@@ -73,7 +73,74 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json(payments);
+    // Aggregate transactions (group payments by transactionId)
+    const txMap = new Map<string, any>();
+
+    registrations.forEach(reg => {
+      reg.payments.forEach((p: any) => {
+        const txId = p.transactionId || String(p.id);
+        const entry = txMap.get(txId) || {
+          transactionId: txId,
+          totalAmount: 0,
+          paymentStatus: p.status,
+          createdAt: p.createdAt || reg.createdAt,
+          registrationIds: new Set<number>(),
+          payments: [] as any[],
+          userName: reg.user?.name,
+          email: reg.user?.email,
+          phone: reg.user?.phone,
+          registrationTypes: new Set<string>(),
+        };
+
+        entry.totalAmount += Number(p.amount || 0);
+        entry.registrationIds.add(reg.id);
+        entry.payments.push({
+          id: p.id,
+          registrationId: reg.id,
+          amount: Number(p.amount || 0),
+          status: p.status,
+        });
+        if (reg.registrationType) entry.registrationTypes.add(reg.registrationType);
+        txMap.set(txId, entry);
+      });
+
+      // If a registration has no payments (theoretically) include it as single-reg transaction
+      if (!reg.payments || reg.payments.length === 0) {
+        const syntheticTx = `reg-${reg.id}`;
+        if (!txMap.has(syntheticTx)) {
+          txMap.set(syntheticTx, {
+            transactionId: syntheticTx,
+            totalAmount: Number(reg.totalAmount || 0),
+            paymentStatus: reg.paymentStatus,
+            createdAt: reg.createdAt,
+            registrationIds: new Set([reg.id]),
+            payments: [],
+            userName: reg.user?.name,
+            email: reg.user?.email,
+            phone: reg.user?.phone,
+            registrationTypes: new Set([reg.registrationType]),
+          });
+        }
+      }
+    });
+
+    const transactions = Array.from(txMap.values()).map((t: any) => ({
+      transactionId: t.transactionId,
+      totalAmount: t.totalAmount,
+      paymentStatus: t.paymentStatus,
+      createdAt: t.createdAt,
+      registrationIds: Array.from(t.registrationIds),
+      payments: t.payments,
+      userName: t.userName,
+      email: t.email,
+      phone: t.phone,
+      registrationTypes: Array.from(t.registrationTypes),
+    }));
+
+    return NextResponse.json({
+      registrations: registrationsResp,
+      transactions,
+    });
   } catch (error) {
     console.error('Error fetching payments:', error);
     return NextResponse.json(

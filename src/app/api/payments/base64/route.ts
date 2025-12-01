@@ -90,24 +90,48 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
     }
 
-    // Prefer lookup by email first (use findFirst because email is not guaranteed unique)
-    const existingByEmail = email ? await prisma.user.findFirst({ where: { email } }) : null;
-    let existingUser;
-    // Reuse only when email exists AND names match (case-insensitive)
-    if (existingByEmail && existingByEmail.name && existingByEmail.name.toLowerCase() === (fullName || "").toLowerCase()) {
-      existingUser = existingByEmail;
-    } else {
-      // Do not block on email/name mismatch — create a separate user in that case.
-      const existingByName = await prisma.user.findFirst({
-        where: {
-          name: { equals: fullName, mode: 'insensitive' }
-        }
-      });
-      existingUser = existingByName && (!email || (existingByName.email === email)) ? existingByName : undefined;
+    // Helper: normalize a name for robust comparison
+    function normalizeName(n?: string) {
+      const s = String(n || "");
+      // NFD + strip combining marks (diacritics), collapse whitespace, trim, lower-case
+      return s
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+    }
 
-      if (existingByEmail && existingByEmail.name && existingByEmail.name.toLowerCase() !== (fullName || "").toLowerCase()) {
-        // Log for audit/debug but proceed to create a new user as requested
-        console.warn("[payments/base64] Email exists with different name; creating a separate user:", existingByEmail.email, "existingName:", existingByEmail.name);
+    // First try an exact email+name match (case-insensitive) to ensure reuse when both match
+    const normalizedFullName = fullName.trim();
+    let existingUser = null;
+    if (email && normalizedFullName) {
+      existingUser = await prisma.user.findFirst({
+        where: {
+          email: { equals: email, mode: "insensitive" },
+          name: { equals: normalizedFullName, mode: "insensitive" },
+        },
+      });
+    }
+
+    // Fallback to prior behavior if no exact match found
+    if (!existingUser) {
+      const existingByEmail = email
+        ? await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } })
+        : null;
+
+      if (existingByEmail) {
+        if (normalizeName(existingByEmail.name) === normalizeName(fullName)) {
+          existingUser = existingByEmail;
+        } else {
+          console.warn("[payments/base64] Email exists with different name; creating a separate user:", existingByEmail.email, "existingName:", existingByEmail.name);
+          existingUser = undefined;
+        }
+      } else {
+        const existingByName = await prisma.user.findFirst({
+          where: { name: { equals: fullName, mode: "insensitive" } },
+        });
+        existingUser = existingByName && (!email || (existingByName.email === email)) ? existingByName : undefined;
       }
     }
 
@@ -121,6 +145,9 @@ export async function POST(req: Request) {
         console.warn("[payments/base64] Failed to parse items:", e);
       }
     }
+
+    // Debug: log cart shape so we can see why items might be missing
+    console.log("[payments/base64] cartItems:", Array.isArray(cartItems) ? cartItems.length : typeof cartItems, cartItems);
 
     const jerseyOptions = await prisma.jerseyOption.findMany();
     const jerseyMap = new Map(jerseyOptions.map((j) => [j.size, j.id]));
@@ -172,74 +199,113 @@ export async function POST(req: Request) {
         });
       }
 
-      const registration = await tx.registration.create({
-        data: {
-          userId: user.id,
-          registrationType: registrationType || "individual",
-          paymentStatus: "pending",
-          totalAmount: new Prisma.Decimal(String(amount ?? 0)),
-          groupName: groupName || undefined,
-        },
-      });
-
-      const participantRows: Array<{ registrationId: number; categoryId: number; jerseyId: number }> = [];
-
-      // NEW: Track early bird claims
+      // Create a registration & payment per cart item so each item keeps its own groupName/registrationType
+      const createdRegistrations: Array<{ id: number; totalAmount: string }> = [];
+      const allParticipantRows: Array<{ registrationId: number; categoryId: number; jerseyId: number }> = [];
       const earlyBirdClaims: Array<{ categoryId: number }> = [];
+      const createdPayments: Array<any> = [];
 
       for (const item of cartItems) {
         const categoryId = Number(item.categoryId);
-        if (Number.isNaN(categoryId)) continue;
+        if (Number.isNaN(categoryId)) {
+          console.warn("[payments/base64] Invalid categoryId, skipping item:", item);
+          continue;
+        }
 
+        // compute per-item total (trust client-provided price/charges)
+        const itemPrice = Number(item.price || 0);
+        const itemJerseyCharges = Number(item.jerseyCharges || 0);
+        let itemTotal = 0;
+        if (item.type === "individual") {
+          itemTotal = itemPrice + itemJerseyCharges;
+        } else {
+          const cnt = Number(item.participants ?? item.participantCount ?? item.count ?? 0) || 0;
+          itemTotal = (itemPrice * cnt) + itemJerseyCharges;
+        }
+
+        const reg = await tx.registration.create({
+          data: {
+            userId: user.id,
+            registrationType: item.type || registrationType || "individual",
+            paymentStatus: "pending",
+            totalAmount: new Prisma.Decimal(String(itemTotal)),
+            groupName: item.type === "community" ? (item.groupName || groupName) : undefined,
+          },
+        });
+        createdRegistrations.push({ id: reg.id, totalAmount: String(itemTotal) });
+        console.log("[payments/base64] Created registration for item:", item.type, "regId:", reg.id);
+
+        // build participants for this registration
         if (item.type === "individual") {
           const jerseyId = (item.jerseySize && jerseyMap.get(item.jerseySize)) || defaultJerseyId;
-          participantRows.push({ registrationId: registration.id, categoryId, jerseyId });
-          
-          // NEW: Check if this is early bird pricing and claim it
+          allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
+
           const category = await tx.raceCategory.findUnique({ where: { id: categoryId } });
           if (category?.earlyBirdPrice && category?.earlyBirdCapacity) {
             const currentClaims = await tx.earlyBirdClaim.count({ where: { categoryId } });
-            if (currentClaims < category.earlyBirdCapacity) {
-              earlyBirdClaims.push({ categoryId });
-            }
+            if (currentClaims < category.earlyBirdCapacity) earlyBirdClaims.push({ categoryId });
           }
         } else if (item.type === "community" || item.type === "family") {
           const jerseysObj: Record<string, number> = item.jerseys || {};
-          for (const [size, cnt] of Object.entries(jerseysObj)) {
-            const count = Number(cnt) || 0;
-            if (count <= 0) continue;
-            const jerseyId = jerseyMap.get(size) || defaultJerseyId;
-            for (let i = 0; i < count; i++) {
-              participantRows.push({ registrationId: registration.id, categoryId, jerseyId });
-            }
+          const jerseyEntries = Object.entries(jerseysObj).map(([k, v]) => [k, Number(v || 0)] as [string, number]);
+          const totalFromJerseys = jerseyEntries.reduce((s, [, c]) => s + c, 0);
+          let participantCount = Number(item.participants ?? item.participantCount ?? item.count ?? 0);
+          if ((item.type === "family") && (!participantCount || participantCount <= 0)) {
+            participantCount = Number(item.participants || 4) || 4;
           }
+
+          if (totalFromJerseys > 0) {
+            for (const [size, count] of jerseyEntries) {
+              if (count <= 0) continue;
+              const jerseyId = jerseyMap.get(size) || defaultJerseyId;
+              for (let i = 0; i < count; i++) {
+                allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
+              }
+            }
+            const remaining = Math.max(0, participantCount - totalFromJerseys);
+            if (remaining > 0) {
+              const jerseyId = defaultJerseyId;
+              for (let i = 0; i < remaining; i++) {
+                allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
+              }
+            }
+          } else if (participantCount > 0) {
+            const jerseyId = defaultJerseyId;
+            for (let i = 0; i < participantCount; i++) {
+              allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
+            }
+          } else {
+            console.warn("[payments/base64] Skipping community/family item because no jerseys and no participants:", item);
+          }
+        } else {
+          console.warn("[payments/base64] Unknown item.type, skipping:", item);
         }
-      }
 
-      if (participantRows.length > 0) {
-        await tx.participant.createMany({ data: participantRows });
-      }
-
-      // NEW: Create early bird claims
-      if (earlyBirdClaims.length > 0) {
-        await tx.earlyBirdClaim.createMany({
-          data: earlyBirdClaims
+        // create payment for this registration
+        const pay = await tx.payment.create({
+          data: {
+            registrationId: reg.id,
+            transactionId: txId,
+            proofOfPayment: proofUrl,
+            status: "pending",
+            amount: new Prisma.Decimal(String(itemTotal)),
+            proofSenderName: proofSenderName,
+          },
         });
+        createdPayments.push(pay);
+      }
+
+      // bulk create participants
+      if (allParticipantRows.length > 0) {
+        await tx.participant.createMany({ data: allParticipantRows });
+      }
+
+      if (earlyBirdClaims.length > 0) {
+        await tx.earlyBirdClaim.createMany({ data: earlyBirdClaims });
         console.log("[payments/base64] Created early bird claims:", earlyBirdClaims.length);
       }
 
-      const payment = await tx.payment.create({
-        data: {
-          registrationId: registration.id,
-          transactionId: txId,
-          proofOfPayment: proofUrl,
-          status: "pending",
-          amount: new Prisma.Decimal(String(amount ?? 0)),
-          proofSenderName: proofSenderName,
-        },
-      });
-
-      return { registration, payment, userId: user.id };
+      return { registrations: createdRegistrations, payments: createdPayments, userId: user.id };
     });
 
     console.log("[payments/base64] Transaction completed");

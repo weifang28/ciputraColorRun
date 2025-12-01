@@ -749,6 +749,7 @@ export default function RegistrationPage() {
                 Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
             ),
             jerseyCharges: jerseyCharge, // NEW
+            groupName: (groupName || "").trim() || undefined, // ensure group name is carried with the item
         });
 
         const totalPrice = (pricePerPerson * currentParticipants) + jerseyCharge;
@@ -922,6 +923,7 @@ export default function RegistrationPage() {
                         Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
                     ),
                     jerseyCharges: jerseyCharge,
+                    groupName: (groupName || "").trim() || undefined,
                 });
             }
         }
@@ -1495,6 +1497,9 @@ export default function RegistrationPage() {
                         </div>
                     )}
 
+                    
+
+                    
                     
 
                     {/* Community layout with improved pricing */}

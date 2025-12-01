@@ -147,23 +147,48 @@ export async function POST(req: Request) {
     const cartItemsJson = String(formData.get("items") || "");
     const forceCreate = String(formData.get("forceCreate") || "") === "true";
 
-    // Pre  p by email first (use findFirst because email is not guaranteed unique)
-    const existingByEmail = email ? await prisma.user.findFirst({ where: { email } }) : null;
-    let existingUser;
-    // Reuse only when email exists AND names match (case-insensitive)
-    if (existingByEmail && existingByEmail.name && existingByEmail.name.toLowerCase() === (fullName || "").toLowerCase()) {
-      existingUser = existingByEmail;
-    } else {
-      // Do not block on email/name mismatch — create a separate user in that case.
-      const existingByName = await prisma.user.findFirst({
-        where: {
-          name: { equals: fullName, mode: 'insensitive' }
-        }
-      });
-      existingUser = existingByName && (!email || (existingByName.email === email)) ? existingByName : undefined;
+    // Helper: normalize a name for robust comparison
+    function normalizeName(n?: string) {
+      const s = String(n || "");
+      // NFD + strip combining marks (diacritics), collapse whitespace, trim, lower-case
+      return s
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+    }
 
-      if (existingByEmail && existingByEmail.name && existingByEmail.name.toLowerCase() !== (fullName || "").toLowerCase()) {
-        console.warn("[payments] Email exists with different name; creating a separate user:", existingByEmail.email, "existingName:", existingByEmail.name);
+    // First try an exact email+name match (case-insensitive) to ensure reuse when both match
+    const normalizedFullName = fullName.trim();
+    let existingUser = null;
+    if (email && normalizedFullName) {
+      existingUser = await prisma.user.findFirst({
+        where: {
+          email: { equals: email, mode: "insensitive" },
+          name: { equals: normalizedFullName, mode: "insensitive" },
+        },
+      });
+    }
+
+    // Fallback: if no exact email+name match, keep previous logic
+    if (!existingUser) {
+      const existingByEmail = email
+        ? await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } })
+        : null;
+
+      if (existingByEmail) {
+        if (normalizeName(existingByEmail.name) === normalizeName(fullName)) {
+          existingUser = existingByEmail;
+        } else {
+          console.warn("[payments] Email exists with different name; creating a separate user:", existingByEmail.email, "existingName:", existingByEmail.name);
+          existingUser = undefined;
+        }
+      } else {
+        const existingByName = await prisma.user.findFirst({
+          where: { name: { equals: fullName, mode: "insensitive" } },
+        });
+        existingUser = existingByName && (!email || (existingByName.email === email)) ? existingByName : undefined;
       }
     }
 
@@ -261,91 +286,129 @@ export async function POST(req: Request) {
       }
       console.log("[payments] User ID:", user.id);
 
-      const registration = await tx.registration.create({
-        data: {
-          userId: user.id,
-          registrationType,
-          paymentStatus: "pending",
-          totalAmount: new Prisma.Decimal(String(amount ?? 0)),
-          groupName: groupName || undefined,
-        },
-      });
-      console.log("[payments] Created registration:", registration.id);
-
-      const participantRows: Array<{ registrationId: number; categoryId: number; jerseyId: number }> = [];
-
-      // NEW: Track early bird claims
+      // Create separate registration + participants + payment for each cart item
+      const createdRegistrations: Array<{ id: number; totalAmount: string }> = [];
+      const allParticipantRows: Array<{ registrationId: number; categoryId: number; jerseyId: number }> = [];
       const earlyBirdClaims: Array<{ categoryId: number }> = [];
+      const createdPayments: Array<any> = [];
 
       for (const item of cartItems) {
         const categoryId = Number(item.categoryId);
-        if (Number.isNaN(categoryId)) continue;
+        if (Number.isNaN(categoryId)) {
+          console.warn("[payments] Invalid categoryId, skipping item:", item);
+          continue;
+        }
 
+        // compute per-item total amount (trust client price fields, fallback to 0)
+        let itemTotal = 0;
+        const itemPrice = Number(item.price || 0);
+        const itemJerseyCharges = Number(item.jerseyCharges || 0);
+        if (item.type === "individual") {
+          itemTotal = itemPrice + itemJerseyCharges;
+        } else {
+          const cnt = Number(item.participants ?? item.participantCount ?? item.count ?? 0) || 0;
+          itemTotal = (itemPrice * cnt) + itemJerseyCharges;
+        }
+
+        const reg = await tx.registration.create({
+          data: {
+            userId: user.id,
+            registrationType: item.type || registrationType,
+            paymentStatus: "pending",
+            totalAmount: new Prisma.Decimal(String(itemTotal)),
+            groupName: item.type === "community" ? (item.groupName || groupName) : undefined,
+          },
+        });
+        createdRegistrations.push({ id: reg.id, totalAmount: String(itemTotal) });
+        console.log("[payments] Created registration for item:", item.type, "regId:", reg.id, "total:", itemTotal);
+
+        // build participants for this registration
         if (item.type === "individual") {
           const jerseyId = (item.jerseySize && jerseyMap.get(item.jerseySize)) || defaultJerseyId;
-          participantRows.push({ registrationId: registration.id, categoryId, jerseyId });
-          
-          // NEW: Check if this is early bird pricing and claim it
+          allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
+
           const category = await tx.raceCategory.findUnique({ where: { id: categoryId } });
           if (category?.earlyBirdPrice && category?.earlyBirdCapacity) {
             const currentClaims = await tx.earlyBirdClaim.count({ where: { categoryId } });
-            if (currentClaims < category.earlyBirdCapacity) {
-              earlyBirdClaims.push({ categoryId });
-            }
+            if (currentClaims < category.earlyBirdCapacity) earlyBirdClaims.push({ categoryId });
           }
         } else if (item.type === "community" || item.type === "family") {
           const jerseysObj: Record<string, number> = item.jerseys || {};
-          for (const [size, cnt] of Object.entries(jerseysObj)) {
-            const count = Number(cnt) || 0;
-            if (count <= 0) continue;
-            const jerseyId = jerseyMap.get(size) || defaultJerseyId;
-            for (let i = 0; i < count; i++) {
-              participantRows.push({ registrationId: registration.id, categoryId, jerseyId });
-            }
+          const jerseyEntries = Object.entries(jerseysObj).map(([k, v]) => [k, Number(v || 0)] as [string, number]);
+          const totalFromJerseys = jerseyEntries.reduce((s, [, c]) => s + c, 0);
+          let participantCount = Number(item.participants ?? item.participantCount ?? item.count ?? 0);
+          if ((item.type === "family") && (!participantCount || participantCount <= 0)) {
+            participantCount = Number(item.participants || 4) || 4;
           }
+
+          if (totalFromJerseys > 0) {
+            for (const [size, count] of jerseyEntries) {
+              if (count <= 0) continue;
+              const jerseyId = jerseyMap.get(size) || defaultJerseyId;
+              for (let i = 0; i < count; i++) {
+                allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
+              }
+            }
+            const remaining = Math.max(0, participantCount - totalFromJerseys);
+            if (remaining > 0) {
+              const jerseyId = defaultJerseyId;
+              for (let i = 0; i < remaining; i++) allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
+            }
+          } else if (participantCount > 0) {
+            const jerseyId = defaultJerseyId;
+            for (let i = 0; i < participantCount; i++) {
+              allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
+            }
+          } else {
+            console.warn("[payments] Skipping community/family item because no jerseys and no participants:", item);
+          }
+        } else {
+          console.warn("[payments] Unknown item.type, skipping:", item);
         }
-      }
 
-      if (participantRows.length > 0) {
-        await tx.participant.createMany({ data: participantRows });
-        console.log("[payments] Created participants:", participantRows.length);
-      }
-
-      // NEW: Create early bird claims
-      if (earlyBirdClaims.length > 0) {
-        await tx.earlyBirdClaim.createMany({
-          data: earlyBirdClaims
+        // create payment record for this registration (same txId / proof)
+        const pay = await tx.payment.create({
+          data: {
+            registrationId: reg.id,
+            transactionId: txId,
+            proofOfPayment: proofPath!,
+            status: "pending",
+            amount: new Prisma.Decimal(String(itemTotal)),
+            proofSenderName: proofSenderName,
+          },
         });
+        createdPayments.push(pay);
+        console.log("[payments] Created payment for registration:", reg.id, "paymentId:", pay.id);
+      }
+
+      // bulk create participants for all registrations
+      if (allParticipantRows.length > 0) {
+        await tx.participant.createMany({ data: allParticipantRows });
+        console.log("[payments] Created participants:", allParticipantRows.length);
+      }
+
+      // early bird claims
+      if (earlyBirdClaims.length > 0) {
+        await tx.earlyBirdClaim.createMany({ data: earlyBirdClaims });
         console.log("[payments] Created early bird claims:", earlyBirdClaims.length);
       }
 
-      const payment = await tx.payment.create({
-        data: {
-          registrationId: registration.id,
-          transactionId: txId,
-          proofOfPayment: proofPath!,
-          status: "pending",
-          amount: new Prisma.Decimal(String(amount ?? 0)),
-          proofSenderName: proofSenderName,
-        },
-      });
-      console.log("[payments] Created payment:", payment.id);
-
-      return { registration, payment, userId: user.id };
-    });
-
-    console.log("[payments] Transaction completed successfully");
-
-    // Post-transaction: bib numbers and QR codes
-    console.log("[payments] Step 8: Assigning bib numbers and creating QR codes...");
+      return { registrations: createdRegistrations, payments: createdPayments, userId: user.id };
+     });
     
+    console.log("[payments] Transaction completed successfully");
+ 
+    // Post-transaction: assign bibs and generate QR codes for all created registrations
+    console.log("[payments] Step 8: Assigning bib numbers and creating QR codes...");
+
+    const createdRegistrationIds = (result.registrations || []).map((r: any) => Number(r.id));
     const createdParticipants = await prisma.participant.findMany({
-      where: { registrationId: result.registration.id },
+      where: { registrationId: { in: createdRegistrationIds } },
       include: { category: true },
       orderBy: { id: 'asc' },
-    });
+   });
 
-    for (const participant of createdParticipants) {
+   for (const participant of createdParticipants) {
       const bibNumber = generateBibNumber(participant.category?.name, participant.id);
       await prisma.participant.update({
         where: { id: participant.id },
@@ -353,19 +416,22 @@ export async function POST(req: Request) {
       });
     }
 
-    const grouped = createdParticipants.reduce((acc: Record<number, number>, r) => {
-      const cid = r.categoryId ?? 0;
-      acc[cid] = (acc[cid] || 0) + 1;
-      return acc;
-    }, {});
+    // Group by registrationId + categoryId to create QR per-registration
+    const groupedByRegAndCat: Record<string, number> = {};
+    for (const p of createdParticipants) {
+      const key = `${p.registrationId}:${p.categoryId || 0}`;
+      groupedByRegAndCat[key] = (groupedByRegAndCat[key] || 0) + 1;
+    }
 
     const createdQrCodes: any[] = [];
-    for (const [catIdStr, count] of Object.entries(grouped)) {
+    for (const [key, count] of Object.entries(groupedByRegAndCat)) {
+      const [regIdStr, catIdStr] = key.split(":");
+      const regId = Number(regIdStr);
       const catId = Number(catIdStr);
-      const token = `${result.registration.id}-${catId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const token = `${regId}-${catId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const qr = await prisma.qrCode.create({
         data: {
-          registrationId: result.registration.id,
+          registrationId: regId,
           categoryId: catId,
           qrCodeData: token,
           totalPacks: count as number,
@@ -376,20 +442,15 @@ export async function POST(req: Request) {
       createdQrCodes.push(qr);
     }
     console.log("[payments] Created QR codes:", createdQrCodes.length);
-
-    // RESTORED: Simple email notification that works
-    const registeredUser = await prisma.user.findUnique({
-      where: { id: result.userId }
-    });
-
+ 
+    // RESTORED: Simple email notification that works (include list of registration IDs)
+    const registeredUser = await prisma.user.findUnique({ where: { id: result.userId } });
+ 
     if (registeredUser && registeredUser.email) {
       console.log("[payments] Sending registration confirmation email to:", registeredUser.email);
-      
-      // Send simple confirmation email directly here (no external API call)
       try {
         const emailUser = process.env.EMAIL_USER;
         const emailPass = process.env.EMAIL_PASS;
-        
         if (emailUser && emailPass) {
           const transporter = nodemailer.createTransport({
             host: process.env.EMAIL_HOST,
@@ -398,108 +459,44 @@ export async function POST(req: Request) {
             auth: { user: emailUser, pass: emailPass },
           });
 
+          // build registration list for email
+          const regListHtml = (result.registrations || []).map((r: any) => `<li>#${r.id} — Rp ${Number(r.totalAmount).toLocaleString('id-ID')}</li>`).join("");
+ 
           await transporter.sendMail({
             from: `"Ciputra Color Run 2026" <${emailUser}>`,
             to: registeredUser.email,
             subject: "🎉 Registration Received — Ciputra Color Run 2026",
             html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-                <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 40px 24px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">🎉 Registration Received!</h1>
-                  <p style="margin: 12px 0 0 0; color: rgba(255,255,255,0.95); font-size: 16px;">Ciputra Color Run 2026</p>
-                </div>
-
-                <div style="padding: 32px 24px;">
-                  <p style="margin: 0 0 20px 0; color: #111827; font-size: 16px;">
-                    Dear <strong>${registeredUser.name}</strong>,
-                  </p>
-
-                  <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px;">
-                    Thank you for registering! We have received your registration and payment proof.
-                  </p>
-
-                  <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                    <p style="margin: 0; color: #065f46; font-size: 14px;">
-                      <strong>Registration ID:</strong> <span style="font-family: monospace; font-size: 16px; color: #047857;">#${result.registration.id}</span>
-                    </p>
-                  </div>
-
-                  <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 3px solid #3b82f6; border-radius: 12px; padding: 28px; margin: 28px 0; text-align: center;">
-                    <p style="margin: 0 0 16px 0; color: #1e40af; font-size: 15px; font-weight: 600;">🔑 YOUR ACCESS CODE</p>
-                    <div style="background: #ffffff; border: 3px dashed #3b82f6; border-radius: 10px; padding: 20px; margin: 16px 0;">
-                      <code style="font-size: 32px; font-weight: bold; color: #1e40af; font-family: 'Courier New', monospace; letter-spacing: 3px; display: block;">
-                        ${registeredUser.accessCode}
-                      </code>
-                    </div>
-                    <p style="margin: 16px 0 0 0; color: #1e40af; font-size: 14px;">
-                      <strong>⚠️ Save this code!</strong><br>
-                      Use it to check your payment status at <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/login" style="color: #2563eb;">${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/login</a>
-                    </p>
-                  </div>
-
-                  <div style="margin: 28px 0;">
-                    <h3 style="margin: 0 0 16px 0; color: #111827; font-size: 18px; font-weight: bold;">What happens next?</h3>
-                    <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px; line-height: 1.8;">
-                      <li style="margin-bottom: 8px;">Our admin will verify your payment (usually within <strong>48 hours</strong>).</li>
-                      <li style="margin-bottom: 8px;">Once approved, you'll receive a <strong>confirmation email with your QR code</strong>.</li>
-                      <li style="margin-bottom: 8px;">You can check your payment status anytime using your access code above.</li>
-                    </ol>
-                  </div>
-
-                  <div style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-radius: 12px; padding: 24px; margin: 28px 0; text-align: center;">
-                    <div style="font-size: 32px; margin-bottom: 8px;">💬</div>
-                    <h3 style="margin: 0 0 8px 0; color: #065f46; font-size: 18px; font-weight: bold;">Join Our WhatsApp Group</h3>
-                    <p style="margin: 0 0 16px 0; color: #047857; font-size: 14px;">Get event updates and connect with other participants!</p>
-                    <a href="https://chat.whatsapp.com/HkYS1Oi3CyqFWeVJ7d18Ve" 
-                       style="display: inline-block; background: #25D366; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: bold; font-size: 15px;">
-                      Join WhatsApp Group
-                    </a>
-                  </div>
-
-                  <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #e5e7eb;">
-                    <p style="margin: 0 0 12px 0; color: #111827; font-weight: bold; font-size: 14px;">Need Help?</p>
-                    <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">Contact our support team:</p>
-                    <div style="margin-top: 12px;">
-                      <p style="margin: 6px 0; color: #374151; font-size: 14px;">
-                        <strong>📱 Abel</strong> — WhatsApp: <a href="https://wa.me/6289541031967" style="color: #059669; text-decoration: none;">0895410319676</a>
-                      </p>
-                      <p style="margin: 6px 0; color: #374151; font-size: 14px;">
-                        <strong>📱 Elysian</strong> — WhatsApp: <a href="https://wa.me/62811306658" style="color: #059669; text-decoration: none;">0811306658</a>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-                  <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 12px;">© 2026 Ciputra Color Run. All rights reserved.</p>
-                  <p style="margin: 0; color: #9ca3af; font-size: 11px;">This email was sent to ${registeredUser.email}</p>
-                </div>
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #059669;">Registration Received!</h2>
+                <p>Dear ${registeredUser.name || "Participant"},</p>
+                <p>Thank you for registering! We have received your payment proof and created the following registrations:</p>
+                <ul>${regListHtml}</ul>
+                <p>We will verify payments shortly.</p>
               </div>
             `,
           });
-          
           console.log("[payments] Registration email sent successfully to:", registeredUser.email);
         } else {
           console.warn("[payments] Email credentials not configured");
         }
       } catch (emailError: any) {
         console.error("[payments] Failed to send registration email:", emailError?.message || emailError);
-        // Don't fail the whole request if email fails
       }
     } else {
       console.warn("[payments] Cannot send email - no user email found");
     }
-
+ 
     return NextResponse.json({
       success: true,
-      registrationId: result.registration.id,
-      paymentId: result.payment.id,
+      registrations: result.registrations,
+      payments: result.payments,
       transactionId: txId,
       qrCodes: createdQrCodes,
     });
-
-  } catch (err: any) {
-    console.error("[payments] POST error:", err?.message || err);
+ 
+   } catch (err: any) {
+     console.error("[payments] POST error:", err?.message || err);
     
     if (err?.code === 'P6005' || err?.message?.includes("15000ms")) {
       return NextResponse.json({ error: "Server is busy. Please try again." }, { status: 503 });
