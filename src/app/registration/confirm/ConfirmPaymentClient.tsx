@@ -192,15 +192,16 @@ export default function ConfirmPaymentClient() {
         setUploadStatus("Preparing upload...");
 
         try {
-            let proofUrl: string;
-            let idCardUrl: string | undefined;
-            
-            const canUseFormData = proofFile.size < 500_000 && 
+            // declare here so both branches can safely reference
+            let proofUrl: string | undefined = undefined;
+            let idCardUrl: string | undefined = undefined;
+
+            const canUseFormData = proofFile.size < 500_000 &&
                 (!userDetails?.idCardPhoto || !(userDetails.idCardPhoto instanceof File) || userDetails.idCardPhoto.size < 500_000);
-            
+
             if (canUseFormData) {
+                // direct FormData POST
                 console.log("[handleConfirmedSubmit] Trying direct FormData upload...");
-                
                 const formData = new FormData();
                 formData.append("proof", proofFile);
                 if (proofSenderName?.trim()) formData.append("proofSenderName", proofSenderName.trim());
@@ -222,89 +223,20 @@ export default function ConfirmPaymentClient() {
                 }
                 formData.append("items", JSON.stringify(items));
 
-                let res: Response;
-                let body: any;
-                // Try FormData endpoint first (small files)
-                if (canUseFormData) {
-                    const formData = new FormData();
-                    formData.append("proof", proofFile);
-                    if (proofSenderName?.trim()) formData.append("proofSenderName", proofSenderName.trim());
-                    formData.append("amount", String(totalPrice));
-                    formData.append("fullName", fullName);
-                    formData.append("email", email);
-                    formData.append("phone", phone);
-                    formData.append("birthDate", birthDate);
-                    formData.append("gender", gender);
-                    formData.append("currentAddress", currentAddress);
-                    formData.append("nationality", nationality);
-                    formData.append("emergencyPhone", emergencyPhone);
-                    formData.append("medicalHistory", medicalHistory);
-                    formData.append("medicationAllergy", medicationAllergy || "");
-                    formData.append("registrationType", items[0]?.type || "individual");
-                    if (groupName?.trim()) formData.append("groupName", groupName.trim());
-                    if (userDetails?.idCardPhoto instanceof File) {
-                        formData.append("idCardPhoto", userDetails.idCardPhoto);
-                    }
-                    formData.append("items", JSON.stringify(items));
+                let res: Response = await fetch("/api/payments", { method: "POST", body: formData, credentials: "include" });
+                let body: any = await res.json().catch(() => ({}));
 
+                // handle email/name mismatch if server still returns 409 (legacy/modal flow may intercept)
+                if (res.status === 409 && body?.error === "EMAIL_NAME_MISMATCH") {
+                    const proceed = window.confirm(`The email you provided (${email}) is already associated with the account name "${body.existingName}". It's recommended to login first. Press OK to continue registering with this email anyway, or Cancel to login.`);
+                    if (!proceed) {
+                        router.push("/auth/login");
+                        return;
+                    }
+                    // retry with forceCreate
+                    formData.append("forceCreate", "true");
                     res = await fetch("/api/payments", { method: "POST", body: formData, credentials: "include" });
                     body = await res.json().catch(() => ({}));
-                    // If server signals email/name mismatch, prompt the user
-                    if (res.status === 409 && body?.error === "EMAIL_NAME_MISMATCH") {
-                        const proceed = window.confirm(`The email you provided (${email}) is already associated with the account name "${body.existingName}". It's recommended to login first. Press OK to continue registering with this email anyway, or Cancel to login.`);
-                        if (!proceed) {
-                            router.push("/auth/login");
-                            return;
-                        }
-                        // user chose to continue -> retry with forceCreate flag
-                        formData.append("forceCreate", "true");
-                        res = await fetch("/api/payments", { method: "POST", body: formData, credentials: "include" });
-                        body = await res.json().catch(() => ({}));
-                    }
-                } else {
-                    // JSON/base64 endpoint
-                    const payload = {
-                        proofUrl,
-                        idCardUrl,
-                        items,
-                        amount: totalPrice,
-                        fullName,
-                        email,
-                        phone,
-                        birthDate,
-                        gender,
-                        currentAddress,
-                        nationality,
-                        emergencyPhone,
-                        medicalHistory,
-                        medicationAllergy: medicationAllergy || "",
-                        registrationType: items[0]?.type || "individual",
-                        proofSenderName: proofSenderName?.trim() || undefined,
-                        groupName: groupName?.trim() || undefined,
-                    };
-                    res = await fetch("/api/payments/base64", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload),
-                        credentials: "include",
-                    });
-                    body = await res.json().catch(() => ({}));
-                    if (res.status === 409 && body?.error === "EMAIL_NAME_MISMATCH") {
-                        const proceed = window.confirm(`The email you provided (${email}) is already associated with the account name "${body.existingName}". It's recommended to login first. Press OK to continue registering with this email anyway, or Cancel to login.`);
-                        if (!proceed) {
-                            router.push("/auth/login");
-                            return;
-                        }
-                        // retry with forceCreate
-                        payload.forceCreate = true;
-                        res = await fetch("/api/payments/base64", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(payload),
-                            credentials: "include",
-                        });
-                        body = await res.json().catch(() => ({}));
-                    }
                 }
 
                 if (!res.ok) {
@@ -314,52 +246,73 @@ export default function ConfirmPaymentClient() {
 
                 console.log("[handleConfirmedSubmit] Upload successful");
             } else {
+                // chunked upload -> obtain URLs -> send JSON to /api/payments/base64
                 console.log("[handleConfirmedSubmit] Using chunked upload...");
                 setUploadStatus("Uploading payment proof...");
-                
+
                 proofUrl = await uploadFileInChunks(proofFile, "proofs");
                 console.log("[handleConfirmedSubmit] Proof uploaded:", proofUrl);
-                
+
                 if (userDetails?.idCardPhoto instanceof File) {
                     setUploadStatus("Uploading ID card...");
                     idCardUrl = await uploadFileInChunks(userDetails.idCardPhoto, "id-cards");
                     console.log("[handleConfirmedSubmit] ID card uploaded:", idCardUrl);
                 }
-                
+
                 setUploadStatus("Saving registration...");
-                
-                const res = await fetch("/api/payments/base64", {
+
+                const payload: any = {
+                    proofUrl,
+                    idCardUrl,
+                    items,
+                    amount: totalPrice,
+                    fullName,
+                    email,
+                    phone,
+                    birthDate,
+                    gender,
+                    currentAddress,
+                    nationality,
+                    emergencyPhone,
+                    medicalHistory,
+                    medicationAllergy: medicationAllergy || "",
+                    registrationType: items[0]?.type || "individual",
+                    proofSenderName: proofSenderName?.trim() || undefined,
+                    groupName: groupName?.trim() || undefined,
+                };
+
+                let res = await fetch("/api/payments/base64", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        proofUrl,
-                        idCardUrl,
-                        items,
-                        amount: totalPrice,
-                        fullName,
-                        email,
-                        phone,
-                        birthDate,
-                        gender,
-                        currentAddress,
-                        nationality,
-                        emergencyPhone,
-                        medicalHistory,
-                        medicationAllergy: medicationAllergy || "",
-                        registrationType: items[0]?.type || "individual",
-                        proofSenderName: proofSenderName?.trim() || undefined,
-                        groupName: groupName?.trim() || undefined,
-                    }),
+                    body: JSON.stringify(payload),
                     credentials: "include",
                 });
-
                 const body: any = await res.json().catch(() => ({}));
 
-                if (!res.ok) {
-                    console.error("[handleConfirmedSubmit] Server error:", res.status, body);
-                    const errorMsg = body?.error || "An unexpected error occurred. Please try again.";
-                    showToast(errorMsg, "error");
-                    throw new Error("Upload failed");
+                if (res.status === 409 && body?.error === "EMAIL_NAME_MISMATCH") {
+                    const proceed = window.confirm(`The email you provided (${email}) is already associated with the account name "${body.existingName}". It's recommended to login first. Press OK to continue registering with this email anyway, or Cancel to login.`);
+                    if (!proceed) {
+                        router.push("/auth/login");
+                        return;
+                    }
+                    // retry with forceCreate
+                    payload.forceCreate = true;
+                    res = await fetch("/api/payments/base64", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                        credentials: "include",
+                    });
+                    const retryBody: any = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        const errMsg = retryBody?.error || "Upload failed";
+                        throw new Error(errMsg);
+                    }
+                } else {
+                    if (!res.ok) {
+                        const errMsg = body?.error || "Upload failed";
+                        throw new Error(errMsg);
+                    }
                 }
 
                 console.log("[handleConfirmedSubmit] Registration successful");
@@ -367,7 +320,7 @@ export default function ConfirmPaymentClient() {
 
             // Clear cart and session data ONLY after successful upload
             clearCart();
-            
+
             // NEW: clear all registration session keys after successful payment submission
             try {
                 const keysToClear = [
@@ -384,7 +337,7 @@ export default function ConfirmPaymentClient() {
             } catch (e) {
                 console.error("[handleConfirmedSubmit] Failed to clear session data:", e);
             }
-            
+
             setSubmitted(true);
             setShowPopup(true);
             showToast("Payment submitted — awaiting verification.", "success");
