@@ -628,7 +628,34 @@ export default function LODashboard() {
               </div>
 
               {/* ID Card/Passport Photo - UPDATED */}
-              {selectedPayment.user?.idCardPhoto && (
+                {selectedPayment.registrations && selectedPayment.registrations.length > 0 && selectedPayment.registrations.some((r:any) => (r.user?.idCardPhoto || r.idCardPhoto)) ? (
+                <div className="bg-[#18181b] rounded-xl p-6 border border-[#73e9dd]/20">
+                  <h3 className="text-lg font-semibold text-[#91dcac] mb-4 flex items-center gap-2">
+                    <IdCard size={20} />
+                    ID Card(s) for Registrations
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {selectedPayment.registrations.map((r: any) => {
+                      const img = r.user?.idCardPhoto || r.idCardPhoto;
+                      if (!img) return null;
+                      const alt = `ID Card — Registration #${r.registrationId}`;
+                      return (
+                        <a key={r.registrationId} href={getImageUrl(img) || '#'} target="_blank" rel="noreferrer" className="block">
+                          <img
+                            src={getImageUrl(img) || ''}
+                            alt={alt}
+                            className="w-full rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all cursor-pointer object-cover max-h-60"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23374151' width='400' height='300'/%3E%3Ctext fill='%239CA3AF' font-family='sans-serif' font-size='14' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3EImage not available%3C/text%3E%3C/svg%3E";
+                            }}
+                          />
+                          <p className="text-xs text-[#ffdfc0]/60 text-center mt-2">Registration #{r.registrationId}</p>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : selectedPayment.user?.idCardPhoto ? (
                 <div className="bg-[#18181b] rounded-xl p-6 border border-[#73e9dd]/20">
                   <h3 className="text-lg font-semibold text-[#91dcac] mb-4 flex items-center gap-2">
                     <IdCard size={20} />
@@ -651,7 +678,7 @@ export default function LODashboard() {
                   </a>
                   <p className="text-xs text-[#ffdfc0]/60 text-center mt-2">Click to view full size</p>
                 </div>
-              )}
+              ) : null}
 
               {/* Registration Information */}
               <div className="bg-[#18181b] rounded-xl p-6 border border-[#73e9dd]/20">
