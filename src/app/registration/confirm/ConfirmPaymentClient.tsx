@@ -199,32 +199,49 @@ export default function ConfirmPaymentClient() {
             const canUseFormData = proofFile.size < 500_000 &&
                 (!userDetails?.idCardPhoto || !(userDetails.idCardPhoto instanceof File) || userDetails.idCardPhoto.size < 500_000);
 
-            if (canUseFormData) {
-                // direct FormData POST
-                console.log("[handleConfirmedSubmit] Trying direct FormData upload...");
-                const formData = new FormData();
-                formData.append("proof", proofFile);
-                if (proofSenderName?.trim()) formData.append("proofSenderName", proofSenderName.trim());
-                formData.append("amount", String(totalPrice));
-                formData.append("fullName", fullName);
-                formData.append("email", email);
-                formData.append("phone", phone);
-                formData.append("birthDate", birthDate);
-                formData.append("gender", gender);
-                formData.append("currentAddress", currentAddress);
-                formData.append("nationality", nationality);
-                formData.append("emergencyPhone", emergencyPhone);
-                formData.append("medicalHistory", medicalHistory);
-                formData.append("medicationAllergy", medicationAllergy || "");
-                formData.append("registrationType", items[0]?.type || "individual");
-                if (groupName?.trim()) formData.append("groupName", groupName.trim());
-                if (userDetails?.idCardPhoto instanceof File) {
-                    formData.append("idCardPhoto", userDetails.idCardPhoto);
-                }
-                formData.append("items", JSON.stringify(items));
+            // Prefer groupName from a family cart item, then from form/session/userDetails
+            const familyItem = items.find((it: any) => it.type === "family");
+            const resolvedGroupName =
+                (familyItem?.groupName && String(familyItem.groupName).trim()) ||
+                (groupName && String(groupName).trim()) ||
+                (userDetails?.groupName && String(userDetails.groupName).trim()) ||
+                (sessionStorage.getItem("reg_groupName") || "").trim() ||
+                undefined;
 
-                let res: Response = await fetch("/api/payments", { method: "POST", body: formData, credentials: "include" });
-                let body: any = await res.json().catch(() => ({}));
+            // Ensure each family cart item carries the resolved groupName so backend receives it per-registration
+            const itemsToSend = items.map((it: any) =>
+                it.type === "family"
+                    ? { ...it, groupName: (it.groupName && String(it.groupName).trim()) || resolvedGroupName }
+                    : it
+            );
+ 
+             if (canUseFormData) {
+                 // direct FormData POST
+                 console.log("[handleConfirmedSubmit] Trying direct FormData upload...");
+                 const formData = new FormData();
+                 formData.append("proof", proofFile);
+                 if (proofSenderName?.trim()) formData.append("proofSenderName", proofSenderName.trim());
+                 formData.append("amount", String(totalPrice));
+                 formData.append("fullName", fullName);
+                 formData.append("email", email);
+                 formData.append("phone", phone);
+                 formData.append("birthDate", birthDate);
+                 formData.append("gender", gender);
+                 formData.append("currentAddress", currentAddress);
+                 formData.append("nationality", nationality);
+                 formData.append("emergencyPhone", emergencyPhone);
+                 formData.append("medicalHistory", medicalHistory);
+                 formData.append("medicationAllergy", medicationAllergy || "");
+                 formData.append("registrationType", items[0]?.type || "individual");
+                if (resolvedGroupName) formData.append("groupName", resolvedGroupName);
+                 if (userDetails?.idCardPhoto instanceof File) {
+                     formData.append("idCardPhoto", userDetails.idCardPhoto);
+                 }
+                // send items with per-item groupName populated
+                formData.append("items", JSON.stringify(itemsToSend));
+ 
+                 let res: Response = await fetch("/api/payments", { method: "POST", body: formData, credentials: "include" });
+                 let body: any = await res.json().catch(() => ({}));
 
                 // handle email/name mismatch if server still returns 409 (legacy/modal flow may intercept)
                 if (res.status === 409 && body?.error === "EMAIL_NAME_MISMATCH") {
@@ -262,31 +279,32 @@ export default function ConfirmPaymentClient() {
                 setUploadStatus("Saving registration...");
 
                 const payload: any = {
-                    proofUrl,
-                    idCardUrl,
-                    items,
-                    amount: totalPrice,
-                    fullName,
-                    email,
-                    phone,
-                    birthDate,
-                    gender,
-                    currentAddress,
-                    nationality,
-                    emergencyPhone,
-                    medicalHistory,
-                    medicationAllergy: medicationAllergy || "",
-                    registrationType: items[0]?.type || "individual",
-                    proofSenderName: proofSenderName?.trim() || undefined,
-                    groupName: groupName?.trim() || undefined,
-                };
+                     proofUrl,
+                     idCardUrl,
+                     // send items with per-item groupName populated
+                     items: itemsToSend,
+                     amount: totalPrice,
+                     fullName,
+                     email,
+                     phone,
+                     birthDate,
+                     gender,
+                     currentAddress,
+                     nationality,
+                     emergencyPhone,
+                     medicalHistory,
+                     medicationAllergy: medicationAllergy || "",
+                     registrationType: itemsToSend[0]?.type || "individual",
+                     proofSenderName: proofSenderName?.trim() || undefined,
+                    groupName: resolvedGroupName,
+                 };
 
                 let res = await fetch("/api/payments/base64", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload),
-                    credentials: "include",
-                });
+                     method: "POST",
+                     headers: { "Content-Type": "application/json" },
+                     body: JSON.stringify(payload),
+                     credentials: "include",
+                 });
                 const body: any = await res.json().catch(() => ({}));
 
                 if (res.status === 409 && body?.error === "EMAIL_NAME_MISMATCH") {

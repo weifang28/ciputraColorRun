@@ -313,10 +313,13 @@ export async function POST(req: Request) {
         const reg = await tx.registration.create({
           data: {
             userId: user.id,
-            registrationType: item.type || registrationType,
-            paymentStatus: "pending",
+            registrationType: item.type,
+            // Prefer per-item groupName, fallback to top-level groupName
+            groupName: (item as any)?.groupName
+              ? String((item as any).groupName).trim() || undefined
+              : (groupName ? String(groupName).trim() || undefined : undefined),
             totalAmount: new Prisma.Decimal(String(itemTotal)),
-            groupName: item.type === "community" ? (item.groupName || groupName) : undefined,
+            paymentStatus: "pending",
           },
         });
         createdRegistrations.push({ id: reg.id, totalAmount: String(itemTotal) });

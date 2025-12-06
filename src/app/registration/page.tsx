@@ -727,10 +727,10 @@ export default function RegistrationPage() {
                  jerseys: Object.fromEntries(
                      Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
                  ),
-                jerseyCharges: jerseyCharge, // NEW
-                groupName: (groupName || "").trim() || undefined,
+                 jerseyCharges: jerseyCharge, // NEW
+                 groupName: (groupName || "").trim() || undefined,
              });
- 
+
              const totalWithCharges = (currentPrice * bundleSize) + jerseyCharge;
              showToast(`Family bundle added! Total: Rp ${totalWithCharges.toLocaleString("id-ID")}${jerseyCharge > 0 ? ` (includes Rp ${jerseyCharge.toLocaleString("id-ID")} extra size charges)` : ''}`, "success");
              
@@ -739,12 +739,8 @@ export default function RegistrationPage() {
             jerseyOptions.forEach(j => { resetJerseys[j.size] = ""; });
             setJerseys(resetJerseys);
 
-            // UX: after adding a family bundle, switch the registration radio back to Individual
-            // so the form doesn't show family-specific inputs and avoids confusion.
-            setType("individual");
-            setRegistrationType("individual");
- 
-            return;
+            // Keep the UI on Family after adding the bundle (do not switch back to Individual)
+             return;
         }
 
         // Community validation - UPDATED: Allow adding 1+ participants, no minimum
@@ -978,12 +974,12 @@ export default function RegistrationPage() {
                     Object.entries(jerseys).map(([k, v]) => [k, Number(v) || 0])
                 ),
                 jerseyCharges: jerseyCharge,
+                // Persist family name into the same DB/Cart field used by community (groupName)
+                groupName: (groupName || "").trim() || undefined,
             });
 
-            // same UX reset when family added via executeCheckout
-            setType("individual");
-            setRegistrationType("individual");
-
+            // Keep the UI on Family after checkout add (do not switch back to Individual)
+ 
             // reset local fields
             const resetJerseys: Record<string, number | ""> = {};
             jerseyOptions.forEach(j => { resetJerseys[j.size] = ""; });
@@ -1119,18 +1115,18 @@ export default function RegistrationPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {/* Individual */}
                             <label
-                              title={hasIndividualInCart ? "Remove existing Individual items in cart to switch types" : "Individual"}
-                              aria-disabled={hasIndividualInCart}
-                              className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all ${hasIndividualInCart ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${type === "individual" ? 'border-blue-500 bg-blue-50 shadow-lg scale-105' : 'border-gray-300 bg-white hover:border-blue-300 hover:bg-blue-50/50'}`}
+                              title={(hasIndividualInCart || hasFamilyBundle) ? "Remove existing conflicting items in cart to switch types" : "Individual"}
+                              aria-disabled={hasIndividualInCart || hasFamilyBundle}
+                              className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all ${(hasIndividualInCart || hasFamilyBundle) ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${type === "individual" ? 'border-blue-500 bg-blue-50 shadow-lg scale-105' : 'border-gray-300 bg-white hover:border-blue-300 hover:bg-blue-50/50'}`}
                             >
                                 <input
                                     type="radio"
                                     name="regType"
                                     value="individual"
                                     checked={type === "individual"}
-                                    onChange={() => { if (!hasIndividualInCart) { setType("individual"); setRegistrationType("individual"); } }}
+                                    onChange={() => { if (!hasIndividualInCart && !hasFamilyBundle) { setType("individual"); setRegistrationType("individual"); } }}
                                     className="sr-only"
-                                    disabled={hasIndividualInCart}
+                                    disabled={hasIndividualInCart || hasFamilyBundle}
                                 />
                                 <div className="flex flex-col items-center gap-2">
                                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${type === "individual" ? 'border-blue-500 bg-blue-500' : 'border-gray-400 bg-white'}`}>
@@ -1142,18 +1138,18 @@ export default function RegistrationPage() {
  
                             {/* Community */}
                             <label
-                              title={hasIndividualInCart ? "Remove existing Individual items in cart to switch types" : "Community"}
-                              aria-disabled={hasIndividualInCart}
-                              className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all ${hasIndividualInCart ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${type === "community" ? 'border-emerald-500 bg-emerald-50 shadow-lg scale-105' : 'border-gray-300 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'}`}
+                              title={(hasIndividualInCart || hasFamilyBundle) ? "Remove existing conflicting items in cart to switch types" : "Community"}
+                              aria-disabled={hasIndividualInCart || hasFamilyBundle}
+                              className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all ${(hasIndividualInCart || hasFamilyBundle) ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${type === "community" ? 'border-emerald-500 bg-emerald-50 shadow-lg scale-105' : 'border-gray-300 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'}`}
                             >
                                 <input
                                     type="radio"
                                     name="regType"
                                     value="community"
                                     checked={type === "community"}
-                                    onChange={() => { if (!hasIndividualInCart) { setType("community"); setRegistrationType("community"); } }}
+                                    onChange={() => { if (!hasIndividualInCart && !hasFamilyBundle) { setType("community"); setRegistrationType("community"); } }}
                                     className="sr-only"
-                                    disabled={hasIndividualInCart}
+                                    disabled={hasIndividualInCart || hasFamilyBundle}
                                 />
                                 <div className="flex flex-col items-center gap-2">
                                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${type === "community" ? 'border-emerald-500 bg-emerald-500' : 'border-gray-400 bg-white'}`}>
@@ -1192,7 +1188,7 @@ export default function RegistrationPage() {
                                 </div>
                             </label>
                         </div>
-                    </div>
+                     </div>
 
                     {/* Personal Details Form - Keep all existing personal details inputs */}
                     <div className="space-y-4">
@@ -1818,7 +1814,7 @@ export default function RegistrationPage() {
                                         </div>
 
                                         <p className="text-xs text-gray-500 mt-3 text-center">
-                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / 4
+                                            Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / {participants || 0}
                                         </p>
                                     </div>
 
@@ -1877,11 +1873,16 @@ export default function RegistrationPage() {
                                         <button
                                             onClick={handleAddToCart}
                                             disabled={
+                                                hasIndividualInCart || hasFamilyBundle ||
                                                 !participants || 
                                                 Number(participants || 0) < 1 ||
                                                 Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0) !== Number(participants || 0)
                                             }
-                                            className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                            className={`w-full px-6 py-3 rounded-full font-bold shadow-xl transition-all transform ${
+                                                (hasIndividualInCart || hasFamilyBundle)
+                                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-60"
+                                                    : "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white hover:shadow-2xl"
+                                            }`}
                                         >
                                             ADD CATEGORY TO CART
                                         </button>
@@ -1903,11 +1904,11 @@ export default function RegistrationPage() {
                                 <button
                                     onClick={handleCheckout}
                                     className={`w-1/2 md:w-1/3 px-6 py-3 rounded-full font-semibold shadow-xl transition-all transform ${
-                                        getTotalCommunityParticipants() >= 10
+                                        (!hasFamilyBundle && getTotalCommunityParticipants() >= 10)
                                             ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95'
                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
-                                    disabled={getTotalCommunityParticipants() < 10}
+                                    disabled={hasFamilyBundle || getTotalCommunityParticipants() < 10}
                                 >
                                     Proceed to Checkout
                                 </button>

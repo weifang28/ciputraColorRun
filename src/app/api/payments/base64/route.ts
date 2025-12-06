@@ -226,10 +226,13 @@ export async function POST(req: Request) {
         const reg = await tx.registration.create({
           data: {
             userId: user.id,
-            registrationType: item.type || registrationType || "individual",
-            paymentStatus: "pending",
+            registrationType: item.type,
+            // Prefer per-item groupName, fallback to top-level groupName
+            groupName: (item as any)?.groupName
+              ? String((item as any).groupName).trim() || undefined
+              : (groupName ? String(groupName).trim() || undefined : undefined),
             totalAmount: new Prisma.Decimal(String(itemTotal)),
-            groupName: item.type === "community" ? (item.groupName || groupName) : undefined,
+            paymentStatus: "pending",
           },
         });
         createdRegistrations.push({ id: reg.id, totalAmount: String(itemTotal) });
@@ -250,11 +253,12 @@ export async function POST(req: Request) {
           const jerseyEntries = Object.entries(jerseysObj).map(([k, v]) => [k, Number(v || 0)] as [string, number]);
           const totalFromJerseys = jerseyEntries.reduce((s, [, c]) => s + c, 0);
           let participantCount = Number(item.participants ?? item.participantCount ?? item.count ?? 0);
-          if ((item.type === "family") && (!participantCount || participantCount <= 0)) {
+          if (item.type === "family" && (!participantCount || participantCount <= 0)) {
             participantCount = Number(item.participants || 4) || 4;
           }
 
           if (totalFromJerseys > 0) {
+            // Use explicit jersey counts first
             for (const [size, count] of jerseyEntries) {
               if (count <= 0) continue;
               const jerseyId = jerseyMap.get(size) || defaultJerseyId;
@@ -262,6 +266,7 @@ export async function POST(req: Request) {
                 allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
               }
             }
+            // Fill remaining participants with default jersey if necessary
             const remaining = Math.max(0, participantCount - totalFromJerseys);
             if (remaining > 0) {
               const jerseyId = defaultJerseyId;
@@ -270,6 +275,7 @@ export async function POST(req: Request) {
               }
             }
           } else if (participantCount > 0) {
+            // No jersey map provided — create participants with default jersey
             const jerseyId = defaultJerseyId;
             for (let i = 0; i < participantCount; i++) {
               allParticipantRows.push({ registrationId: reg.id, categoryId, jerseyId });
@@ -278,7 +284,7 @@ export async function POST(req: Request) {
             console.warn("[payments/base64] Skipping community/family item because no jerseys and no participants:", item);
           }
         } else {
-          console.warn("[payments/base64] Unknown item.type, skipping:", item);
+          console.warn("[payments/base64] Unknown item.type, skipping item:", item);
         }
 
         // create payment for this registration
