@@ -427,6 +427,8 @@ export default function RegistrationPage() {
         return items.some(it => it.type === "individual");
     }, [items]);
 
+    const isGroupType = type === "community" || type === "family";
+
     // NEW: Calculate extra jersey charges
     function calculateJerseyCharges(jerseySelection: Record<string, number | "">): number {
         let total = 0;
@@ -823,7 +825,7 @@ export default function RegistrationPage() {
                 idCardPhoto: idCardPhoto || undefined,
                 registrationType,
                 // Save groupName for both community and family so server receives same DB field
-                groupName: (type === "community" || type === "family") ? (groupName || "").trim() || undefined : undefined,
+                groupName: isGroupType ? (groupName || "").trim() || undefined : undefined,
          });
 
             // Add one individual item to cart (Buy Now)
@@ -938,7 +940,7 @@ export default function RegistrationPage() {
             idCardPhoto: idCardPhoto || undefined,
             registrationType,
             // Save groupName for both community and family so server receives same DB field
-            groupName: (type === "community" || type === "family") ? (groupName || "").trim() || undefined : undefined,
+            groupName: isGroupType ? (groupName || "").trim() || undefined : undefined,
         });
 
         if (type === "individual") {
