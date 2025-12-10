@@ -415,23 +415,14 @@ export async function POST(req: Request) {
     
     console.log("[payments] Transaction completed successfully");
  
-    // Post-transaction: assign bibs and generate QR codes for all created registrations
-    console.log("[payments] Step 8: Assigning bib numbers and creating QR codes...");
-
+    // Post-transaction: QR codes for all created registrations
+    console.log("[payments] Step 8: Creating QR codes...");
     const createdRegistrationIds = (result.registrations || []).map((r: any) => Number(r.id));
     const createdParticipants = await prisma.participant.findMany({
       where: { registrationId: { in: createdRegistrationIds } },
       include: { category: true },
       orderBy: { id: 'asc' },
-   });
-
-   for (const participant of createdParticipants) {
-      const bibNumber = generateBibNumber(participant.category?.name, participant.id);
-      await prisma.participant.update({
-        where: { id: participant.id },
-        data: { bibNumber },
-      });
-    }
+    });
 
     // Group by registrationId + categoryId to create QR per-registration
     const groupedByRegAndCat: Record<string, number> = {};
