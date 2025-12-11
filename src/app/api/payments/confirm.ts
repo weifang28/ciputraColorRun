@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { authenticateAdmin, unauthorizedResponse } from '../middleware/auth';
 
 const prisma = new PrismaClient();
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     const paymentIdForReg = registrationBefore.payment?.id ?? null;
 
     // Update registration + its pending payment(s) in a single transaction
-    const registration = await prisma.$transaction(async (tx) => {
+    const registration = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       if (paymentIdForReg) {
         // Update the transaction-level payment by id
         await tx.payment.updateMany({
