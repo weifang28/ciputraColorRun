@@ -150,7 +150,8 @@ export async function POST(req: Request) {
     console.log("[payments/base64] cartItems:", Array.isArray(cartItems) ? cartItems.length : typeof cartItems, cartItems);
 
     const jerseyOptions = await prisma.jerseyOption.findMany();
-    const jerseyMap = new Map(jerseyOptions.map((j) => [j.size, j.id]));
+    // avoid implicit any by typing the map callback param
+    const jerseyMap = new Map(jerseyOptions.map((j: any) => [j.size, j.id]));
     const defaultJerseyId = jerseyOptions[0]?.id ?? 1;
 
     const accessCode = existingUser?.accessCode || await generateAccessCode(fullName || "user");
