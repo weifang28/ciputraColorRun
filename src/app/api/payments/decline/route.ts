@@ -68,7 +68,8 @@ export async function POST(request: Request) {
 
       if (participants && participants.length > 0) {
         const categoryMap: Record<number, number> = {};
-        participants.forEach((p) => {
+        // avoid implicit `any` by typing the callback parameter
+        participants.forEach((p: any) => {
           const cid = typeof p.categoryId === "number" ? p.categoryId : null;
           if (cid === null) return; // skip participants without a category
           categoryMap[cid] = (categoryMap[cid] || 0) + 1;
