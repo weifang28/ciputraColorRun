@@ -31,7 +31,7 @@ export async function GET() {
 
     // compute remaining early-bird per category using EarlyBirdClaim count
     const categoriesWithRemaining = await Promise.all(
-      categories.map(async (c) => {
+      categories.map(async (c: any) => {
         const claims = await prisma.earlyBirdClaim.count({ where: { categoryId: c.id } });
         const remaining = Math.max(0, (c.earlyBirdCapacity ?? 0) - claims);
         console.log(`[API] Category ${c.name}: ${claims} claims, ${remaining} remaining`);
