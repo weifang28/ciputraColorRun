@@ -2,16 +2,14 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingCart, User, Menu, X } from "lucide-react";
+import { User, Menu, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useCart } from "../context/CartContext";
 
 export default function NavBar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
-    const { totalItems } = useCart();
 
     // hide on scroll down, show on scroll up
     const [isNavHidden, setIsNavHidden] = useState(false);
@@ -75,8 +73,6 @@ export default function NavBar() {
         window.addEventListener("scroll", onScroll, { passive: true });
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
-
-    const { totalItems: totalItems2 } = useCart();
 
     // Track auth status (null=unknown, false=not logged in, true=logged in)
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -226,20 +222,6 @@ export default function NavBar() {
                                 LOGIN
                             </button>
                         )}
-
-                        {/* Cart (moved to the end) */}
-                        <button
-                            onClick={() => router.push("/cart")}
-                            className="relative text-white hover:text-white/80 transition-colors ml-2"
-                            aria-label="Shopping Cart"
-                        >
-                            <ShoppingCart size={26} strokeWidth={2.2} />
-                            {totalItems > 0 && (
-                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                                    {totalItems}
-                                </span>
-                            )}
-                        </button>
                     </div>
 
                     <button
@@ -271,23 +253,8 @@ export default function NavBar() {
                                             REGISTER
                                         </Link>
 
-                                        {/* Bottom actions: cart + auth (right aligned) */}
+                                        {/* Bottom actions: auth (right aligned) */}
                                         <div className="flex items-center gap-4 pt-4 border-t border-white/10 w-full justify-end">
-                                            <button
-                                                onClick={() => {
-                                                    setIsMenuOpen(false);
-                                                    router.push("/cart");
-                                                }}
-                                                className="relative text-white hover:text-white/80 transition-colors"
-                                                aria-label="Shopping Cart"
-                                            >
-                                                <ShoppingCart size={28} strokeWidth={2.5} />
-                                                {totalItems > 0 && (
-                                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                                                        {totalItems}
-                                                    </span>
-                                                )}
-                                            </button>
 
                                             {isAuthenticated === null ? (
                                                 <div className="w-20 h-8 bg-white/10 rounded animate-pulse"></div>

@@ -7,8 +7,7 @@ export async function GET() {
   try {
     const jerseys = await prisma.jerseyOption.findMany({
       orderBy: [
-        { type: "asc" }, // Adult first, then kids
-        { id: "asc" }, // Then by size order
+        { id: "asc" }, // Order by ID
       ],
     });
 

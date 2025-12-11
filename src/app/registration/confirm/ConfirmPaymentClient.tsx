@@ -1,7 +1,6 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useCart } from "../../context/CartContext";
 import { useState, useEffect } from "react";
 import TutorialModal from "../../components/TutorialModal";
 import { showToast } from "../../../lib/toast";
@@ -14,9 +13,21 @@ export default function ConfirmPaymentClient() {
 
     const search = useSearchParams();
     const router = useRouter();
-    const { items, clearCart, totalPrice, userDetails } = useCart();
 
-    const fromCart = search.get("fromCart") === "true";
+    // Load registration data from session storage
+    const [registrationData, setRegistrationData] = useState<any>(null);
+
+    // Calculate total price from registration data
+    const totalPrice = registrationData
+        ? (registrationData.type === "individual"
+            ? registrationData.price + (registrationData.jerseyCharges || 0)
+            : registrationData.type === "family"
+            ? (registrationData.price * registrationData.participants) + (registrationData.jerseyCharges || 0)
+            : (registrationData.price * registrationData.participants) + (registrationData.jerseyCharges || 0))
+        : 0;
+
+    // Convert registration data to items array for compatibility with API
+    const items = registrationData ? [registrationData] : [];
 
     const [fullName, setFullName] = useState<string>("");
     const [email, setEmail] = useState<string>("");
@@ -46,40 +57,36 @@ export default function ConfirmPaymentClient() {
     ];
 
     useEffect(() => {
-        // Load from context first, then fallback to sessionStorage
-        if (userDetails) {
-            setFullName(userDetails.fullName);
-            setEmail(userDetails.email);
-            setPhone(userDetails.phone);
-            setBirthDate(userDetails.birthDate);
-            setGender(userDetails.gender);
-            setCurrentAddress(userDetails.currentAddress);
-            setNationality(userDetails.nationality || "");
-            setEmergencyPhone(userDetails.emergencyPhone || "");
-            setMedicalHistory(userDetails.medicalHistory || "");
-            setMedicationAllergy(userDetails.medicationAllergy || "");
-            setGroupName(userDetails.groupName || "");
-        } else {
-            setFullName(sessionStorage.getItem("reg_fullName") || search.get("fullName") || "");
-            setEmail(sessionStorage.getItem("reg_email") || search.get("email") || "");
-            setPhone(sessionStorage.getItem("reg_phone") || search.get("phone") || "");
-            setBirthDate(sessionStorage.getItem("reg_birthDate") || "");
-            setGender(sessionStorage.getItem("reg_gender") || "male");
-            setCurrentAddress(sessionStorage.getItem("reg_currentAddress") || "");
-            setNationality(sessionStorage.getItem("reg_nationality") || "WNI");
-            setEmergencyPhone(sessionStorage.getItem("reg_emergencyPhone") || "");
-            setMedicalHistory(sessionStorage.getItem("reg_medicalHistory") || "");
-            setMedicationAllergy(sessionStorage.getItem("reg_medicationAllergy") || "");
-            setGroupName(sessionStorage.getItem("reg_groupName") || "");
+        // Load registration data from session storage
+        const savedData = sessionStorage.getItem("currentRegistration");
+        if (!savedData) {
+            router.push("/registration");
+            return;
         }
-    }, [userDetails, search]);
-
-    // Redirect if cart is empty when coming from cart
-    useEffect(() => {
-        if (!submitted && fromCart && items.length === 0) {
+        
+        try {
+            const data = JSON.parse(savedData);
+            setRegistrationData(data);
+            
+            // Load user details from registration data
+            if (data.userDetails) {
+                setFullName(data.userDetails.fullName || "");
+                setEmail(data.userDetails.email || "");
+                setPhone(data.userDetails.phone || "");
+                setBirthDate(data.userDetails.birthDate || "");
+                setGender(data.userDetails.gender || "male");
+                setCurrentAddress(data.userDetails.currentAddress || "");
+                setNationality(data.userDetails.nationality || "WNI");
+                setEmergencyPhone(data.userDetails.emergencyPhone || "");
+                setMedicalHistory(data.userDetails.medicalHistory || "");
+                setMedicationAllergy(data.userDetails.medicationAllergy || "");
+                setGroupName(data.userDetails.groupName || data.groupName || "");
+            }
+        } catch (error) {
+            console.error("Failed to load registration data:", error);
             router.push("/registration");
         }
-    }, [fromCart, items, router, submitted]);
+    }, [router]);
 
     // Convert File to base64
     async function fileToBase64(file: File): Promise<string> {
@@ -196,24 +203,22 @@ export default function ConfirmPaymentClient() {
             let proofUrl: string | undefined = undefined;
             let idCardUrl: string | undefined = undefined;
 
+            const idCardPhoto = registrationData?.userDetails?.idCardPhoto;
             const canUseFormData = proofFile.size < 500_000 &&
-                (!userDetails?.idCardPhoto || !(userDetails.idCardPhoto instanceof File) || userDetails.idCardPhoto.size < 500_000);
+                (!idCardPhoto || !(idCardPhoto instanceof File) || idCardPhoto.size < 500_000);
 
-            // Prefer groupName from a family cart item, then from form/session/userDetails
-            const familyItem = items.find((it: any) => it.type === "family");
+            // Get groupName from registration data
             const resolvedGroupName =
-                (familyItem?.groupName && String(familyItem.groupName).trim()) ||
+                (registrationData.groupName && String(registrationData.groupName).trim()) ||
+                (registrationData.userDetails?.groupName && String(registrationData.userDetails.groupName).trim()) ||
                 (groupName && String(groupName).trim()) ||
-                (userDetails?.groupName && String(userDetails.groupName).trim()) ||
-                (sessionStorage.getItem("reg_groupName") || "").trim() ||
                 undefined;
 
-            // Ensure each family cart item carries the resolved groupName so backend receives it per-registration
-            const itemsToSend = items.map((it: any) =>
-                it.type === "family"
-                    ? { ...it, groupName: (it.groupName && String(it.groupName).trim()) || resolvedGroupName }
-                    : it
-            );
+            // Ensure registration carries the resolved groupName
+            const itemsToSend = [{
+                ...registrationData,
+                groupName: resolvedGroupName
+            }];
  
              if (canUseFormData) {
                  // direct FormData POST
@@ -232,10 +237,10 @@ export default function ConfirmPaymentClient() {
                  formData.append("emergencyPhone", emergencyPhone);
                  formData.append("medicalHistory", medicalHistory);
                  formData.append("medicationAllergy", medicationAllergy || "");
-                 formData.append("registrationType", items[0]?.type || "individual");
+                 formData.append("registrationType", registrationData.type || "individual");
                 if (resolvedGroupName) formData.append("groupName", resolvedGroupName);
-                 if (userDetails?.idCardPhoto instanceof File) {
-                     formData.append("idCardPhoto", userDetails.idCardPhoto);
+                 if (idCardPhoto instanceof File) {
+                     formData.append("idCardPhoto", idCardPhoto);
                  }
                 // send items with per-item groupName populated
                 formData.append("items", JSON.stringify(itemsToSend));
@@ -270,9 +275,9 @@ export default function ConfirmPaymentClient() {
                 proofUrl = await uploadFileInChunks(proofFile, "proofs");
                 console.log("[handleConfirmedSubmit] Proof uploaded:", proofUrl);
 
-                if (userDetails?.idCardPhoto instanceof File) {
+                if (idCardPhoto instanceof File) {
                     setUploadStatus("Uploading ID card...");
-                    idCardUrl = await uploadFileInChunks(userDetails.idCardPhoto, "id-cards");
+                    idCardUrl = await uploadFileInChunks(idCardPhoto, "id-cards");
                     console.log("[handleConfirmedSubmit] ID card uploaded:", idCardUrl);
                 }
 
@@ -336,10 +341,10 @@ export default function ConfirmPaymentClient() {
                 console.log("[handleConfirmedSubmit] Registration successful");
             }
 
-            // Clear cart and session data ONLY after successful upload
-            clearCart();
+            // Clear session data ONLY after successful upload
+            sessionStorage.removeItem("currentRegistration");
 
-            // NEW: clear all registration session keys after successful payment submission
+            // Clear all registration session keys after successful payment submission
             try {
                 const keysToClear = [
                     "reg_formData",

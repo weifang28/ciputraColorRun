@@ -1,8 +1,6 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
-import { useCart } from "../../context/CartContext";
-import { useState, useEffect, Suspense } from "react";
+import { Suspense } from "react";
 import  ConfirmPaymentClient from "./ConfirmPaymentClient"
 
 

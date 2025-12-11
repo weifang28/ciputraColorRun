@@ -144,7 +144,7 @@ export async function POST(req: Request) {
     const amount = Number(formData.get("amount") || 0);
     const proofSenderName = String(formData.get("proofSenderName") || "").trim();
     const groupName = String(formData.get("groupName") || "").trim();
-    const cartItemsJson = String(formData.get("items") || "");
+    const itemsJson = String(formData.get("items") || "");
     const forceCreate = String(formData.get("forceCreate") || "") === "true";
 
     // Helper: normalize a name for robust comparison
@@ -222,14 +222,14 @@ export async function POST(req: Request) {
       idCardPhotoPath = await saveFileLocally(idCardPhotoFile, "id-cards", idFileName);
     }
 
-    // Parse cart items
-    console.log("[payments] Step 4: Parsing cart items...");
-    let cartItems: any[] = [];
-    if (cartItemsJson) {
+    // Parse registration items
+    console.log("[payments] Step 4: Parsing registration items...");
+    let items: any[] = [];
+    if (itemsJson) {
       try {
-        cartItems = JSON.parse(cartItemsJson);
+        items = JSON.parse(itemsJson);
       } catch (e) {
-        console.warn("[payments] Failed to parse cartItems:", e);
+        console.warn("[payments] Failed to parse items:", e);
       }
     }
 
@@ -286,13 +286,13 @@ export async function POST(req: Request) {
       }
       console.log("[payments] User ID:", user.id);
 
-      // Create separate registration + participants + payment for each cart item
+      // Create separate registration + participants + payment for each item
       const createdRegistrations: Array<{ id: number; totalAmount: string }> = [];
       const allParticipantRows: Array<{ registrationId: number; categoryId: number; jerseyId: number }> = [];
       const earlyBirdClaims: Array<{ categoryId: number }> = [];
       const createdPayments: Array<any> = [];
 
-      for (const item of cartItems) {
+      for (const item of items) {
         const categoryId = Number(item.categoryId);
         if (Number.isNaN(categoryId)) {
           console.warn("[payments] Invalid categoryId, skipping item:", item);
@@ -387,7 +387,7 @@ export async function POST(req: Request) {
         console.log("[payments] Created early bird claims:", earlyBirdClaims.length);
       }
 
-      // Create one transaction-level payment that covers all registrations in this cart
+      // Create one transaction-level payment that covers all registrations in this submission
       const totalTxAmount = createdRegistrations.reduce((s, r) => s + Number(r.totalAmount || 0), 0);
       const payment = await tx.payment.create({
         data: {

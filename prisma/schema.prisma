@@ -109,7 +109,7 @@ model Payment {
   status           String    @default("pending")
   amount           Decimal?
   createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  updatedAt        DateTime  @default(now()) @updatedAt
 
   // NEW: one Payment covers many Registrations
   registrations    Registration[]
