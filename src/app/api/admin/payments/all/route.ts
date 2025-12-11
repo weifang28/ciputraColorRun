@@ -28,12 +28,12 @@ export async function GET(request: Request) {
     });
 
     // Transform to match expected format
-    const payments = registrations.map(reg => {
+    const payments = registrations.map((reg: any) => {
       // Calculate category counts
       const categoryCounts: Record<string, number> = {};
       const jerseySizes: Record<string, number> = {};
       
-      reg.participants.forEach(p => {
+      reg.participants.forEach((p: any) => {
         const catName = p.category?.name || 'Unknown';
         categoryCounts[catName] = (categoryCounts[catName] || 0) + 1;
         
