@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       success: true,
       claims,
       total: claims.length,
-      totalPacks: claims.reduce((sum, c: any) => sum + (c.packsClaimedCount || 0), 0),
+      totalPacks: claims.reduce((sum: number, c: any) => sum + (c.packsClaimedCount || 0), 0),
     });
   } catch (error: any) {
     console.error("[racePack/claims] Error fetching claims:", error);
