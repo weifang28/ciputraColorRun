@@ -247,7 +247,8 @@ export async function POST(req: Request) {
     // Pre-fetch jersey options
     console.log("[payments] Step 5: Pre-fetching jersey options...");
     const jerseyOptions = await prisma.jerseyOption.findMany();
-    const jerseyMap = new Map(jerseyOptions.map(j => [j.size, j.id]));
+    // avoid implicit `any` by typing the map callback parameter
+    const jerseyMap = new Map(jerseyOptions.map((j: any) => [j.size, j.id]));
     const defaultJerseyId = jerseyOptions[0]?.id ?? 1;
 
     // Database transaction
