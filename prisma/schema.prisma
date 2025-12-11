@@ -8,55 +8,65 @@ datasource db {
 }
 
 model User {
-  id                Int            @id @default(autoincrement())
-  name              String?
-  email             String
-  phone             String
-  accessCode        String         @unique
-  role              String         @default("user")
-  password          String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  birthDate         DateTime?
-  gender            String?
-  currentAddress    String?
-  nationality       String?
-  idCardPhoto       String?
-  emergencyPhone    String?
-  medicalHistory    String?
+  id              Int            @id @default(autoincrement())
+  name            String?
+  email           String
+  phone           String
+  accessCode      String         @unique
+  role            String         @default("user")
+  password        String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  registrations   Registration[]
+  
+  // Personal details
+  birthDate       DateTime?
+  gender          String?
+  currentAddress  String?
+  nationality     String?
+  idCardPhoto     String?
+  emergencyPhone  String?
+  medicalHistory  String?
   medicationAllergy String?
 }
 
 model RaceCategory {
-  id                Int              @id @default(autoincrement())
-  name              String           @unique
-  imageUrl          String?
-  basePrice         Decimal          @db.Decimal(10, 2)
-  earlyBirdPrice    Decimal?         @db.Decimal(10, 2)
-  tier1Price        Decimal?         @db.Decimal(10, 2)
-  tier1Min          Int?             @default(10)
-  tier1Max          Int?             @default(29)
-  tier2Price        Decimal?         @db.Decimal(10, 2)
-  tier2Min          Int?             @default(30)
-  tier2Max          Int?
-  tier3Price        Decimal?         @db.Decimal(10, 2)
-  tier3Min          Int?             @default(60)
-  bundlePrice       Decimal?         @db.Decimal(10, 2)
-  bundleSize        Int?             @default(4)
-  earlyBirdCapacity Int?
-  earlyBirdClaims   EarlyBirdClaim[]
-  participants      Participant[]
-  qrCodes           QrCode[]
+  id                Int       @id @default(autoincrement())
+  name              String    @unique
+  basePrice         Decimal   @db.Decimal(10, 2)
+  earlyBirdPrice    Decimal?  @db.Decimal(10, 2)
+  
+  // Community tier pricing
+  tier1Price      Decimal?       @db.Decimal(10, 2)
+  tier1Min        Int?           @default(10)
+  tier1Max        Int?           @default(29)
+  
+  tier2Price      Decimal?       @db.Decimal(10, 2)
+  tier2Min        Int?           @default(30)
+  tier2Max        Int?
+  
+  tier3Price      Decimal?       @db.Decimal(10, 2)
+  tier3Min        Int?           @default(60)
+  
+  // Bundle pricing (for 3K family bundle)
+  bundlePrice     Decimal?       @db.Decimal(10, 2)
+  bundleSize      Int?           @default(4)
+
+  earlyBirdCapacity Int?   
+  
+  participants    Participant[]
+  qrCodes         QrCode[]
+  earlyBirdClaims EarlyBirdClaim[]
 }
 
 model JerseyOption {
-  id           Int           @id @default(autoincrement())
-  size         String        @unique
-  price        Decimal       @db.Decimal(10, 2)
+  id           Int            @id @default(autoincrement())
+  size         String         @unique
+  type         String         @default("adult") // "adult" or "kids"
+  price        Decimal        @db.Decimal(10, 2) // Price for extra charge (e.g., 10000 for 6XL+)
   quantity     Int?
-  description  String?
-  isExtraSize  Boolean       @default(false)
-  type         String        @default("adult")
+  isExtraSize  Boolean        @default(false) // NEW: Flag for sizes with extra charge
+  description  String?        // NEW: Description for extra sizes
   participants Participant[]
 }
 
@@ -69,10 +79,11 @@ model Registration {
   paymentStatus    String        @default("pending")
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-  paymentId        Int?
   participants     Participant[]
-  qrCodes          QrCode[]
+  // NEW: link to the transaction-level payment that covers this registration
+  paymentId        Int?
   payment          Payment?      @relation(fields: [paymentId], references: [id])
+  qrCodes          QrCode[]
   user             User          @relation(fields: [userId], references: [id])
 }
 
@@ -84,22 +95,24 @@ model Participant {
   bibNumber      String?
   packClaimed    Boolean       @default(false)
   claimDetails   ClaimDetail[]
-  category       RaceCategory? @relation(fields: [categoryId], references: [id])
+  category       RaceCategory?  @relation(fields: [categoryId], references: [id])
   jersey         JerseyOption  @relation(fields: [jerseyId], references: [id])
   registration   Registration  @relation(fields: [registrationId], references: [id])
 }
 
 model Payment {
-  id              Int            @id @default(autoincrement())
-  transactionId   String
-  proofOfPayment  String?
-  status          String         @default("pending")
-  paidAt          DateTime?
-  amount          Decimal?
-  createdAt       DateTime       @default(now())
-  proofSenderName String?
-  updatedAt       DateTime       @default(now()) @updatedAt
-  registrations   Registration[]
+  id               Int       @id @default(autoincrement())
+  transactionId    String
+  proofOfPayment   String?
+  proofSenderName  String?
+  paidAt           DateTime?   // time of settlement / external paid timestamp
+  status           String    @default("pending")
+  amount           Decimal?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
+
+  // NEW: one Payment covers many Registrations
+  registrations    Registration[]
 }
 
 model QrCode {
@@ -135,8 +148,8 @@ model ClaimDetail {
 }
 
 model EarlyBirdClaim {
-  id         Int          @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   categoryId Int
-  createdAt  DateTime     @default(now())
   category   RaceCategory @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime @default(now())
 }
