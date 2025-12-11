@@ -75,17 +75,29 @@ export async function POST(request: Request) {
         orderBy: { id: 'asc' },
       });
 
+      const updatedParticipants: typeof participants = [];
       for (const participant of participants) {
-        if (!participant.bibNumber) { // only assign if not already set
+        try {
+          if (!participant.bibNumber) {
             const bibNumber = generateBibNumber(participant.category?.name, participant.id);
-            await tx.participant.update({
-                where: { id: participant.id },
-                data: { bibNumber },
+            const updated = await tx.participant.update({
+              where: { id: participant.id },
+              data: { bibNumber },
             });
+            updatedParticipants.push({ ...updated, category: participant.category });
+            console.log(`[confirm] Assigned bib ${updated.bibNumber} -> participant ${participant.id}`);
+          } else {
+            updatedParticipants.push(participant);
+            console.log(`[confirm] Participant ${participant.id} already has bib ${participant.bibNumber}`);
+          }
+        } catch (e) {
+          console.error(`[confirm] Failed to set bib for participant ${participant.id}:`, e);
+          throw e; // bubble to rollback transaction
         }
       }
 
-      return reg;
+      // return registration with participants so caller can verify saved bibs
+      return { ...reg, participants: updatedParticipants };
     });
 
     // optional: fire-and-forget email/QR send (log errors but don't fail)

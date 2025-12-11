@@ -203,9 +203,14 @@ export default function ConfirmPaymentClient() {
             let proofUrl: string | undefined = undefined;
             let idCardUrl: string | undefined = undefined;
 
+            // idCardPhoto may be a File (if preserved) — otherwise check for an existing uploaded URL
             const idCardPhoto = registrationData?.userDetails?.idCardPhoto;
-            const canUseFormData = proofFile.size < 500_000 &&
-                (!idCardPhoto || !(idCardPhoto instanceof File) || idCardPhoto.size < 500_000);
+            const existingIdCardUrl = registrationData?.userDetails?.existingIdCardPhotoUrl || registrationData?.userDetails?.idCardUrl || undefined;
+            // debug: ensure we are actually carrying an existing URL to the submit step
+            console.log("[handleConfirmedSubmit] existingIdCardUrl:", existingIdCardUrl);
+            
+            // Ensure we propagate existing URL if no File is present
+            let resolvedIdCardUrl: string | undefined = existingIdCardUrl;
 
             // Get groupName from registration data
             const resolvedGroupName =
@@ -219,6 +224,13 @@ export default function ConfirmPaymentClient() {
                 ...registrationData,
                 groupName: resolvedGroupName
             }];
+
+            // Decide whether we can POST FormData directly.
+            // Use small threshold to avoid large FormData requests — larger files will use chunked upload.
+            const canUseFormData =
+                !!proofFile &&
+                proofFile.size < 500_000 &&
+                (!idCardPhoto || !(idCardPhoto instanceof File) || idCardPhoto.size < 500_000);
  
              if (canUseFormData) {
                  // direct FormData POST
@@ -239,9 +251,13 @@ export default function ConfirmPaymentClient() {
                  formData.append("medicationAllergy", medicationAllergy || "");
                  formData.append("registrationType", registrationData.type || "individual");
                 if (resolvedGroupName) formData.append("groupName", resolvedGroupName);
+                 // Always send existingIdCardUrl if available (fallback for File not present)
                  if (idCardPhoto instanceof File) {
-                     formData.append("idCardPhoto", idCardPhoto);
-                 }
+                    formData.append("idCardPhoto", idCardPhoto);
+                }
+                if (existingIdCardUrl) {
+                    formData.append("existingIdCardUrl", String(existingIdCardUrl));
+                }
                 // send items with per-item groupName populated
                 formData.append("items", JSON.stringify(itemsToSend));
  
@@ -279,13 +295,17 @@ export default function ConfirmPaymentClient() {
                     setUploadStatus("Uploading ID card...");
                     idCardUrl = await uploadFileInChunks(idCardPhoto, "id-cards");
                     console.log("[handleConfirmedSubmit] ID card uploaded:", idCardUrl);
+                } else if (existingIdCardUrl) {
+                    // reuse previously uploaded id card URL stored in session
+                    idCardUrl = existingIdCardUrl;
                 }
 
                 setUploadStatus("Saving registration...");
 
                 const payload: any = {
                      proofUrl,
-                     idCardUrl,
+                     // prefer newly uploaded or uploaded-by-registration URL
+                     idCardUrl: idCardUrl || resolvedIdCardUrl || existingIdCardUrl || undefined,
                      // send items with per-item groupName populated
                      items: itemsToSend,
                      amount: totalPrice,
@@ -401,54 +421,47 @@ export default function ConfirmPaymentClient() {
                     <div className="mb-6">
                         <h3 className="font-semibold mb-3">Order Summary:</h3>
                         <div className="space-y-2">
-                            {items.map((item) => {
-                                let secondaryLabel = "";
-                                if (item.type === "community" || item.type === "family") {
-                                    const jerseysObj: Record<string, number> = item.jerseys || {};
-                                    const pairs = Object.entries(jerseysObj)
-                                        .filter(([, cnt]) => Number(cnt) > 0)
-                                        .map(([size, cnt]) => `${size}(${cnt})`);
-                                    secondaryLabel = pairs.length > 0 ? pairs.join(", ") : `${item.participants || 0} participants`;
-                                } else {
-                                    secondaryLabel = `Size ${item.jerseySize || "—"}`;
-                                }
+                            {items.map((item, idx) => {
+    const itemKey = item.id ?? `item-${idx}`;
 
-                                const itemTotal = (item.type === "community" || item.type === "family")
-                                    ? Number(item.price) * Number(item.participants || 0)
-                                    : Number(item.price);
+    // If community/family, build JSX list of pairs with keys
+    let secondaryLabel: React.ReactNode = "";
+    if (item.type === "community" || item.type === "family") {
+        const jerseysObj: Record<string, number> = item.jerseys || {};
+        const pairs = Object.entries(jerseysObj).filter(([, cnt]) => Number(cnt) > 0);
+        if (pairs.length > 0) {
+            secondaryLabel = (
+                <>
+                    {pairs.map(([size, cnt], i) => (
+                        <span key={size}>
+                            {`${size}(${cnt})`}
+                            {i < pairs.length - 1 ? ", " : ""}
+                        </span>
+                    ))}
+                </>
+            );
+        } else {
+            secondaryLabel = `${item.participants || 0} participants`;
+        }
+    } else {
+        secondaryLabel = `Size ${item.jerseySize || "—"}`;
+    }
 
-                                // extra charge amount saved on cart item
-                                const extraCharge = Number(item.jerseyCharges || 0);
-
-                                // compute 6XL count for display (community/family use jerseys map, individual uses jerseySize)
-                                const count6XL =
-                                    (item.jerseys && Number(item.jerseys["6XL"] || 0)) ||
-                                    (item.type === "individual" && item.jerseySize === "6XL" ? 1 : 0);
-
-                                return (
-                                    <div key={item.id} className="flex justify-between text-sm border-b pb-2">
-                                      <div>
-                                        <p className="font-semibold text-gray-900">{item.categoryName}</p>
-                                        <p className="text-gray-600 text-xs">{secondaryLabel}</p>
-
-                                        {/* EXTRA: show human-friendly note when extra-size charges exist */}
-                                        {extraCharge > 0 && (
-                                          <p className="text-xs text-orange-700 mt-1">
-                                            <strong>Note:</strong>{" "}
-                                            {count6XL > 0
-                                              ? `Includes extra size charge for ${count6XL}× 6XL`
-                                              : "Includes extra size charge"}
-                                            : <span className="font-semibold">+Rp {extraCharge.toLocaleString("id-ID")}</span>
-                                          </p>
-                                        )}
-                                      </div>
-
-                                      <div>
-                                        <p className="font-semibold">Rp {itemTotal.toLocaleString("id-ID")}</p>
-                                      </div>
-                                    </div>
-                                );
-                            })}
+    return (
+        <div key={itemKey} className="flex justify-between text-sm border-b pb-2">
+            <div>
+                <p className="font-semibold text-gray-900">{item.categoryName}</p>
+                <p className="text-gray-600 text-xs">{secondaryLabel}</p>
+            </div>
+            <p className="font-semibold text-gray-900">
+                Rp {((item.type === "community" || item.type === "family")
+                    ? Number(item.price) * Number(item.participants || 0)
+                    : Number(item.price)
+                ).toLocaleString("id-ID")}
+            </p>
+        </div>
+    );
+})}
                             <div className="flex justify-between font-bold text-lg pt-2">
                                 <span>Total:</span>
                                 <span>Rp {totalPrice.toLocaleString("id-ID")}</span>
@@ -604,32 +617,47 @@ export default function ConfirmPaymentClient() {
                                 <div className="space-y-3">
                                     <h4 className="font-bold text-gray-900 text-base">Order Summary:</h4>
                                     <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
-                                        {items.map((item) => {
-                                            let secondaryLabel = "";
-                                            if (item.type === "community" || item.type === "family") {
-                                                const jerseysObj: Record<string, number> = item.jerseys || {};
-                                                const pairs = Object.entries(jerseysObj)
-                                                    .filter(([, cnt]) => Number(cnt) > 0)
-                                                    .map(([size, cnt]) => `${size}(${cnt})`);
-                                                secondaryLabel = pairs.length > 0 ? pairs.join(", ") : `${item.participants || 0} participants`;
-                                            } else {
-                                                secondaryLabel = `Size ${item.jerseySize || "—"}`;
-                                            }
+                                        {items.map((item, idx) => {
+    const itemKey = item.id ?? `item-${idx}`;
 
-                                            return (
-                                                <div key={item.id} className="flex justify-between border-b border-gray-300 pb-2">
-                                                    <div>
-                                                        <p className="font-semibold text-gray-900">{item.categoryName}</p>
-                                                        <p className="text-gray-600 text-xs">{secondaryLabel}</p>
-                                                    </div>
-                                                    <p className="font-semibold text-gray-900">
-                                                        Rp {((item.type === "community" || item.type === "family") 
-                                                            ? Number(item.price) * Number(item.participants || 0)
-                                                            : Number(item.price)).toLocaleString("id-ID")}
-                                                    </p>
-                                                </div>
-                                            );
-                                        })}
+    // If community/family, build JSX list of pairs with keys
+    let secondaryLabel: React.ReactNode = "";
+    if (item.type === "community" || item.type === "family") {
+        const jerseysObj: Record<string, number> = item.jerseys || {};
+        const pairs = Object.entries(jerseysObj).filter(([, cnt]) => Number(cnt) > 0);
+        if (pairs.length > 0) {
+            secondaryLabel = (
+                <>
+                    {pairs.map(([size, cnt], i) => (
+                        <span key={size}>
+                            {`${size}(${cnt})`}
+                            {i < pairs.length - 1 ? ", " : ""}
+                        </span>
+                    ))}
+                </>
+            );
+        } else {
+            secondaryLabel = `${item.participants || 0} participants`;
+        }
+    } else {
+        secondaryLabel = `Size ${item.jerseySize || "—"}`;
+    }
+
+    return (
+        <div key={itemKey} className="flex justify-between border-b border-gray-300 pb-2">
+            <div>
+                <p className="font-semibold text-gray-900">{item.categoryName}</p>
+                <p className="text-gray-600 text-xs">{secondaryLabel}</p>
+            </div>
+            <p className="font-semibold text-gray-900">
+                Rp {((item.type === "community" || item.type === "family")
+                    ? Number(item.price) * Number(item.participants || 0)
+                    : Number(item.price)
+                ).toLocaleString("id-ID")}
+            </p>
+        </div>
+    );
+})}
                                     </div>
                                 </div>
                             </div>

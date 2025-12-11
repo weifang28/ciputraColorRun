@@ -6,6 +6,16 @@ import nodemailer from "nodemailer";
 
 const prisma = new PrismaClient();
 
+// Bib number generator (same logic used in other payment handlers)
+function generateBibNumber(categoryName: string | undefined, participantId: number): string {
+  const catLower = (categoryName || "").toLowerCase().replace(/\s+/g, "");
+  let prefix = "0";
+  if (catLower.includes("3k") || catLower === "3km") prefix = "3";
+  else if (catLower.includes("5k") || catLower === "5km") prefix = "5";
+  else if (catLower.includes("10k") || catLower === "10km") prefix = "10";
+  return `${prefix}${String(participantId).padStart(4, "0")}`;
+}
+
 async function makeUniqueAccessCode(baseName: string): Promise<string> {
   // Extract first name (first word before space)
   const firstName = (baseName || 'user')
@@ -153,32 +163,72 @@ export async function POST(request: Request) {
 
       console.log('[payments/confirm] Updated registration', registrationId, 'payment status to confirmed');
 
-      // Deduct jersey quantities
+      // --- Assign bib numbers for participants in this registration ---
       const participants = await tx.participant.findMany({
         where: { registrationId },
-        include: { jersey: true },
+        include: { category: true },
+        orderBy: { id: 'asc' },
       });
+ 
+      // --- Global counter: scan DB for highest 4-digit suffix and start from max+1 ---
+      const existingBibs = await tx.participant.findMany({
+        where: { bibNumber: { not: null } as any },
+        select: { bibNumber: true },
+      });
+      let maxSuffix = 0;
+      for (const p of existingBibs) {
+        const bn = String(p.bibNumber || "");
+        if (bn.length < 4) continue;
+        const suffix = bn.slice(-4); // last 4 digits are the numeric counter
+        const n = parseInt(suffix, 10);
+        if (!Number.isNaN(n) && n > maxSuffix) maxSuffix = n;
+      }
+      let globalCounter = maxSuffix + 1;
+ 
+      const updatedParticipants: typeof participants = [];
+      for (const participant of participants) {
+        try {
+          // defensive: ensure we have a numeric id
+          const pid = Number(participant?.id);
+          if (Number.isNaN(pid) || pid <= 0) {
+            console.warn(`[payments/confirm] Skipping participant with invalid id:`, participant);
+            continue;
+          }
 
-      const jerseyUpdates = participants.reduce((acc: Record<number, number>, p) => {
-        if (p.jerseyId) {
-          acc[p.jerseyId] = (acc[p.jerseyId] || 0) + 1;
-        }
-        return acc;
-      }, {});
+          if (!participant.bibNumber) {
+            // compute prefix from category name
+            const catLower = (participant.category?.name || "").toLowerCase().replace(/\s+/g, "");
+            let prefix = "0";
+            if (catLower.includes("3k") || catLower === "3km") prefix = "3";
+            else if (catLower.includes("5k") || catLower === "5km") prefix = "5";
+            else if (catLower.includes("10k") || catLower === "10km") prefix = "10";
 
-      for (const [jerseyIdStr, count] of Object.entries(jerseyUpdates)) {
-        const jerseyId = Number(jerseyIdStr);
-        const jersey = await tx.jerseyOption.findUnique({ where: { id: jerseyId } });
-        if (jersey && jersey.quantity !== null) {
-          const newQty = Math.max(0, jersey.quantity - count);
-          await tx.jerseyOption.update({
-            where: { id: jerseyId },
-            data: { quantity: newQty },
-          });
+            const bibNumber = `${prefix}${String(globalCounter).padStart(4, "0")}`;
+
+            // Ensure we pass primitives to Prisma and not accidental objects
+            const updated = await tx.participant.update({
+              where: { id: pid },
+              data: { bibNumber: String(bibNumber) },
+            });
+
+            globalCounter += 1; // advance global counter for next participant
+
+            updatedParticipants.push({ ...updated, category: participant.category });
+            console.log(`[payments/confirm] Assigned bib ${updated.bibNumber} -> participant ${pid}`);
+          } else {
+            updatedParticipants.push(participant);
+            console.log(`[payments/confirm] Participant ${participant.id} already has bib ${participant.bibNumber}`);
+          }
+        } catch (e) {
+          console.error(`[payments/confirm] Failed to set bib for participant ${participant?.id}:`, e);
+          throw e; // rollback transaction if anything fails
         }
       }
 
-      return reg;
+      // attach participants to registration for response
+      const regWithParticipants = { ...reg, participants: updatedParticipants };
+ 
+      return regWithParticipants;
     });
 
     console.log('[payments/confirm] Transaction completed for user:', userId);
