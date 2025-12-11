@@ -254,8 +254,8 @@ export async function POST(req: Request) {
     // Database transaction
     console.log("[payments] Step 7: Starting database transaction...");
     
-    const result = await prisma.$transaction(async ((tx: any)) => {
-      let user;
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+       let user;
       
       if (existingUser) {
         // REUSE existing user and update their information
