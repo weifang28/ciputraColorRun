@@ -4,6 +4,18 @@ import { authenticateAdmin, unauthorizedResponse } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 
+function generateBibNumber(categoryName: string | undefined, participantId: number): string {
+  const catLower = (categoryName || "").toLowerCase().replace(/\s+/g, "");
+  let prefix = "0";
+  
+  if (catLower.includes("3k") || catLower === "3km") prefix = "3";
+  else if (catLower.includes("5k") || catLower === "5km") prefix = "5";
+  else if (catLower.includes("10k") || catLower === "10km") prefix = "10";
+  
+  return `${prefix}${String(participantId).padStart(4, "0")}`;
+}
+
+
 export async function POST(request: Request) {
   // Authenticate admin (existing logic kept)
   const auth = await authenticateAdmin(request);
@@ -55,6 +67,23 @@ export async function POST(request: Request) {
         data: { paymentStatus: 'confirmed' },
         include: { user: true, payment: true },
       });
+
+      // NEW: Assign bib numbers now that payment is confirmed
+      const participants = await tx.participant.findMany({
+        where: { registrationId: registrationId },
+        include: { category: true },
+        orderBy: { id: 'asc' },
+      });
+
+      for (const participant of participants) {
+        if (!participant.bibNumber) { // only assign if not already set
+            const bibNumber = generateBibNumber(participant.category?.name, participant.id);
+            await tx.participant.update({
+                where: { id: participant.id },
+                data: { bibNumber },
+            });
+        }
+      }
 
       return reg;
     });

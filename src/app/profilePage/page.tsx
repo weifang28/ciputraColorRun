@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { UserInfoCard } from './UserInfoCard';
 import { PurchaseCard } from './PurchaseCard';
 import { FloatingElements } from './FloatingElements';
+import { showToast } from '../../lib/toast';
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -223,11 +224,11 @@ export default function App() {
 
         const { user } = await res.json();
         setUserData(user);
-        alert('Profile updated successfully!'); 
+        showToast('Profile updated successfully!', 'success'); 
         return true;
     } catch (err: any) {
         console.error("Update User Error:", err);
-        alert(`Update failed: ${err.message}`);
+        showToast(`Update failed: ${err.message}`, 'error');
         return false;
     }
   };

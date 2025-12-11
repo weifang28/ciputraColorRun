@@ -69,9 +69,18 @@ function ChartContainer({
   );
 }
 
+const isValidCssColor = (color: string): boolean => {
+  if (!color) return false;
+  // Create a temporary DOM element to check if the color is valid.
+  const s = new Option().style;
+  s.color = color;
+  // The browser will reset the color to an empty string if it's invalid.
+  return s.color !== "";
+};
+
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
-    ([, config]) => config.theme || config.color,
+    ([, config]) => config.theme || config.color
   );
 
   if (!colorConfig.length) {
@@ -90,11 +99,15 @@ ${colorConfig
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+
+    if (color && isValidCssColor(color)) {
+      return `  --color-${key}: ${color};`;
+    }
+    return null;
   })
   .join("\n")}
 }
-`,
+`
           )
           .join("\n"),
       }}

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { cookies } from "next/headers";
+import { z } from "zod";
 
 const prisma = new PrismaClient();
 
@@ -46,22 +47,30 @@ export async function GET(req: Request) {
   }
 }
 
+import { z } from "zod";
+
+const updateUserSchema = z.object({
+  email: z.string().email({ message: "Invalid email format" }),
+  phone: z.string().min(10, { message: "Phone number must be at least 10 digits" }).max(15, { message: "Phone number must be at most 15 digits" }),
+});
+
 // Handler PUT
 export async function PUT(req: Request) {
   try {
-    const { email, phone } = await req.json();
     const accessCode = await getAccessCodeFromCookie();
     
     if (!accessCode) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
     
-    if (!email || !phone) {
-      return NextResponse.json(
-        { error: "Missing required fields: email, or phone" },
-        { status: 400 }
-      );
+    const body = await req.json();
+    const validation = updateUserSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json({ error: "Invalid input", issues: validation.error.issues }, { status: 400 });
     }
+
+    const { email, phone } = validation.data;
     
     // Allow updating email and phone - no uniqueness check needed
     const updatedUser = await prisma.user.update({
