@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { authenticateAdmin, unauthorizedResponse } from '../../middleware/auth';
 import QRCode from "qrcode";
 import nodemailer from "nodemailer";
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
     }
 
     // 3) Perform DB updates first, then send email
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // mark the transaction-level payment (if present) as confirmed
       if (registration.paymentId) {
         await tx.payment.updateMany({
