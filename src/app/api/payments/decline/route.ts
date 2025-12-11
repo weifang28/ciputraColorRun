@@ -85,7 +85,7 @@ export async function POST(request: Request) {
           if (claims.length > 0) {
             const claimsToRemove = claims.slice(0, Math.min(count, claims.length));
             await tx.earlyBirdClaim.deleteMany({
-              where: { id: { in: claimsToRemove.map((c) => c.id) } },
+              where: { id: { in: claimsToRemove.map((c: any) => c.id) } },
             });
           }
         }
