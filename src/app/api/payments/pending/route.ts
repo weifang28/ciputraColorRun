@@ -26,11 +26,11 @@ export async function GET(request: Request) {
     });
 
     // Build per-registration response (backward compatible)
-    const registrationsResp = registrations.map(reg => {
+    const registrationsResp = registrations.map((reg: any) => {
       const categoryCounts: Record<string, number> = {};
       const jerseySizes: Record<string, number> = {};
 
-      reg.participants.forEach(p => {
+      reg.participants.forEach((p: any) => {
         const catName = p.category?.name || 'Unknown';
         categoryCounts[catName] = (categoryCounts[catName] || 0) + 1;
 
