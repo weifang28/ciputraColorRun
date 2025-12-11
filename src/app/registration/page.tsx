@@ -95,6 +95,58 @@ export default function RegistrationPage() {
     const [idCardPhoto, setIdCardPhoto] = useState<File | null>(null);
     const [existingIdCardPhotoUrl, setExistingIdCardPhotoUrl] = useSessionState<string | null>("reg_existingIdCardPhotoUrl", null);
 
+    // Upload file in chunks to /api/payments/upload-chunk and return assembled file URL
+    async function uploadFileInChunksLocal(file: File, subDir: string = "id-cards"): Promise<string> {
+        const CHUNK_SIZE = 200 * 1024; // 200KB
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const prefix = subDir === "id-cards" ? "id" : "file";
+        const newFileName = `${uploadId}_${prefix}.${fileExt}`;
+
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+            const start = chunkIndex * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+
+            const chunkBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const result = reader.result as string;
+                    const base64 = result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(chunk);
+            });
+
+            const res = await fetch('/api/payments/upload-chunk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chunk: chunkBase64,
+                    fileName: newFileName,
+                    chunkIndex,
+                    totalChunks,
+                    uploadId,
+                    subDir,
+                }),
+            });
+
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body?.error || `Chunk ${chunkIndex + 1} upload failed`);
+            }
+
+            const body = await res.json().catch(() => ({}));
+            if (chunkIndex === totalChunks - 1 && body.fileUrl) {
+                return body.fileUrl;
+            }
+        }
+
+        throw new Error('Upload failed - no file URL returned');
+    }
+ 
     // --- NEW: immediate-save effect for personal fields (real-time save) ---
     useEffect(() => {
         try {
@@ -396,6 +448,9 @@ export default function RegistrationPage() {
         return Number(participants || 0);
     }
 
+    // Current community participant count (cart removed => rely on participants input)
+    const communityCount = Number(participants || 0);
+
     // NEW: Calculate extra jersey charges
     function calculateJerseyCharges(jerseySelection: Record<string, number | "">): number {
         let total = 0;
@@ -650,48 +705,78 @@ export default function RegistrationPage() {
     // No add-to-cart functionality - proceed directly to checkout
 
     // Direct checkout - no cart, go straight to confirmation
-    function handleCheckout() {
+    async function handleCheckout() {
         if (!validatePersonalDetails()) return;
-
-        if (type === "individual") {
-            savePersonalDetailsToSession();
-
-            const jerseyCharge = calculateIndividualJerseyCharge(selectedJerseySize);
-            
-            const category = categories.find((c) => c.id === categoryId);
-            if (!category) {
-                showToast("Please select a category before proceeding", "error");
-                return;
-            }
-
-            // Save registration data to session storage
-            const registrationData = {
-                type: "individual",
-                categoryId: category.id,
-                categoryName: category.name,
-                price: currentPrice,
-                jerseySize: selectedJerseySize,
-                jerseyCharges: jerseyCharge,
-                userDetails: {
-                    fullName,
-                    email,
-                    phone,
-                    emergencyPhone,
-                    birthDate,
-                    gender,
-                    currentAddress,
-                    nationality,
-                    medicalHistory,
-                    medicationAllergy,
-                    idCardPhoto: idCardPhoto || undefined,
-                    registrationType,
-                }
-            };
-            
-            sessionStorage.setItem("currentRegistration", JSON.stringify(registrationData));
-            router.push("/registration/confirm");
-            return;
-         } else if (type === "family") {
+ 
+         if (type === "individual") {
+             savePersonalDetailsToSession();
+ 
+             const jerseyCharge = calculateIndividualJerseyCharge(selectedJerseySize);
+             
+             const category = categories.find((c) => c.id === categoryId);
+             if (!category) {
+                 showToast("Please select a category before proceeding", "error");
+                 return;
+             }
+ 
+             // If user selected an ID file in the registration form, upload it now and store the returned URL
+             let resolvedExistingIdUrl = existingIdCardPhotoUrl;
+             if (idCardPhoto instanceof File) {
+                 try {
+                     resolvedExistingIdUrl = await uploadFileInChunksLocal(idCardPhoto, "id-cards");
+                     setExistingIdCardPhotoUrl(resolvedExistingIdUrl);
+                     // also persist filename for UX
+                     setIdCardPhotoName(idCardPhoto.name);
+                 } catch (e) {
+                     console.error("[handleCheckout] ID upload failed:", e);
+                     showToast("Failed to upload ID card. Please try again.", "error");
+                     return;
+                 }
+             }
+ 
+             // Save registration data to session storage
+             const registrationData = {
+                 type: "individual",
+                 categoryId: category.id,
+                 categoryName: category.name,
+                 price: currentPrice,
+                 jerseySize: selectedJerseySize,
+                 jerseyCharges: jerseyCharge,
+                 userDetails: {
+                     fullName,
+                     email,
+                     phone,
+                     emergencyPhone,
+                     birthDate,
+                     gender,
+                     currentAddress,
+                     nationality,
+                     medicalHistory,
+                     medicationAllergy,
+                     // persist existing uploaded URL so confirmation step can reuse it
+                     idCardPhoto: undefined,
+                     existingIdCardPhotoUrl: resolvedExistingIdUrl || undefined,
+                     registrationType,
+                 }
+             };
+             
+             sessionStorage.setItem("currentRegistration", JSON.stringify(registrationData));
+             router.push("/registration/confirm");
+             return;
+          } else if (type === "family") {
+             // family branch: also upload id file if present and include resolved URL
+             let resolvedExistingIdUrl = existingIdCardPhotoUrl;
+             if (idCardPhoto instanceof File) {
+                 try {
+                     resolvedExistingIdUrl = await uploadFileInChunksLocal(idCardPhoto, "id-cards");
+                     setExistingIdCardPhotoUrl(resolvedExistingIdUrl);
+                     setIdCardPhotoName(idCardPhoto.name);
+                 } catch (e) {
+                     console.error("[executeCheckout] ID upload failed:", e);
+                     showToast("Failed to upload ID card. Please try again.", "error");
+                     return;
+                 }
+             }
              const category = categories.find((c) => c.id === categoryId);
              if (!category || !category.bundleSize) {
                  showToast("Invalid family bundle selection", "error");
@@ -770,7 +855,9 @@ export default function RegistrationPage() {
                     nationality,
                     medicalHistory,
                     medicationAllergy,
-                    idCardPhoto: idCardPhoto || undefined,
+                    // Do NOT store File objects in sessionStorage
+                    idCardPhoto: undefined,
+                    existingIdCardPhotoUrl: existingIdCardPhotoUrl || undefined,
                     registrationType,
                     groupName: (groupName || "").trim() || undefined,
                 }
@@ -804,7 +891,10 @@ export default function RegistrationPage() {
                     nationality,
                     medicalHistory,
                     medicationAllergy,
-                    idCardPhoto: idCardPhoto || undefined,
+                    // Don't store File objects in session (not serializable).
+                    // Persist existing uploaded URL instead so confirm page/server can reuse it.
+                    idCardPhoto: undefined,
+                    existingIdCardPhotoUrl: existingIdCardPhotoUrl || undefined,
                     registrationType,
                     groupName: (groupName || "").trim() || undefined,
                 }
@@ -1408,10 +1498,19 @@ export default function RegistrationPage() {
                                             </div>
                                         </div>
                                     </div>
+                                    <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                                        <button
+                                            onClick={handleCheckout}
+                                            className="flex-1 px-6 py-3 rounded-full font-bold shadow-xl transition-all transform bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white hover:shadow-2xl"
+                                        >
+                                            Proceed to Checkout
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     )}
+
 
                     {/* Community layout with improved pricing */}
                     {type === "community" && (
@@ -1442,18 +1541,18 @@ export default function RegistrationPage() {
                                     </div>
 
                                     <div className="grid gap-3">
-                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Number of Participants (for this category) *</label>
+                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Number of Participants (for this category) <strong className="text-red-500">*</strong></label>
                                         <input
                                             type="number"
                                             min={1}
                                             value={participants}
                                             onChange={(e) => setParticipants(e.target.value === "" ? "" : Number(e.target.value))}
                                             className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 placeholder-gray-400 focus:border-emerald-500 focus:outline-none transition-colors text-base"
-                                            placeholder="Enter participant amount (minimum 1)"
+                                            placeholder="Enter participant amount (minimum 10)"
                                         />
-                                        <p className="text-xs text-gray-500 mt-1">
+                                        {/* <p className="text-xs text-gray-500 mt-1">
                                             This will be added to your community total ({getTotalCommunityParticipants()} currently in cart)
-                                        </p>
+                                        </p> */}
                                     </div>
 
                                     {/* LIVE TIER INFO */}
@@ -1466,9 +1565,9 @@ export default function RegistrationPage() {
                                                         {tierInfo.tier}
                                                     </span>
                                                 </div>
-                                                <div className="text-xs text-gray-600">
+                                                {/* <div className="text-xs text-gray-600">
                                                     Total: {tierInfo.totalWithCurrent} participants ({tierInfo.totalInCart} in cart + {Number(participants || 0)} current)
-                                                </div>
+                                                </div> */}
                                                 {tierInfo.nextTier && tierInfo.participantsToNext > 0 && (
                                                     <div className="pt-2 border-t border-purple-200">
                                                         <p className="text-xs text-purple-700">
@@ -1649,16 +1748,16 @@ export default function RegistrationPage() {
                                 <button
                                     onClick={handleCheckout}
                                     className={`w-1/2 md:w-1/3 px-6 py-3 rounded-full font-semibold shadow-xl transition-all transform ${
-                                        getTotalCommunityParticipants() >= 10
+                                        communityCount >= 10
                                             ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95'
                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
-                                    disabled={getTotalCommunityParticipants() < 10}
+                                    disabled={communityCount < 10}
                                 >
                                     Proceed to Checkout
                                 </button>
                             </div>
-                            {getTotalCommunityParticipants() < 10 && (
+                            {communityCount < 10 && (
                                 <p className="text-center text-xs text-gray-500">
                                     Need at least 10 participants for community registration
                                 </p>
@@ -2344,7 +2443,7 @@ export default function RegistrationPage() {
                                     disabled={!agreedToTerms}
                                     className={`flex-1 px-6 py-3 rounded-full font-semibold transition-all transform ${
                                         agreedToTerms
-                                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95'
+                                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl hover:shadow-2xl'
                                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                     }`}
                                 >

@@ -204,22 +204,33 @@ export async function POST(req: Request) {
     const proofFile = formData.get("proof") as File | null;
     const idCardPhotoFile = formData.get("idCardPhoto") as File | null;
 
+    // Support existing uploaded ID URL sent from the client (no File)
+    const existingIdCardUrl = String(formData.get("existingIdCardUrl") || "").trim();
+
     if (!proofFile) {
       return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
     }
-
+ 
     // Save proof image locally
     console.log("[payments] Step 2: Saving proof image locally...");
     const proofExt = proofFile.name.split(".").pop()?.toLowerCase() || "jpg";
     const proofFileName = `${txId}_proof.${proofExt}`;
     proofPath = await saveFileLocally(proofFile, "proofs", proofFileName);
-
+ 
     // Save ID card if provided
-    if (idCardPhotoFile) {
+    // Only treat idCardPhotoFile as a real file if it has a name/size (not an empty FormData value)
+    if (idCardPhotoFile && idCardPhotoFile.size > 0 && idCardPhotoFile.name) {
       console.log("[payments] Step 3: Saving ID card locally...");
       const idExt = idCardPhotoFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const idFileName = `${txId}_id.${idExt}`;
       idCardPhotoPath = await saveFileLocally(idCardPhotoFile, "id-cards", idFileName);
+    } 
+    
+    // If no valid file was uploaded, use the existing URL from session/client
+    if (!idCardPhotoPath && existingIdCardUrl) {
+      // If client passed an existing URL, reuse it (backend will store this path)
+      idCardPhotoPath = existingIdCardUrl;
+      console.log("[payments] Reusing existing ID card URL from client:", idCardPhotoPath);
     }
 
     // Parse registration items
