@@ -232,12 +232,13 @@ export async function POST(req: Request) {
             groupName: (item as any)?.groupName
               ? String((item as any).groupName).trim() || undefined
               : (groupName ? String(groupName).trim() || undefined : undefined),
-            totalAmount: new Prisma.Decimal(String(itemTotal)),
+            // Prisma Decimal constructor not available in current TS types — store as string
+            totalAmount: String(itemTotal),
             paymentStatus: "pending",
           },
         });
         createdRegistrations.push({ id: reg.id, totalAmount: String(itemTotal) });
-        console.log("[payments/base64] Created registration for item:", item.type, "regId:", reg.id);
+        console.log("[payments/base64] Created registration for item:", item.type, "regId:", reg.id, "total:", itemTotal);
 
         // build participants for this registration
         if (item.type === "individual") {
@@ -320,7 +321,8 @@ export async function POST(req: Request) {
            transactionId: txId,
            proofOfPayment: proofUrl,
            status: "pending",
-           amount: new Prisma.Decimal(String(totalTxAmount)),
+           // Use string for Decimal column
+           amount: String(totalTxAmount),
            proofSenderName: proofSenderName,
          },
        });
