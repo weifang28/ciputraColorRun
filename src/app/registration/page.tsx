@@ -202,7 +202,7 @@ export default function RegistrationPage() {
       {
         title: "Complete Payment",
         description: "Review your registration details and complete the payment process",
-        image: "/images/tutorial/tut3.png",
+        image: "/images/tutorial/tutor3.png",
         tip: "Make sure all details are correct before submitting payment"
       },
       // Upload step moved to confirmation page
