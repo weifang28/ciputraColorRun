@@ -11,6 +11,7 @@ export async function GET() {
       select: {
         id: true,
         name: true,
+        imageUrl: true,
         basePrice: true,
         earlyBirdPrice: true,
         tier1Price: true,

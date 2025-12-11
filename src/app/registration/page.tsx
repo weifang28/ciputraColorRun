@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { showToast } from "../../lib/toast";
 import TutorialModal from "../components/TutorialModal";
+import ImageModal from "../components/ImageModal";
 
 interface Category {
     id: number;
     name: string;
+    imageUrl?: string;
     basePrice: string;
     earlyBirdPrice?: string;
     tier1Price?: string;
@@ -126,6 +128,11 @@ export default function RegistrationPage() {
     // modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    
+    // Image modal state
+    const [imageModalOpen, setImageModalOpen] = useState(false);
+    const [selectedImageUrl, setSelectedImageUrl] = useState("");
+    const [selectedImageAlt, setSelectedImageAlt] = useState("");
 
     // Tutorial modal state
     const [showTutorial, setShowTutorial] = useState(true); // show immediately
@@ -1201,23 +1208,56 @@ export default function RegistrationPage() {
                                 <div className="space-y-5">
                                     <div className="grid gap-3">
                                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Race Category *</label>
-                                        <select
-                                            value={categoryId ?? ""}
-                                            onChange={(e) => setCategoryId(Number(e.target.value))}
-                                            className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 focus:border-purple-500 focus:outline-none transition-colors text-base cursor-pointer"
-                                        >
-                                   
-                                    { /* Only show 3km option(s) for Family bundle to avoid accidental mismatch */ }
-                                    {categories
-                                      .filter(c => String(c.name).toLowerCase().trim() === "3km" || String(c.name).toLowerCase().includes("3k"))
-                                      .map(cat => (
-                                        <option key={cat.id} value={cat.id}>
-                                          {cat.name} - Rp {Number(cat.bundlePrice || cat.basePrice).toLocaleString("id-ID")}/person
-                                        </option>
-                                      ))}
-                                </select>
-                                <p className="text-xs text-gray-500">Only 3km category supports family bundle</p>
-                            </div>
+                                        
+                                        {/* Category Cards - Only 3km for Family */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            {categories
+                                                .filter(c => String(c.name).toLowerCase().trim() === "3km" || String(c.name).toLowerCase().includes("3k"))
+                                                .map((cat) => (
+                                                    <div
+                                                        key={cat.id}
+                                                        onClick={() => setCategoryId(cat.id)}
+                                                        className={`relative cursor-pointer rounded-xl border-2 overflow-hidden transition-all transform hover:scale-105 ${
+                                                            categoryId === cat.id
+                                                                ? 'border-purple-500 shadow-lg ring-2 ring-purple-300'
+                                                                : 'border-gray-200 hover:border-purple-300'
+                                                        }`}
+                                                    >
+                                                        {/* Image */}
+                                                        {cat.imageUrl && (
+                                                            <div className="relative h-32 sm:h-40 bg-gradient-to-br from-purple-50 to-pink-50">
+                                                                <img
+                                                                    src={cat.imageUrl}
+                                                                    alt={cat.name}
+                                                                    className="w-full h-full object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedImageUrl(cat.imageUrl!);
+                                                                        setSelectedImageAlt(cat.name);
+                                                                        setImageModalOpen(true);
+                                                                    }}
+                                                                />
+                                                                {/* Selected Badge */}
+                                                                {categoryId === cat.id && (
+                                                                    <div className="absolute top-2 right-2 bg-purple-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                                                                        ✓ Selected
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {/* Content */}
+                                                        <div className="p-4 bg-white">
+                                                            <h3 className="text-lg font-bold text-gray-800 mb-1">{cat.name}</h3>
+                                                            <p className="text-sm font-semibold text-purple-600">
+                                                                Rp {Number(cat.bundlePrice || cat.basePrice).toLocaleString("id-ID")}/person
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                        <p className="text-xs text-gray-500">Only 3km category supports family bundle</p>
+                                    </div>
 
                             {/* NEW: Family Name field (stored to same groupName slot as community) */}
                             <div className="grid gap-3">
@@ -1427,18 +1467,53 @@ export default function RegistrationPage() {
                                     </div>
 
                                     <div className="grid gap-3">
-                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Race Category *</label>
-                                        <select
-                                            value={categoryId ?? ""}
-                                            onChange={(e) => setCategoryId(Number(e.target.value))}
-                                            className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 focus:border-emerald-500 focus:outline-none transition-colors text-base cursor-pointer"
-                                        >
+                                        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Select Race Distance *</label>
+                                        
+                                        {/* Category Cards */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                             {categories.map((cat) => (
-                                                <option key={cat.id} value={cat.id}>
-                                                    {cat.name} - Starting from Rp {Number(cat.basePrice).toLocaleString("id-ID")}
-                                                </option>
+                                                <div
+                                                    key={cat.id}
+                                                    onClick={() => setCategoryId(cat.id)}
+                                                    className={`relative cursor-pointer rounded-xl border-2 overflow-hidden transition-all transform hover:scale-105 ${
+                                                        categoryId === cat.id
+                                                            ? 'border-emerald-500 shadow-lg ring-2 ring-emerald-300'
+                                                            : 'border-gray-200 hover:border-emerald-300'
+                                                    }`}
+                                                >
+                                                    {/* Image */}
+                                                    {cat.imageUrl && (
+                                                        <div className="relative h-32 sm:h-40 bg-gradient-to-br from-emerald-50 to-teal-50">
+                                                            <img
+                                                                src={cat.imageUrl}
+                                                                alt={cat.name}
+                                                                className="w-full h-full object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedImageUrl(cat.imageUrl!);
+                                                                    setSelectedImageAlt(cat.name);
+                                                                    setImageModalOpen(true);
+                                                                }}
+                                                            />
+                                                            {/* Selected Badge */}
+                                                            {categoryId === cat.id && (
+                                                                <div className="absolute top-2 right-2 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                                                                    ✓ Selected
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {/* Content */}
+                                                    <div className="p-4 bg-white">
+                                                        <h3 className="text-lg font-bold text-gray-800 mb-1">{cat.name}</h3>
+                                                        <p className="text-sm font-semibold text-emerald-600">
+                                                            Starting from Rp {Number(cat.basePrice).toLocaleString("id-ID")}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             ))}
-                                        </select>
+                                        </div>
                                     </div>
 
                                     <div className="grid gap-3">
@@ -1670,18 +1745,53 @@ export default function RegistrationPage() {
                     {type === "individual" && (
                         <div className="space-y-4 mt-6">
                             <div className="grid gap-3">
-                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Categories</label>
-                                <select
-                                    value={categoryId ?? ""}
-                                    onChange={(e) => setCategoryId(Number(e.target.value))}
-                                    className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent text-gray-800 focus:border-blue-500 focus:outline-none transition-colors text-base cursor-pointer"
-                                >
+                                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Select Race Distance *</label>
+                                
+                                {/* Category Cards */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     {categories.map((cat) => (
-                                        <option key={cat.id} value={cat.id}>
-                                            {cat.name} - Rp {Number(cat.basePrice).toLocaleString("id-ID")}
-                                        </option>
+                                        <div
+                                            key={cat.id}
+                                            onClick={() => setCategoryId(cat.id)}
+                                            className={`relative cursor-pointer rounded-xl border-2 overflow-hidden transition-all transform hover:scale-105 ${
+                                                categoryId === cat.id
+                                                    ? 'border-blue-500 shadow-lg ring-2 ring-blue-300'
+                                                    : 'border-gray-200 hover:border-blue-300'
+                                            }`}
+                                        >
+                                            {/* Image */}
+                                            {cat.imageUrl && (
+                                                <div className="relative h-32 sm:h-40 bg-gradient-to-br from-blue-50 to-purple-50">
+                                                    <img
+                                                        src={cat.imageUrl}
+                                                        alt={cat.name}
+                                                        className="w-full h-full object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedImageUrl(cat.imageUrl!);
+                                                            setSelectedImageAlt(cat.name);
+                                                            setImageModalOpen(true);
+                                                        }}
+                                                    />
+                                                    {/* Selected Badge */}
+                                                    {categoryId === cat.id && (
+                                                        <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                                                            ✓ Selected
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                            
+                                            {/* Content */}
+                                            <div className="p-4 bg-white">
+                                                <h3 className="text-lg font-bold text-gray-800 mb-1">{cat.name}</h3>
+                                                <p className="text-sm font-semibold text-blue-600">
+                                                    Rp {Number(cat.basePrice).toLocaleString("id-ID")}
+                                                </p>
+                                            </div>
+                                        </div>
                                     ))}
-                                </select>
+                                </div>
                             </div>
 
                             <div className="text-xs text-gray-500">
@@ -2482,6 +2592,14 @@ export default function RegistrationPage() {
                     </div>
                 </div>
             )}
+
+            {/* Image Modal */}
+            <ImageModal
+                isOpen={imageModalOpen}
+                onClose={() => setImageModalOpen(false)}
+                imageUrl={selectedImageUrl}
+                altText={selectedImageAlt}
+            />
         </main>
     );
 }
