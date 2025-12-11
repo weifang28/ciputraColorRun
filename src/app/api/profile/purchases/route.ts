@@ -92,12 +92,15 @@ export async function GET(req: Request) {
 
     // Log registration IDs for debugging
     if (registrations.length > 0) {
-      console.log('[profile/purchases] Registration IDs:', registrations.map(r => r.id));
-      console.log('[profile/purchases] Payment statuses:', registrations.map(r => ({
-        id: r.id,
-        paymentStatus: r.paymentStatus,
-        payments: r.payments
-      })));
+      console.log('[profile/purchases] Registration IDs:', registrations.map((r: any) => r.id));
+      console.log(
+        '[profile/purchases] Payment statuses:',
+        registrations.map((r: any) => ({
+          id: r.id,
+          paymentStatus: r.paymentStatus,
+          payments: r.payments,
+        }))
+      );
     }
 
     return NextResponse.json({ registrations });
