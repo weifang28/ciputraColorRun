@@ -77,7 +77,7 @@ export async function GET(request: Request) {
 
     // Aggregate transactions by payment.transactionId
     const txMap = new Map<string, any>();
-    registrations.forEach(reg => {
+    registrations.forEach((reg: any) => {
       const p = reg.payment;
       if (p) {
         const txId = p.transactionId || String(p.id);
