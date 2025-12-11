@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { authenticateAdmin, unauthorizedResponse } from '../../middleware/auth';
 import nodemailer from 'nodemailer';
 
@@ -38,20 +38,20 @@ export async function POST(request: Request) {
  
     // Update both payment records and registration status inside a transaction
     const paymentIdForReg = registrationBefore.payment?.id ?? null;
-    const registration = await prisma.$transaction(async (tx) => {
-      // If this registration belongs to a transaction-level payment, decline that payment (by id)
-      if (paymentIdForReg) {
-        await tx.payment.updateMany({
-          where: { id: paymentIdForReg, status: 'pending' },
-          data: { status: 'declined' },
-        });
-      } else {
-        // Fallback for legacy rows where Payment may have registrationId field
-        await tx.payment.updateMany({
-          where: { registrationId, status: 'pending' } as any,
-          data: { status: 'declined' },
-        });
-      }
+    const registration = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+       // If this registration belongs to a transaction-level payment, decline that payment (by id)
+       if (paymentIdForReg) {
+         await tx.payment.updateMany({
+           where: { id: paymentIdForReg, status: 'pending' },
+           data: { status: 'declined' },
+         });
+       } else {
+         // Fallback for legacy rows where Payment may have registrationId field
+         await tx.payment.updateMany({
+           where: { registrationId, status: 'pending' } as any,
+           data: { status: 'declined' },
+         });
+       }
  
        // update registration status to declined
        const reg = await tx.registration.update({
