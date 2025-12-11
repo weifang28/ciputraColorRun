@@ -330,7 +330,8 @@ export async function POST(req: Request) {
             groupName: (item as any)?.groupName
               ? String((item as any).groupName).trim() || undefined
               : (groupName ? String(groupName).trim() || undefined : undefined),
-            totalAmount: new Prisma.Decimal(String(itemTotal)),
+            // store Decimal-compatible value as string to avoid using Prisma.Decimal constructor
+            totalAmount: String(itemTotal),
             paymentStatus: "pending",
           },
         });
@@ -406,7 +407,8 @@ export async function POST(req: Request) {
           transactionId: txId,
           proofOfPayment: proofPath!,
           status: "pending",
-          amount: new Prisma.Decimal(String(totalTxAmount)),
+          // use string for Decimal column
+          amount: String(totalTxAmount),
           proofSenderName: proofSenderName,
         },
       });
