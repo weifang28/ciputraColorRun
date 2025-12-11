@@ -157,7 +157,7 @@ export async function POST(req: Request) {
     const accessCode = existingUser?.accessCode || await generateAccessCode(fullName || "user");
 
     console.log("[payments/base64] Starting transaction...");
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       let user;
       
       if (existingUser) {
