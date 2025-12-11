@@ -79,59 +79,59 @@ export async function GET(request: Request) {
 
     // Aggregate transactions by registration.payment.transactionId
     const txMap = new Map<string, any>();
-    registrations.forEach(reg => {
-      const p = reg.payment;
-      if (p) {
-        const txId = p.transactionId || String(p.id);
-        const entry = txMap.get(txId) || {
-          transactionId: txId,
-          totalAmount: 0,
-          paymentStatus: p.status,
-          createdAt: p.createdAt || reg.createdAt,
-          registrationIds: new Set<number>(),
-          payments: [] as any[],
-          userName: reg.user?.name,
-          email: reg.user?.email,
-          phone: reg.user?.phone,
-          registrationTypes: new Set<string>(),
-          categoryCounts: {} as Record<string, number>,
-          jerseySizes: {} as Record<string, number>,
-          _amountAdded: false, // internal flag to avoid double-counting
-        };
-
-        // Ensure the transaction total is set only once (payment.amount is transaction-level)
-        if (!entry._amountAdded) {
-          entry.totalAmount = Number(p.amount || 0);
-          entry._amountAdded = true;
-        }
-
-         entry.registrationIds.add(reg.id);
-         // collect category & jersey aggregates
-         reg.participants.forEach(p => {
+    registrations.forEach((reg: any) => {
+       const p = reg.payment;
+       if (p) {
+         const txId = p.transactionId || String(p.id);
+         const entry = txMap.get(txId) || {
+           transactionId: txId,
+           totalAmount: 0,
+           paymentStatus: p.status,
+           createdAt: p.createdAt || reg.createdAt,
+           registrationIds: new Set<number>(),
+           payments: [] as any[],
+           userName: reg.user?.name,
+           email: reg.user?.email,
+           phone: reg.user?.phone,
+           registrationTypes: new Set<string>(),
+           categoryCounts: {} as Record<string, number>,
+           jerseySizes: {} as Record<string, number>,
+           _amountAdded: false, // internal flag to avoid double-counting
+         };
+ 
+         // Ensure the transaction total is set only once (payment.amount is transaction-level)
+         if (!entry._amountAdded) {
+           entry.totalAmount = Number(p.amount || 0);
+           entry._amountAdded = true;
+         }
+ 
+          entry.registrationIds.add(reg.id);
+          // collect category & jersey aggregates
+         reg.participants.forEach((p: any) => {
            const catName = p.category?.name || 'Unknown';
            entry.categoryCounts[catName] = (entry.categoryCounts[catName] || 0) + 1;
            const jerseySize = p.jersey?.size || 'M';
            entry.jerseySizes[jerseySize] = (entry.jerseySizes[jerseySize] || 0) + 1;
          });
-        txMap.set(txId, entry);
-      } else {
-        // registrations without any payment -> synthetic per-registration transaction
-        const syntheticTx = `reg-${reg.id}`;
-        if (!txMap.has(syntheticTx)) {
-          txMap.set(syntheticTx, {
-            transactionId: syntheticTx,
-            totalAmount: Number(reg.totalAmount || 0),
-            paymentStatus: reg.paymentStatus,
-            createdAt: reg.createdAt,
-            registrationIds: new Set([reg.id]),
-            payments: [],
-            userName: reg.user?.name,
-            email: reg.user?.email,
-            phone: reg.user?.phone,
-            registrationTypes: new Set([reg.registrationType]),
-          });
-        }
-      }
+         txMap.set(txId, entry);
+       } else {
+         // registrations without any payment -> synthetic per-registration transaction
+         const syntheticTx = `reg-${reg.id}`;
+         if (!txMap.has(syntheticTx)) {
+           txMap.set(syntheticTx, {
+             transactionId: syntheticTx,
+             totalAmount: Number(reg.totalAmount || 0),
+             paymentStatus: reg.paymentStatus,
+             createdAt: reg.createdAt,
+             registrationIds: new Set([reg.id]),
+             payments: [],
+             userName: reg.user?.name,
+             email: reg.user?.email,
+             phone: reg.user?.phone,
+             registrationTypes: new Set([reg.registrationType]),
+           });
+         }
+       }
     });
 
     const transactions = Array.from(txMap.values()).map((t: any) => ({
