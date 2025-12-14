@@ -10,6 +10,25 @@ import AboutCarousel from "./components/AboutCarousel";
 import DocDecor from "./components/DocDecor";
 import RouteImageModal from "./components/RouteImageModal";
 
+interface Category {
+    id: number;
+    name: string;
+    basePrice: string;
+    earlyBirdPrice?: string;
+    tier1Price?: string;
+    tier1Min?: number;
+    tier1Max?: number;
+    tier2Price?: string;
+    tier2Min?: number;
+    tier2Max?: number | null;
+    tier3Price?: string;
+    tier3Min?: number;
+    bundlePrice?: string;
+    bundleSize?: number;
+    earlyBirdCapacity?: number;
+    earlyBirdRemaining?: number | null;
+}
+
 export default function Home() {
 	const homeTopRef = useRef<HTMLDivElement | null>(null); // now attached to outer .home_top
 	const aboutRef = useRef<HTMLElement | null>(null);
@@ -17,6 +36,9 @@ export default function Home() {
 	// State for route image modal
 	const [routeModalOpen, setRouteModalOpen] = useState(false);
 	const [selectedRoute, setSelectedRoute] = useState({ src: "", title: "" });
+
+	// State for categories
+	const [categories, setCategories] = useState<Category[]>([]);
 
 	useEffect(() => {
 		if (typeof window === "undefined") return;
@@ -58,6 +80,22 @@ export default function Home() {
 		if (typeof window !== "undefined" && (window as any).AOS) {
 			(window as any).AOS.refresh();
 		}
+
+		// Fetch categories
+		(async () => {
+			try {
+				const res = await fetch(`/api/categories`, {
+					cache: 'no-store',
+					headers: { 'Cache-Control': 'no-cache' }
+				});
+				if (!res.ok) throw new Error("Failed to load categories");
+				const data = await res.json();
+				setCategories(data);
+			} catch (err) {
+				console.error("Failed to load categories:", err);
+			}
+		})();
+
 		// Simulate initial content load
 		const timer = setTimeout(() => setLoading(false), 800);
 		return () => clearTimeout(timer);
@@ -422,7 +460,13 @@ export default function Home() {
 									Rp 215.000
 								</td>
 								<td className="col-note" data-label="Promo">
-									Early bird: Rp 220.000
+									{categories.find(c => c.name.toLowerCase().includes('10'))?.earlyBirdRemaining && categories.find(c => c.name.toLowerCase().includes('10'))?.earlyBirdRemaining! > 0 ? (
+										<>
+											Early bird: Rp {Number(categories.find(c => c.name.toLowerCase().includes('10'))?.earlyBirdPrice).toLocaleString("id-ID")}
+										</>
+									) : (
+										<span className="text-red-500 font-semibold">SOLD OUT</span>
+									)}
 								</td>
 							</tr>
 							<tr className="text-center justify-center items-center">
@@ -442,7 +486,13 @@ export default function Home() {
 									Rp 170.000
 								</td>
 								<td className="col-note" data-label="Promo">
-									Early bird: Rp 180.000
+									{categories.find(c => c.name.toLowerCase().includes('5'))?.earlyBirdRemaining && categories.find(c => c.name.toLowerCase().includes('5'))?.earlyBirdRemaining! > 0 ? (
+										<>
+											Early bird: Rp {Number(categories.find(c => c.name.toLowerCase().includes('5'))?.earlyBirdPrice).toLocaleString("id-ID")}
+										</>
+									) : (
+										<span className="text-red-500 font-semibold">SOLD OUT</span>
+									)}
 								</td>
 							</tr>
 							<tr className="text-center justify-center items-center">
@@ -462,9 +512,15 @@ export default function Home() {
 									Rp 135.000
 								</td>
 								<td className="col-note" data-label="Promo">
-									Early bird: Rp 130.000
-									<br />
-									Bundling family (4 people): Rp 145.000 / person
+									{categories.find(c => c.name.toLowerCase().includes('3'))?.earlyBirdRemaining && categories.find(c => c.name.toLowerCase().includes('3'))?.earlyBirdRemaining! > 0 ? (
+										<>
+											Early bird: Rp {Number(categories.find(c => c.name.toLowerCase().includes('3'))?.earlyBirdPrice).toLocaleString("id-ID")}
+											<br />
+											Bundling family (4 people): Rp {Number(categories.find(c => c.name.toLowerCase().includes('3'))?.bundlePrice).toLocaleString("id-ID")} / person
+										</>
+									) : (
+										<span className="text-red-500 font-semibold">SOLD OUT</span>
+									)}
 								</td>
 							</tr>
 						</tbody>
