@@ -761,7 +761,11 @@ export default function RegistrationPage() {
              };
              
              sessionStorage.setItem("currentRegistration", JSON.stringify(registrationData));
-             router.push("/registration/confirm");
+
+             // NEW: show terms modal (do NOT navigate immediately)
+             setAgreedToTerms(false);
+             setIsModalOpen(true);
+
              return;
           } else if (type === "family") {
              // family branch: also upload id file if present and include resolved URL
@@ -815,13 +819,21 @@ export default function RegistrationPage() {
 
     // Direct checkout after terms accepted - save to session and redirect
     function executeCheckout() {
+        // Ensure personal details persisted
+        savePersonalDetailsToSession();
+
+        // If individual, session already contains currentRegistration -> proceed directly
+        if (type === "individual") {
+            setIsModalOpen(false);
+            router.push("/registration/confirm");
+            return;
+        }
+
         if (!categoryId) return;
  
         const category = categories.find((c) => c.id === categoryId);
         if (!category) return;
  
-        savePersonalDetailsToSession();
-
         if (type === "family") {
             // Force 3km category for family
             const threeKm = categories.find(c => String(c.name).toLowerCase().trim() === "3km")
@@ -1380,7 +1392,7 @@ export default function RegistrationPage() {
                                             <button
                                               type="button"
                                               onClick={() => openSizeChart()}
-                                              className="text-xs text-orange-600 hover:text-orange-700 underline"
+                                                                                           className="text-xs text-orange-600 hover:text-orange-700 underline"
                                             >
                                               Size Guide
                                             </button>
