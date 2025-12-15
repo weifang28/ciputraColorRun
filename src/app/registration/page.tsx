@@ -1455,6 +1455,39 @@ export default function RegistrationPage() {
                                           </div>
                                         </div>
 
+                                        <div className="mb-4">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-semibold text-purple-700">Kids Sizes:</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => openSizeChart()}
+                                      className="text-xs text-purple-600 hover:text-purple-700 underline"
+                                    >
+                                      Size Guide
+                                    </button>
+                                  </div>
+
+                                  <div className="grid grid-cols-3 gap-3">
+                                    {["XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"].map((size) => (
+                                      <div key={size} className="flex flex-col items-center">
+                                        <div className="flex items-center gap-1 mb-2">
+                                          <span className="text-xs font-medium text-purple-700">{size}</span>
+                                        </div>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          value={jerseys[size] ?? ""}
+                                          onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                          className="jersey-input shift-right accent-purple-500 border-purple-300 focus:border-purple-500"
+                                          placeholder="0"
+                                          inputMode="numeric"
+                                          aria-label={`Count for size ${size}`}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
                                         <p className="text-xs text-gray-500 mt-3 text-center">
                                             Total: {Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0)} / 4
                                         </p>
@@ -1689,6 +1722,39 @@ export default function RegistrationPage() {
                                                   value={jerseys[size] ?? ""}
                                                   onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
                                                   className="jersey-input shift-right accent-red-500 border-red-300 focus:border-red-500"
+                                                  placeholder="0"
+                                                  inputMode="numeric"
+                                                  aria-label={`Count for size ${size}`}
+                                                />
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between mb-2">
+                                            <p className="text-xs font-semibold text-emerald-700">Kids Sizes:</p>
+                                            <button
+                                              type="button"
+                                              onClick={() => openSizeChart()}
+                                              className="text-xs text-emerald-600 hover:text-emerald-700 underline"
+                                            >
+                                              Size Guide
+                                            </button>
+                                          </div>
+
+                                          <div className="grid grid-cols-3 gap-3">
+                                            {["XS - KIDS", "S - KIDS", "M - KIDS", "L - KIDS", "XL - KIDS"].map((size) => (
+                                              <div key={size} className="flex flex-col items-center">
+                                                <div className="flex items-center gap-1 mb-2">
+                                                  <span className="text-xs font-medium text-emerald-700">{size}</span>
+                                                </div>
+                                                <input
+                                                  type="number"
+                                                  min={0}
+                                                  value={jerseys[size] ?? ""}
+                                                  onChange={(e) => updateJersey(size, e.target.value === "" ? "" : Number(e.target.value))}
+                                                  className="jersey-input shift-right accent-emerald-500 border-emerald-300 focus:border-emerald-500"
                                                   placeholder="0"
                                                   inputMode="numeric"
                                                   aria-label={`Count for size ${size}`}
