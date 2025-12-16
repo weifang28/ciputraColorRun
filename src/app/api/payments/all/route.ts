@@ -60,7 +60,7 @@ export async function GET(request: Request) {
           id: reg.payment.id,
           amount: Number(reg.payment.amount || 0),
           proofOfPayment: reg.payment.proofOfPayment,
-          proofSenderName: (reg.payment as any).proofSenderName,
+          proofSenderName: reg.payment.proofSenderName,
           status: reg.payment.status,
           transactionId: reg.payment.transactionId,
           registrationId: reg.id,

@@ -41,6 +41,7 @@ interface PaymentDetail {
     status?: string;
     transactionId?: string;
     registrationId?: number;
+    proofSenderName?: string;
   }>;
   user?: {
     birthDate?: string;
@@ -751,6 +752,13 @@ export default function LODashboard() {
                     />
                   </a>
                   <p className="text-xs text-[#ffdfc0]/60 text-center mt-2">Click to view full size</p>
+                 {/* Proof Sender Name */}
+                 <div className="mt-4 pt-4 border-t border-[#73e9dd]/20">
+                   <InfoItem 
+                     label="Proof Sender Name" 
+                     value={selectedPayment.payments[0].proofSenderName || "No sender name provided"} 
+                   />
+                 </div>
                 </div>
               )}
 

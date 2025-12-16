@@ -496,33 +496,44 @@ export default function Home() {
 								</td>
 							</tr>
 							<tr className="text-center justify-center items-center">
-								<td className="col-item" data-label="Kategori">
-									3K
-								</td>
-								<td className="col-main font-mustica" data-label="Harga Dasar">
-									Rp 150.000
-								</td>
-								<td className="col-tier" data-label="Komunitas 10-29">
-									Rp 140.000
-								</td>
-								<td className="col-tier" data-label="Komunitas 30-59">
-									Rp 135.000
-								</td>
-								<td className="col-tier" data-label="Komunitas ≥60">
-									Rp 135.000
-								</td>
-								<td className="col-note" data-label="Promo">
-									{categories.find(c => c.name.toLowerCase().includes('3'))?.earlyBirdRemaining && categories.find(c => c.name.toLowerCase().includes('3'))?.earlyBirdRemaining! > 0 ? (
-										<>
-											Early bird: Rp {Number(categories.find(c => c.name.toLowerCase().includes('3'))?.earlyBirdPrice).toLocaleString("id-ID")}
-											<br />
-											Bundling family (4 people): Rp {Number(categories.find(c => c.name.toLowerCase().includes('3'))?.bundlePrice).toLocaleString("id-ID")} / person
-										</>
-									) : (
-										<span className="text-red-500 font-semibold">SOLD OUT</span>
-									)}
-								</td>
-							</tr>
+                                <td className="col-item" data-label="Kategori">
+                                    3K
+                                </td>
+                                <td className="col-main font-mustica" data-label="Harga Dasar">
+                                    Rp 150.000
+                                </td>
+                                <td className="col-tier" data-label="Komunitas 10-29">
+                                    Rp 140.000
+                                </td>
+                                <td className="col-tier" data-label="Komunitas 30-59">
+                                    Rp 135.000
+                                </td>
+                                <td className="col-tier" data-label="Komunitas ≥60">
+                                    Rp 135.000
+                                </td>
+                                <td className="col-note" data-label="Promo">
+                                    {(() => {
+                                        const three = categories.find(c => c.name.toLowerCase().includes('3'));
+                                        const earlyAvailable = Boolean(three?.earlyBirdRemaining && three!.earlyBirdRemaining! > 0);
+                                        const bundlePrice = Number(three?.bundlePrice ?? three?.basePrice ?? 0);
+                                        return (
+                                            <>
+                                                {earlyAvailable ? (
+                                                    <>
+                                                        Early bird: Rp {Number(three?.earlyBirdPrice ?? 0).toLocaleString("id-ID")}
+                                                        <br />
+                                                    </>
+                                                ) : (
+                                                    <span className="text-red-500 font-semibold">Early bird: SOLD OUT</span>
+                                                )}
+                                                <div>
+                                                    Bundling family (4 people): Rp 145.000 / person
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </td>
+                            </tr>
 						</tbody>
 					</table>
 				</div>
