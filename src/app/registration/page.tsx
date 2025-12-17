@@ -178,6 +178,8 @@ export default function RegistrationPage() {
     // modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    // NEW: submission/loading state for checkout actions
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Tutorial modal state
     const [showTutorial, setShowTutorial] = useState(true); // show immediately
@@ -706,113 +708,115 @@ export default function RegistrationPage() {
 
     // Direct checkout - no cart, go straight to confirmation
     async function handleCheckout() {
+        if (isSubmitting) return; // prevent double clicks
+        
         if (!validatePersonalDetails()) return;
- 
-         if (type === "individual") {
-             savePersonalDetailsToSession();
- 
-             const jerseyCharge = calculateIndividualJerseyCharge(selectedJerseySize);
-             
-             const category = categories.find((c) => c.id === categoryId);
-             if (!category) {
-                 showToast("Please select a category before proceeding", "error");
-                 return;
-             }
- 
-             // If user selected an ID file in the registration form, upload it now and store the returned URL
-             let resolvedExistingIdUrl = existingIdCardPhotoUrl;
-             if (idCardPhoto instanceof File) {
-                 try {
-                     resolvedExistingIdUrl = await uploadFileInChunksLocal(idCardPhoto, "id-cards");
-                     setExistingIdCardPhotoUrl(resolvedExistingIdUrl);
-                     // also persist filename for UX
-                     setIdCardPhotoName(idCardPhoto.name);
-                 } catch (e) {
-                     console.error("[handleCheckout] ID upload failed:", e);
-                     showToast("Failed to upload ID card. Please try again.", "error");
-                     return;
-                 }
-             }
- 
-             // Save registration data to session storage
-             const registrationData = {
-                 type: "individual",
-                 categoryId: category.id,
-                 categoryName: category.name,
-                 price: currentPrice,
-                 jerseySize: selectedJerseySize,
-                 jerseyCharges: jerseyCharge,
-                 userDetails: {
-                     fullName,
-                     email,
-                     phone,
-                     emergencyPhone,
-                     birthDate,
-                     gender,
-                     currentAddress,
-                     nationality,
-                     medicalHistory,
-                     medicationAllergy,
-                     // persist existing uploaded URL so confirmation step can reuse it
-                     idCardPhoto: undefined,
-                     existingIdCardPhotoUrl: resolvedExistingIdUrl || undefined,
-                     registrationType,
-                 }
-             };
-             
-             sessionStorage.setItem("currentRegistration", JSON.stringify(registrationData));
+        
+        setIsSubmitting(true);
+        
+        try {
+            if (type === "individual") {
+                savePersonalDetailsToSession();
 
-             // NEW: show terms modal (do NOT navigate immediately)
-             setAgreedToTerms(false);
-             setIsModalOpen(true);
+                const jerseyCharge = calculateIndividualJerseyCharge(selectedJerseySize);
+                
+                const category = categories.find((c) => c.id === categoryId);
+                if (!category) {
+                    showToast("Please select a category before proceeding", "error");
+                    return;
+                }
 
-             return;
-          } else if (type === "family") {
-             // family branch: also upload id file if present and include resolved URL
-             let resolvedExistingIdUrl = existingIdCardPhotoUrl;
-             if (idCardPhoto instanceof File) {
-                 try {
-                     resolvedExistingIdUrl = await uploadFileInChunksLocal(idCardPhoto, "id-cards");
-                     setExistingIdCardPhotoUrl(resolvedExistingIdUrl);
-                     setIdCardPhotoName(idCardPhoto.name);
-                 } catch (e) {
-                     console.error("[executeCheckout] ID upload failed:", e);
-                     showToast("Failed to upload ID card. Please try again.", "error");
-                     return;
-                 }
-             }
-             const category = categories.find((c) => c.id === categoryId);
-             if (!category || !category.bundleSize) {
-                 showToast("Invalid family bundle selection", "error");
-                 return;
-             }
+                // If user selected an ID file in the registration form, upload it now and store the returned URL
+                let resolvedExistingIdUrl = existingIdCardPhotoUrl;
+                if (idCardPhoto instanceof File) {
+                    try {
+                        resolvedExistingIdUrl = await uploadFileInChunksLocal(idCardPhoto, "id-cards");
+                        setExistingIdCardPhotoUrl(resolvedExistingIdUrl);
+                        setIdCardPhotoName(idCardPhoto.name);
+                    } catch (e) {
+                        console.error("[handleCheckout] ID upload failed:", e);
+                        showToast("Failed to upload ID card. Please try again.", "error");
+                        return;
+                    }
+                }
 
-             const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
-             if (totalJerseys !== category.bundleSize && totalJerseys > 0) {
-                 showToast(`Please complete jersey selection`, "error");
-                 return;
-             }
+                const registrationData = {
+                    type: "individual",
+                    categoryId: category.id,
+                    categoryName: category.name,
+                    price: currentPrice,
+                    jerseySize: selectedJerseySize,
+                    jerseyCharges: jerseyCharge,
+                    userDetails: {
+                        fullName,
+                        email,
+                        phone,
+                        emergencyPhone,
+                        birthDate,
+                        gender,
+                        currentAddress,
+                        nationality,
+                        medicalHistory,
+                        medicationAllergy,
+                        idCardPhoto: undefined,
+                        existingIdCardPhotoUrl: resolvedExistingIdUrl || undefined,
+                        registrationType,
+                    }
+                };
+                
+                sessionStorage.setItem("currentRegistration", JSON.stringify(registrationData));
 
-             setAgreedToTerms(false);
-             setIsModalOpen(true);
-         } else {
-            // For community, check if minimum participants entered
-            const currentParticipants = Number(participants || 0);
+                setAgreedToTerms(false);
+                setIsModalOpen(true);
+                return;
+            } else if (type === "family") {
+                let resolvedExistingIdUrl = existingIdCardPhotoUrl;
+                if (idCardPhoto instanceof File) {
+                    try {
+                        resolvedExistingIdUrl = await uploadFileInChunksLocal(idCardPhoto, "id-cards");
+                        setExistingIdCardPhotoUrl(resolvedExistingIdUrl);
+                        setIdCardPhotoName(idCardPhoto.name);
+                    } catch (e) {
+                        console.error("[handleCheckout] ID upload failed:", e);
+                        showToast("Failed to upload ID card. Please try again.", "error");
+                        return;
+                    }
+                }
+                const category = categories.find((c) => c.id === categoryId);
+                if (!category || !category.bundleSize) {
+                    showToast("Invalid family bundle selection", "error");
+                    return;
+                }
 
-            if (currentParticipants < 10) {
-                showToast(`Community registration requires minimum 10 participants. Currently have ${currentParticipants}`, "error");
+                const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
+                if (totalJerseys !== category.bundleSize && totalJerseys > 0) {
+                    showToast(`Please complete jersey selection`, "error");
+                    return;
+                }
+
+                setAgreedToTerms(false);
+                setIsModalOpen(true);
+                return;
+            } else {
+                const currentParticipants = Number(participants || 0);
+                if (currentParticipants < 10) {
+                    showToast(`Community registration requires minimum 10 participants. Currently have ${currentParticipants}`, "error");
+                    return;
+                }
+
+                const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
+                if (totalJerseys !== currentParticipants) {
+                    showToast(`Jersey count must match participant count`, "error");
+                    return;
+                }
+
+                setAgreedToTerms(false);
+                setIsModalOpen(true);
                 return;
             }
-
-            const totalJerseys = Object.values(jerseys).reduce<number>((sum, val) => sum + Number(val || 0), 0);
-            if (totalJerseys !== currentParticipants) {
-                showToast(`Jersey count must match participant count`, "error");
-                return;
-            }
-
-            setAgreedToTerms(false);
-            setIsModalOpen(true);
-         }
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     // No add-to-cart - direct checkout only
@@ -1557,6 +1561,9 @@ export default function RegistrationPage() {
                     )}
 
 
+                    
+
+
                     {/* Community layout with improved pricing */}
                     {type === "community" && (
                         <div className="space-y-6 mt-6">
@@ -1825,14 +1832,24 @@ export default function RegistrationPage() {
                             <div className="flex justify-center mt-4">
                                 <button
                                     onClick={handleCheckout}
+                                    disabled={isSubmitting || communityCount < 10}
                                     className={`w-1/2 md:w-1/3 px-6 py-3 rounded-full font-semibold shadow-xl transition-all transform ${
-                                        communityCount >= 10
+                                        communityCount >= 10 && !isSubmitting
                                             ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95'
                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
-                                    disabled={communityCount < 10}
                                 >
-                                    Proceed to Checkout
+                                    {isSubmitting ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Processing...
+                                        </span>
+                                    ) : (
+                                        "Proceed to Checkout"
+                                    )}
                                 </button>
                             </div>
                             {communityCount < 10 && (
@@ -1977,9 +1994,24 @@ export default function RegistrationPage() {
 
                                 <button
                                     onClick={handleCheckout}
-                                    className="flex-1 px-6 py-3 rounded-full font-bold shadow-xl transition-all transform bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white hover:shadow-2xl"
+                                    disabled={isSubmitting}
+                                    className={`flex-1 px-6 py-3 rounded-full font-bold shadow-xl transition-all transform ${
+                                        isSubmitting
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white hover:shadow-2xl'
+                                    }`}
                                 >
-                                    Buy Now
+                                    {isSubmitting ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Processing...
+                                        </span>
+                                    ) : (
+                                        "Buy Now"
+                                    )}
                                 </button>
                             </div>
                         </div>
