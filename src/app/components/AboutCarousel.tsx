@@ -127,13 +127,13 @@ export default function AboutCarousel({
         data-aos-delay="0"
         data-aos-anchor-placement="center-center"
       >
-        <img
+        {/* <img
           src="/homepage/Divider.svg"
           alt="divider"
           className="about-divider-img"
           loading="eager"
           draggable={false}
-        />
+        /> */}
       </div>
     </div>
   );
