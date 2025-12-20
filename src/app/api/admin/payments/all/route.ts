@@ -18,10 +18,10 @@ export async function GET(request: Request) {
       include: {
         user: true,
         payment: {
-          select: {
+          select: { 
             id: true,
             amount: true,
-            proofOfPayment: true,  // ✅ THIS MUST BE HERE
+            proofOfPayment: true,
             status: true,
             transactionId: true,
             proofSenderName: true,
@@ -30,6 +30,7 @@ export async function GET(request: Request) {
         participants: {
           include: {
             category: true,
+            jersey: true, // <-- add jersey relation so we can read jersey.size
           },
         },
       },
@@ -61,8 +62,9 @@ export async function GET(request: Request) {
           return acc;
         }, {} as Record<string, number>),
         jerseySizes: reg.participants.reduce((acc, p) => {
-          if (p.jerseySize) {
-            acc[p.jerseySize] = (acc[p.jerseySize] || 0) + 1;
+          const size = p.jersey?.size;
+          if (size) {
+            acc[size] = (acc[size] || 0) + 1;
           }
           return acc;
         }, {} as Record<string, number>),
