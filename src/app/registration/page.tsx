@@ -1239,7 +1239,7 @@ export default function RegistrationPage() {
                                     className="w-full px-4 py-3 border-b-2 border-gray-200 bg-transparent cursor-pointer hover:border-blue-300 transition-colors flex items-center justify-between group"
                                 >
                                     <span className={`text-base ${idCardPhotoName ? "text-gray-800" : "text-gray-400"}`}>
-                                        {idCardPhotoName || `Upload ${nationality === "WNI" ? "ID Card" : "Passport"}`}
+                                        {idCardPhotoName || `Upload ${nationality === "WNI" ? "ID Card (KTP, SIM, Birth Certificate, and other official ID)" : "Passport"}`}
                                     </span>
                                     <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -1248,18 +1248,23 @@ export default function RegistrationPage() {
                                 <input
                                     id="idCardPhoto"
                                     type="file"
-                                    accept="image/png,image/jpeg,image/jpg"
+                                    accept="image/png,image/jpeg,image/jpg,application/pdf"
                                     className="hidden"
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
+                                            // Validate file size (Max 10MB)
+                                            if (file.size > 10 * 1024 * 1024) {
+                                                showToast("File too large. Maximum size is 10MB.", "error");
+                                                return;
+                                            }
                                             setIdCardPhoto(file);
                                             setIdCardPhotoName(file.name);
                                         }
                                     }}
                                     required
                                 />
-                                <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG (Max 10MB)</p>
+                                <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG, PDF (Max 10MB)</p>
                             </div>
                         </div>
 

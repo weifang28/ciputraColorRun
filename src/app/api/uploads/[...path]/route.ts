@@ -44,6 +44,8 @@ export async function GET(request: NextRequest, context: any) {
       ".png": "image/png",
       ".gif": "image/gif",
       ".webp": "image/webp",
+      ".bmp": "image/bmp",
+      ".pdf": "application/pdf",
     };
     
     const contentType = contentTypes[ext] || "application/octet-stream";

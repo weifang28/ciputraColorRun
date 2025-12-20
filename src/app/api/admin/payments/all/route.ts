@@ -5,20 +5,31 @@ const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status') || 'pending';
+    // Get status filter from query params
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
 
     const registrations = await prisma.registration.findMany({
-      where: {
-        paymentStatus: status as any,
-      },
+      where: status ? {
+        payment: {
+          status: status
+        }
+      } : undefined,
       include: {
         user: true,
-        payment: true,
+        payment: {
+          select: {
+            id: true,
+            amount: true,
+            proofOfPayment: true,  // ✅ THIS MUST BE HERE
+            status: true,
+            transactionId: true,
+            proofSenderName: true,
+          }
+        },
         participants: {
           include: {
             category: true,
-            jersey: true,
           },
         },
       },
@@ -27,40 +38,39 @@ export async function GET(request: Request) {
       },
     });
 
-    // Transform to match expected format
-    const payments = registrations.map((reg: any) => {
-      // Calculate category counts
-      const categoryCounts: Record<string, number> = {};
-      const jerseySizes: Record<string, number> = {};
-      
-      reg.participants.forEach((p: any) => {
-        const catName = p.category?.name || 'Unknown';
-        categoryCounts[catName] = (categoryCounts[catName] || 0) + 1;
-        
-        const jerseySize = p.jersey?.size || 'M';
-        jerseySizes[jerseySize] = (jerseySizes[jerseySize] || 0) + 1;
-      });
+    console.log('[admin/payments/all] Sample payment object:', JSON.stringify(registrations[0]?.payment, null, 2));
 
+    // Transform to match expected structure
+    const payments = registrations.map(reg => {
       return {
         registrationId: reg.id,
+        registrationIds: [reg.id],
+        transactionId: reg.payment?.transactionId || '',
         userName: reg.user.name,
         email: reg.user.email,
         phone: reg.user.phone,
         registrationType: reg.registrationType,
         groupName: reg.groupName || undefined,
-        totalAmount: reg.totalAmount,
-        createdAt: reg.createdAt,
-        paymentStatus: reg.paymentStatus,
+        totalAmount: Number(reg.totalAmount),
+        createdAt: reg.createdAt.toISOString(),
+        paymentStatus: reg.payment?.status || 'pending',
         participantCount: reg.participants.length,
-        categoryCounts: Object.keys(categoryCounts).length > 0 ? categoryCounts : undefined,
-        jerseySizes: Object.keys(jerseySizes).length > 0 ? jerseySizes : undefined,
-        // Normalize singular `payment` relation to an array for consumers expecting `payments`
+        categoryCounts: reg.participants.reduce((acc, p) => {
+          const catName = p.category?.name || 'Unknown';
+          acc[catName] = (acc[catName] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+        jerseySizes: reg.participants.reduce((acc, p) => {
+          if (p.jerseySize) {
+            acc[p.jerseySize] = (acc[p.jerseySize] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<string, number>),
         payments: reg.payment ? [{
           id: reg.payment.id,
-          amount: Number(reg.payment.amount ?? 0),
-          proofOfPayment: reg.payment.proofOfPayment,
-          // keep custom fields potentially present on the record
-          proofSenderName: (reg.payment as any)?.proofSenderName,
+          amount: Number(reg.payment.amount),
+          proofOfPayment: reg.payment.proofOfPayment,  // ✅ MAKE SURE THIS IS INCLUDED
+          proofSenderName: reg.payment.proofSenderName,
           status: reg.payment.status,
           transactionId: reg.payment.transactionId,
           registrationId: reg.id,
@@ -72,10 +82,13 @@ export async function GET(request: Request) {
           nationality: reg.user.nationality,
           emergencyPhone: reg.user.emergencyPhone,
           medicalHistory: reg.user.medicalHistory,
-          idCardPhoto: reg.user.idCardPhoto,
+          idCardPhoto: reg.user.idCardPhoto,  // ✅ ID card works because this is here
         },
       };
     });
+
+    console.log('[admin/payments/all] Returning payments:', payments.length);
+    console.log('[admin/payments/all] First payment proof:', payments[0]?.payments?.[0]?.proofOfPayment);
 
     return NextResponse.json(payments);
   } catch (error) {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, User, Mail, Phone, Calendar, MapPin, AlertCircle, LogOut, FileText, IdCard } from 'lucide-react';
+import { X, User, Mail, Phone, Calendar, MapPin, AlertCircle, LogOut, FileText, IdCard, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getImageUrl, getPaymentProofUrl } from '../../lib/imageUrl';
 
@@ -97,6 +97,7 @@ export default function LODashboard() {
   // Fetch payments when tab changes
   useEffect(() => {
     fetchPayments();
+    fetchCounts();
   }, [activeTab]);
 
   async function fetchStatusCounts() {
@@ -112,56 +113,34 @@ export default function LODashboard() {
   }
 
   async function fetchPayments() {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const currentStatus = TABS.find(t => t.key === activeTab)?.status || 'pending';
-      const endpoint = currentStatus === 'pending' ? '/api/payments/pending' : `/api/payments/all?status=${currentStatus}`;
-      const res = await fetch(endpoint, { credentials: 'include' });
-      if (!res.ok) {
-        if (res.status === 401) {
-          router.push('/admin/login');
-          return;
-        }
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(err.error || 'Failed to fetch payments');
-      }
-      const data = await res.json();
+      // FIX: Use the correct admin endpoint
+      const url = activeTab === 'all' 
+        ? '/api/admin/payments/all'
+        : `/api/admin/payments/all?status=${activeTab}`;
+      
+      console.log('[LODashboard] Fetching from:', url);
+      
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      // Prefer aggregated transactions when provided by API
-      if (Array.isArray(data.transactions) && data.transactions.length > 0) {
-        // build registration map if server returned per-registration rows
-        const regMap: Record<number, any> = (data.registrations || []).reduce((m: Record<number, any>, r: any) => {
-          m[r.registrationId] = r;
-          return m;
-        }, {});
-
-        const txs = data.transactions as any[];
-        const mapped = txs.map(tx => ({
-          registrationId: tx.registrationIds?.[0] ?? 0, // compatibility: first reg id
-          registrationIds: tx.registrationIds ?? [],
-          transactionId: tx.transactionId,
-          userName: tx.userName ?? tx.email ?? '—',
-          email: tx.email ?? '—',
-          phone: tx.phone ?? '—',
-          registrationType: (tx.registrationTypes && tx.registrationTypes[0]) || 'individual',
-          groupName: tx.groupName,
-          totalAmount: Number(tx.totalAmount || 0),
-          createdAt: tx.createdAt,
-          paymentStatus: tx.paymentStatus,
-          participantCount: tx.registrationIds?.length ?? 0,
-          categoryCounts: tx.categoryCounts,
-          jerseySizes: tx.jerseySizes,
-          payments: tx.payments || [],
-          user: tx.user || undefined,
-          // attach registration objects if available
-          registrations: (tx.registrationIds || []).map((id: number) => regMap[id]).filter(Boolean),
-        })) as PaymentDetail[];
-        setPayments(mapped);
-      } else {
-        // Fallback: older per-registration shape
-        const paymentsData = Array.isArray(data) ? data : (data.registrations || []);
-        setPayments(paymentsData as any);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch payments: ${response.statusText}`);
       }
+
+      const data = await response.json();
+      console.log('[LODashboard] Received data:', data);
+      console.log('[LODashboard] First payment:', JSON.stringify(data[0], null, 2));
+      
+      // The admin endpoint returns the correct format directly
+      setPayments(data as PaymentDetail[]);
+      
     } catch (err: any) {
       setError(err.message);
       console.error('Error fetching payments:', err);
@@ -170,7 +149,20 @@ export default function LODashboard() {
     }
   }
 
-  // Accept/Decline must operate on all registrations linked to a payment
+  async function fetchCounts() {
+    try {
+      const response = await fetch('/api/payments/counts', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setStatusCounts(data.counts);
+      }
+    } catch (err) {
+      console.error('Error fetching counts:', err);
+    }
+  }
+
   async function handleAccept(payment: PaymentDetail) {
     if (!confirm(`Confirm payment for transaction ${payment.transactionId || payment.registrationId}? This will confirm all linked registrations.`)) return;
     try {
@@ -453,22 +445,60 @@ export default function LODashboard() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {payment.payments?.[0] && (
-                        <a
-                          href={getPaymentProofUrl(payment.payments[0].id)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-shrink-0"
-                        >
-                          <img
-                            src={getPaymentProofUrl(payment.payments[0].id)}
-                            alt="Payment proof"
-                            className="w-24 h-24 object-cover rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        </a>
+                      {/* Always show payment proof section */}
+                      {payment.payments?.[0] ? (
+                        payment.payments[0].proofOfPayment ? (
+                          <>
+                            {getFileType(payment.payments[0].proofOfPayment) === 'pdf' ? (
+                              <a
+                                href={getPaymentProofUrl(payment.payments[0].id)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-2 px-4 py-2 bg-[#73e9dd]/10 border border-[#73e9dd]/30 text-[#73e9dd] rounded-lg hover:bg-[#73e9dd]/20 transition-all text-sm"
+                              >
+                                <FileText size={16} />
+                                View Proof (PDF) - ID: {payment.payments[0].id}
+                              </a>
+                            ) : getFileType(payment.payments[0].proofOfPayment) === 'image' ? (
+                              <a
+                                href={getPaymentProofUrl(payment.payments[0].id)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex-shrink-0"
+                              >
+                                <img
+                                  src={getPaymentProofUrl(payment.payments[0].id)}
+                                  alt="Payment proof"
+                                  className="w-24 h-24 object-cover rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all"
+                                  onError={(e) => {
+                                    console.error('Image load failed for payment ID:', payment.payments[0].id);
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              </a>
+                            ) : (
+                              <a
+                                href={getPaymentProofUrl(payment.payments[0].id)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-2 px-4 py-2 bg-[#73e9dd]/10 border border-[#73e9dd]/30 text-[#73e9dd] rounded-lg hover:bg-[#73e9dd]/20 transition-all text-sm"
+                              >
+                                <FileText size={16} />
+                                View Proof - ID: {payment.payments[0].id}
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 rounded-lg text-sm">
+                            <AlertCircle size={16} />
+                            No proof uploaded (Path: {payment.payments[0].proofOfPayment || 'null'})
+                          </div>
+                        )
+                      ) : (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 rounded-lg text-sm">
+                          <AlertCircle size={16} />
+                          No payment record
+                        </div>
                       )}
                       {payment.categoryCounts && Object.entries(payment.categoryCounts).length > 0 && (
                         <div className="flex-1 bg-[#18181b] rounded-lg p-3">
@@ -628,7 +658,7 @@ export default function LODashboard() {
                 </div>
               </div>
 
-              {/* ID Card/Passport Photo - UPDATED */}
+              {/* ID Card/Passport Photo - UPDATED for PDF support */}
                 {selectedPayment.registrations && selectedPayment.registrations.length > 0 && selectedPayment.registrations.some((r:any) => (r.user?.idCardPhoto || r.idCardPhoto)) ? (
                 <div className="bg-[#18181b] rounded-xl p-6 border border-[#73e9dd]/20">
                   <h3 className="text-lg font-semibold text-[#91dcac] mb-4 flex items-center gap-2">
@@ -639,19 +669,20 @@ export default function LODashboard() {
                     {selectedPayment.registrations.map((r: any) => {
                       const img = r.user?.idCardPhoto || r.idCardPhoto;
                       if (!img) return null;
+                      const imgUrl = getImageUrl(img);
                       const alt = `ID Card — Registration #${r.registrationId}`;
+                      
                       return (
-                        <a key={r.registrationId} href={getImageUrl(img) || '#'} target="_blank" rel="noreferrer" className="block">
-                          <img
-                            src={getImageUrl(img) || ''}
+                        <div key={r.registrationId}>
+                          <FileDisplay 
+                            src={imgUrl}
+                            originalPath={img}
                             alt={alt}
-                            className="w-full rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all cursor-pointer object-cover max-h-60"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23374151' width='400' height='300'/%3E%3Ctext fill='%239CA3AF' font-family='sans-serif' font-size='14' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3EImage not available%3C/text%3E%3C/svg%3E";
-                            }}
+                            label={`ID Card - Reg #${r.registrationId}`}
+                            imageClassName="w-full rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all cursor-pointer object-cover max-h-60"
                           />
                           <p className="text-xs text-[#ffdfc0]/60 text-center mt-2">Registration #{r.registrationId}</p>
-                        </a>
+                        </div>
                       );
                     })}
                   </div>
@@ -662,21 +693,13 @@ export default function LODashboard() {
                     <IdCard size={20} />
                     {selectedPayment.user.nationality === 'WNI' ? 'KTP/ID Card Photo' : 'Passport Photo'}
                   </h3>
-                  <a
-                    href={getImageUrl(selectedPayment.user.idCardPhoto) || '#'}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block"
-                  >
-                    <img
-                      src={getImageUrl(selectedPayment.user.idCardPhoto) || ''}
-                      alt="ID Card"
-                      className="w-full max-w-2xl mx-auto rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all cursor-pointer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23374151' width='400' height='300'/%3E%3Ctext fill='%239CA3AF' font-family='sans-serif' font-size='16' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3EImage not available%3C/text%3E%3C/svg%3E";
-                      }}
-                    />
-                  </a>
+                  <FileDisplay 
+                    src={getImageUrl(selectedPayment.user.idCardPhoto)}
+                    originalPath={selectedPayment.user.idCardPhoto}
+                    alt="ID Card"
+                    label={selectedPayment.user.nationality === 'WNI' ? 'ID Card Document' : 'Passport Document'}
+                    imageClassName="w-full max-w-2xl mx-auto rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all cursor-pointer"
+                  />
                   <p className="text-xs text-[#ffdfc0]/60 text-center mt-2">Click to view full size</p>
                 </div>
               ) : null}
@@ -732,35 +755,47 @@ export default function LODashboard() {
                 )}
               </div>
 
-              {/* Payment Proof - UPDATED */}
-              {selectedPayment.payments?.[0] && (
-                <div className="bg-[#18181b] rounded-xl p-6 border border-[#73e9dd]/20">
-                  <h3 className="text-lg font-semibold text-[#91dcac] mb-4">Payment Proof</h3>
-                  <a
-                    href={getPaymentProofUrl(selectedPayment.payments[0].id)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block"
-                  >
-                    <img
-                      src={getPaymentProofUrl(selectedPayment.payments[0].id)}
-                      alt="Payment proof"
-                      className="w-full max-w-2xl mx-auto rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all cursor-pointer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23374151' width='400' height='300'/%3E%3Ctext fill='%239CA3AF' font-family='sans-serif' font-size='16' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3EProof not available%3C/text%3E%3C/svg%3E";
-                      }}
-                    />
-                  </a>
-                  <p className="text-xs text-[#ffdfc0]/60 text-center mt-2">Click to view full size</p>
-                 {/* Proof Sender Name */}
-                 <div className="mt-4 pt-4 border-t border-[#73e9dd]/20">
-                   <InfoItem 
-                     label="Proof Sender Name" 
-                     value={selectedPayment.payments[0].proofSenderName || "No sender name provided"} 
-                   />
-                 </div>
+              {/* Payment Proof - ALWAYS SHOW THIS SECTION */}
+              <div className="bg-[#18181b] rounded-xl p-6 border border-[#73e9dd]/20">
+                <h3 className="text-lg font-semibold text-[#91dcac] mb-4">Payment Proof</h3>
+                
+                {/* DEBUG INFO */}
+                <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
+                  <p><strong>Debug Info:</strong></p>
+                  <p>Payment ID: {selectedPayment.payments?.[0]?.id || 'N/A'}</p>
+                  <p>Proof Path in DB: {selectedPayment.payments?.[0]?.proofOfPayment || 'null'}</p>
+                  <p>File Type Detected: {getFileType(selectedPayment.payments?.[0]?.proofOfPayment)}</p>
+                  <p>Proxy URL: {selectedPayment.payments?.[0] ? getPaymentProofUrl(selectedPayment.payments[0].id) : 'N/A'}</p>
                 </div>
-              )}
+                
+                {selectedPayment.payments?.[0]?.proofOfPayment ? (
+                  <>
+                    <FileDisplay 
+                      src={getPaymentProofUrl(selectedPayment.payments[0].id)}
+                      originalPath={selectedPayment.payments[0].proofOfPayment}
+                      alt="Payment proof"
+                      label="Payment Proof Document"
+                      imageClassName="w-full max-w-2xl mx-auto rounded-lg border-2 border-[#73e9dd]/30 hover:border-[#73e9dd] transition-all cursor-pointer"
+                    />
+                    <p className="text-xs text-[#ffdfc0]/60 text-center mt-2">
+                      {getFileType(selectedPayment.payments[0].proofOfPayment) === 'pdf' ? 'Click "Open PDF" to view' : 'Click to view full size'}
+                    </p>
+                  </>
+                ) : (
+                  <div className="bg-yellow-500/10 border-2 border-yellow-500/30 rounded-lg p-8 flex flex-col items-center justify-center gap-4">
+                    <AlertCircle size={64} className="text-yellow-500" />
+                    <p className="text-yellow-300 text-center font-medium">No payment proof uploaded</p>
+                    <p className="text-[#ffdfc0]/60 text-center text-sm">The user has not provided proof of payment yet</p>
+                  </div>
+                )}
+                {/* Proof Sender Name */}
+                <div className="mt-4 pt-4 border-t border-[#73e9dd]/20">
+                  <InfoItem 
+                    label="Proof Sender Name" 
+                    value={selectedPayment.payments?.[0]?.proofSenderName || "No sender name provided"} 
+                  />
+                </div>
+              </div>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 pt-4 border-t border-[#73e9dd]/30">
@@ -846,6 +881,119 @@ export default function LODashboard() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Helper function to determine file type from path/filename
+function getFileType(filePath: string | null | undefined): 'pdf' | 'image' | 'unknown' {
+  if (!filePath) return 'unknown';
+  
+  const lowerPath = filePath.toLowerCase();
+  
+  // Check for PDF
+  if (lowerPath.endsWith('.pdf') || lowerPath.includes('.pdf')) {
+    return 'pdf';
+  }
+  
+  // Check for common image extensions
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+  for (const ext of imageExtensions) {
+    if (lowerPath.endsWith(ext) || lowerPath.includes(ext)) {
+      return 'image';
+    }
+  }
+  
+  return 'unknown';
+}
+
+// Unified component to display either image or PDF based on file type
+function FileDisplay({ 
+  src, 
+  originalPath,
+  alt, 
+  label = "View Document",
+  imageClassName = ""
+}: { 
+  src: string | null; 
+  originalPath?: string;
+  alt: string; 
+  label?: string;
+  imageClassName?: string;
+}) {
+  if (!src) {
+    return (
+      <div className="w-full h-60 bg-[#18181b] rounded-lg border-2 border-[#73e9dd]/20 flex flex-col items-center justify-center text-[#ffdfc0]/60 gap-3">
+        <AlertCircle size={48} className="text-[#73e9dd]/50" />
+        <p className="text-center">No document available</p>
+      </div>
+    );
+  }
+
+  const fileType = getFileType(originalPath || src);
+
+  if (fileType === 'pdf') {
+    return (
+      <div className="bg-[#18181b] rounded-lg p-8 border-2 border-[#73e9dd]/30 flex flex-col items-center justify-center gap-4">
+        <FileText size={64} className="text-[#73e9dd]" />
+        <p className="text-[#ffdfc0] text-center font-medium">{label} (PDF)</p>
+        <a
+          href={src}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 px-6 py-3 bg-[#73e9dd]/20 border border-[#73e9dd]/50 text-[#73e9dd] rounded-lg hover:bg-[#73e9dd]/30 transition-all font-semibold"
+        >
+          <ExternalLink size={20} />
+          Open PDF
+        </a>
+      </div>
+    );
+  }
+
+  if (fileType === 'image') {
+    return (
+      <a href={src} target="_blank" rel="noreferrer" className="block">
+        <img
+          src={src}
+          alt={alt}
+          className={imageClassName}
+          onError={(e) => {
+            // Replace with a "file not found" placeholder
+            const target = e.target as HTMLImageElement;
+            console.error('Failed to load image:', src);
+            target.style.display = 'none';
+            const parent = target.parentElement;
+            if (parent) {
+              parent.innerHTML = `
+                <div class="w-full h-60 bg-[#18181b] rounded-lg border-2 border-red-500/30 flex flex-col items-center justify-center gap-3">
+                  <svg class="w-16 h-16 text-red-500/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                  <p class="text-red-300 text-center font-medium">Image file not found</p>
+                  <p class="text-[#ffdfc0]/60 text-center text-sm">The file may have been moved or deleted</p>
+                </div>
+              `;
+            }
+          }}
+        />
+      </a>
+    );
+  }
+
+  // Unknown file type - show generic link
+  return (
+    <div className="bg-[#18181b] rounded-lg p-8 border-2 border-[#73e9dd]/30 flex flex-col items-center justify-center gap-4">
+      <FileText size={64} className="text-[#73e9dd]/50" />
+      <p className="text-[#ffdfc0] text-center font-medium">{label}</p>
+      <a
+        href={src}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-2 px-6 py-3 bg-[#73e9dd]/20 border border-[#73e9dd]/50 text-[#73e9dd] rounded-lg hover:bg-[#73e9dd]/30 transition-all font-semibold"
+      >
+        <ExternalLink size={20} />
+        View Document
+      </a>
     </div>
   );
 }

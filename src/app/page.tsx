@@ -429,13 +429,13 @@ export default function Home() {
 									Normal Price
 								</th>
 								<th scope="col" className="col-tier">
-									Community 10-29
+									Community 10-29 Person
 								</th>
 								<th scope="col" className="col-tier">
-									Community 30-59
+									Community 30-59 Person
 								</th>
 								<th scope="col" className="col-tier">
-									Community ≥60
+									Community ≥60 Person
 								</th>
 								<th scope="col" className="col-note">
 									Early bird / Bundle
