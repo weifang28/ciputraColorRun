@@ -525,11 +525,12 @@ export default function ConfirmPaymentClient() {
                                 onChange={(e) => setProofSenderName(e.target.value)}
                                 className="w-full px-4 py-3 border rounded-md"
                                 placeholder="e.g. PT. Example / John Doe"
+                                required
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-medium mb-2">
-                                Upload Payment Proof *
+                                Upload Payment Proof <strong className="text-red-500">*</strong>
                             </label>
 
                             <label
