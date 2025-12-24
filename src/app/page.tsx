@@ -448,21 +448,21 @@ export default function Home() {
 									10K
 								</td>
 								<td className="col-main font-mustica" data-label="Harga Dasar">
-									Rp 250.000
+									Rp 250.000 / Pax
 								</td>
 								<td className="col-tier" data-label="Komunitas 10-29">
-									Rp 235.000
+									Rp 235.000 / Pax
 								</td>
 								<td className="col-tier" data-label="Komunitas 30-59">
-									Rp 225.000
+									Rp 225.000 / Pax
 								</td>
 								<td className="col-tier" data-label="Komunitas ≥60">
-									Rp 215.000
+									Rp 215.000 / Pax
 								</td>
 								<td className="col-note" data-label="Promo">
 									{categories.find(c => c.name.toLowerCase().includes('10'))?.earlyBirdRemaining && categories.find(c => c.name.toLowerCase().includes('10'))?.earlyBirdRemaining! > 0 ? (
 										<>
-											Early bird: Rp {Number(categories.find(c => c.name.toLowerCase().includes('10'))?.earlyBirdPrice).toLocaleString("id-ID")}
+											Early bird: Rp {Number(categories.find(c => c.name.toLowerCase().includes('10'))?.earlyBirdPrice).toLocaleString("id-ID")} / Pax
 										</>
 									) : (
 										<span className="text-red-500 font-semibold">SOLD OUT</span>
@@ -474,16 +474,16 @@ export default function Home() {
 									5K
 								</td>
 								<td className="col-main font-mustica" data-label="Harga Dasar">
-									Rp 200.000
+									Rp 200.000 / Pax
 								</td>
 								<td className="col-tier" data-label="Komunitas 10-29">
-									Rp 190.000
+									Rp 190.000 / Pax
 								</td>
 								<td className="col-tier" data-label="Komunitas 30-59">
-									Rp 180.000
+									Rp 180.000 / Pax
 								</td>
 								<td className="col-tier" data-label="Komunitas ≥60">
-									Rp 170.000
+									Rp 170.000 / Pax
 								</td>
 								<td className="col-note" data-label="Promo">
 									{categories.find(c => c.name.toLowerCase().includes('5'))?.earlyBirdRemaining && categories.find(c => c.name.toLowerCase().includes('5'))?.earlyBirdRemaining! > 0 ? (
@@ -500,16 +500,16 @@ export default function Home() {
                                     3K
                                 </td>
                                 <td className="col-main font-mustica" data-label="Harga Dasar">
-                                    Rp 150.000
+                                    Rp 150.000 / Pax
                                 </td>
                                 <td className="col-tier" data-label="Komunitas 10-29">
-                                    Rp 140.000
+                                    Rp 140.000 / Pax
                                 </td>
                                 <td className="col-tier" data-label="Komunitas 30-59">
-                                    Rp 135.000
+                                    Rp 135.000 / Pax
                                 </td>
                                 <td className="col-tier" data-label="Komunitas ≥60">
-                                    Rp 135.000
+                                    Rp 135.000 / Pax
                                 </td>
                                 <td className="col-note" data-label="Promo">
                                     {(() => {
@@ -527,7 +527,7 @@ export default function Home() {
                                                     <span className="text-red-500 font-semibold">Early bird: SOLD OUT</span>
                                                 )}
                                                 <div>
-                                                    Bundling family (4 people): Rp 145.000 / person
+                                                    Bundling family (4 people): Rp 145.000 / Pax
                                                 </div>
                                             </>
                                         );
