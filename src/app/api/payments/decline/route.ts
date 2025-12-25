@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (!registrationId) {
       return NextResponse.json({ error: 'Missing registrationId' }, { status: 400 });
     }
-
+    
     // Get registration details before updating (include payment relation to get payment id)
     const registrationBefore = await prisma.registration.findUnique({
       where: { id: registrationId },
@@ -40,15 +40,16 @@ export async function POST(request: Request) {
     const paymentIdForReg = registrationBefore.payment?.id ?? null;
     const registration = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
        // If this registration belongs to a transaction-level payment, decline that payment (by id)
+       // REMOVE the status: 'pending' filter to allow declining confirmed payments
        if (paymentIdForReg) {
          await tx.payment.updateMany({
-           where: { id: paymentIdForReg, status: 'pending' },
+           where: { id: paymentIdForReg },
            data: { status: 'declined' },
          });
        } else {
          // Fallback for legacy rows where Payment may have registrationId field
          await tx.payment.updateMany({
-           where: { registrationId, status: 'pending' } as any,
+           where: { registrationId } as any,
            data: { status: 'declined' },
          });
        }
