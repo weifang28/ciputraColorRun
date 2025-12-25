@@ -35,12 +35,14 @@ export async function POST(request: Request) {
     if (!registrationBefore) {
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
+
+    // Track if this was previously confirmed (to skip email notification)
+    const wasConfirmed = registrationBefore.paymentStatus === 'confirmed';
  
     // Update both payment records and registration status inside a transaction
     const paymentIdForReg = registrationBefore.payment?.id ?? null;
     const registration = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
        // If this registration belongs to a transaction-level payment, decline that payment (by id)
-       // REMOVE the status: 'pending' filter to allow declining confirmed payments
        if (paymentIdForReg) {
          await tx.payment.updateMany({
            where: { id: paymentIdForReg },
@@ -95,8 +97,8 @@ export async function POST(request: Request) {
       return reg;
     });
 
-    // Send decline notification email
-    if (registration.user?.email) {
+    // Send decline notification email ONLY if payment was not previously confirmed
+    if (!wasConfirmed && registration.user?.email) {
       try {
         await sendDeclineEmail(
           registration.user.email,
@@ -104,10 +106,13 @@ export async function POST(request: Request) {
           registrationId,
           declineReason
         );
+        console.log('[payments/decline] Decline email sent to:', registration.user.email);
       } catch (emailError) {
         console.error('Failed to send decline email:', emailError);
         // Don't fail the request if email fails
       }
+    } else if (wasConfirmed) {
+      console.log('[payments/decline] Skipping email notification - payment was previously confirmed');
     }
 
     return NextResponse.json({ success: true, registration });
