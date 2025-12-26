@@ -1232,7 +1232,7 @@ export default function RegistrationPage() {
 
                             <div className="grid gap-3">
                                 <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                                    {nationality === "WNI" ? "ID Card Photo" : "Passport Photo"} <strong className = "text-red-600">*</strong>
+                                    {nationality === "WNI" ? "ID Card Photo (KTP, SIM, Birth Certificate, and other official ID)" : "Passport Photo"} <strong className = "text-red-600">*</strong>
                                 </label>
                                 <label 
                                     htmlFor="idCardPhoto"
