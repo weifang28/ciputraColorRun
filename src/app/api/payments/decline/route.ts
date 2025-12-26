@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (!registrationId) {
       return NextResponse.json({ error: 'Missing registrationId' }, { status: 400 });
     }
-    
+
     // Get registration details before updating (include payment relation to get payment id)
     const registrationBefore = await prisma.registration.findUnique({
       where: { id: registrationId },
@@ -63,37 +63,6 @@ export async function POST(request: Request) {
          include: { user: true },
        });
  
-      // Restore early-bird capacity
-      const participants = await tx.participant.findMany({
-        where: { registrationId },
-        select: { categoryId: true },
-      });
-
-      if (participants && participants.length > 0) {
-        const categoryMap: Record<number, number> = {};
-        // avoid implicit `any` by typing the callback parameter
-        participants.forEach((p: any) => {
-          const cid = typeof p.categoryId === "number" ? p.categoryId : null;
-          if (cid === null) return; // skip participants without a category
-          categoryMap[cid] = (categoryMap[cid] || 0) + 1;
-        });
- 
-        for (const [catIdStr, count] of Object.entries(categoryMap)) {
-          const catId = Number(catIdStr);
-          const claims = await tx.earlyBirdClaim.findMany({
-            where: { categoryId: catId },
-            orderBy: { id: 'desc' },
-            take: count,
-          });
-          if (claims.length > 0) {
-            const claimsToRemove = claims.slice(0, Math.min(count, claims.length));
-            await tx.earlyBirdClaim.deleteMany({
-              where: { id: { in: claimsToRemove.map((c: any) => c.id) } },
-            });
-          }
-        }
-      }
-
       return reg;
     });
 
