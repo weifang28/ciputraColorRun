@@ -1083,7 +1083,15 @@ export default function RegistrationPage() {
                                     name="regType"
                                     value="family"
                                     checked={type === "family"}
-                                    onChange={() => { setType("family"); setRegistrationType("family"); }}
+                                    // onChange={() => { setType("family"); setRegistrationType("family"); }}
+                                    onChange={() => {
+                                        setType("family");
+                                        setRegistrationType("family");
+                                        // Ensure family bundle uses the 3km category so bundlePrice is applied
+                                        const threeKm = categories.find(c => String(c.name).toLowerCase().trim() === "3km")
+                                            || categories.find(c => String(c.name).toLowerCase().includes("3k"));
+                                        if (threeKm) setCategoryId(threeKm.id);
+                                    }}
                                     className="sr-only"
                                 />
                                 <div className="flex flex-col items-center gap-2">
