@@ -532,7 +532,8 @@ export default function RegistrationPage() {
         }
 
         const currentParticipants = Number(participants || 0);
-        const totalWithCurrent = getTotalCommunityParticipants() + currentParticipants;
+        // const totalWithCurrent = getTotalCommunityParticipants() + currentParticipants;
+        const totalWithCurrent = currentParticipants;
         
         return calculatePrice(category, type === "community" ? totalWithCurrent : 1);
     }, [categoryId, categories, participants, type]);
@@ -931,7 +932,8 @@ export default function RegistrationPage() {
 
         const currentParticipants = Number(participants || 0);
         const totalInCart = getTotalCommunityParticipants();
-        const totalWithCurrent = totalInCart + currentParticipants;
+        // const totalWithCurrent = totalInCart + currentParticipants;
+        const totalWithCurrent = currentParticipants;
 
         let tier = "Base Price";
         let nextTier = null;
@@ -977,7 +979,7 @@ export default function RegistrationPage() {
             tier,
             nextTier,
             participantsToNext,
-            totalInCart,
+            // totalInCart,
             totalWithCurrent,
         };
     }, [type, categoryId, categories, participants]);
